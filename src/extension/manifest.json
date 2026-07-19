@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Halcyon for Discord",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "A restrained, iOS-styled plugin layer for the Discord web client.",
   "permissions": ["storage"],
   "host_permissions": ["*://*.discord.com/*"],

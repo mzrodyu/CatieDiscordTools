@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.8
+// @version      0.1.9
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -12,23 +12,28 @@
 
 "use strict";
 var Halcyon = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
   // src/core/logger/index.ts
-  var WEIGHT = {
-    debug: 10,
-    info: 20,
-    warn: 30,
-    error: 40
-  };
-  var BADGE = {
-    debug: "#8E8E93",
-    info: "#0A84FF",
-    warn: "#FF9F0A",
-    error: "#FF453A"
-  };
-  var RING_CAPACITY = 500;
-  var ring = [];
-  var subscribers = /* @__PURE__ */ new Set();
-  var threshold = false ? WEIGHT.debug : WEIGHT.info;
   function record(level, scope, parts) {
     const entry = { time: Date.now(), level, scope, parts };
     ring.push(entry);
@@ -60,16 +65,31 @@ var Halcyon = (() => {
     subscribers.add(fn);
     return () => subscribers.delete(fn);
   }
+  var WEIGHT, BADGE, RING_CAPACITY, ring, subscribers, threshold;
+  var init_logger = __esm({
+    "src/core/logger/index.ts"() {
+      "use strict";
+      init_react_shim();
+      WEIGHT = {
+        debug: 10,
+        info: 20,
+        warn: 30,
+        error: 40
+      };
+      BADGE = {
+        debug: "#8E8E93",
+        info: "#0A84FF",
+        warn: "#FF9F0A",
+        error: "#FF453A"
+      };
+      RING_CAPACITY = 500;
+      ring = [];
+      subscribers = /* @__PURE__ */ new Set();
+      threshold = false ? WEIGHT.debug : WEIGHT.info;
+    }
+  });
 
   // src/core/modules/webpack.ts
-  var log = logger("modules");
-  var CHUNK_KEY = "webpackChunkdiscord_app";
-  var wpRequire;
-  var ready = false;
-  var interceptorInstalled = false;
-  var waiters = /* @__PURE__ */ new Set();
-  var sourcePatches = [];
-  var selfResolver = () => void 0;
   function setSelfResolver(fn) {
     selfResolver = fn;
     globalThis.__halcyon_self__ = (id) => selfResolver(id);
@@ -214,7 +234,6 @@ var Halcyon = (() => {
     const src = factory.toString();
     return typeof find2 === "string" ? src.includes(find2) : find2.test(src);
   }
-  var NESTED_SCAN_MAX_KEYS = 40;
   function matchExport(exp, filter, meta) {
     try {
       if (filter(exp, meta)) return exp;
@@ -416,6 +435,22 @@ ${slices.join("\n  ...  \n")}`);
       return JSON.stringify({ error: String(err), patches, dom }, null, 2);
     }
   }
+  var log, CHUNK_KEY, wpRequire, ready, interceptorInstalled, waiters, sourcePatches, selfResolver, NESTED_SCAN_MAX_KEYS;
+  var init_webpack = __esm({
+    "src/core/modules/webpack.ts"() {
+      "use strict";
+      init_react_shim();
+      init_logger();
+      log = logger("modules");
+      CHUNK_KEY = "webpackChunkdiscord_app";
+      ready = false;
+      interceptorInstalled = false;
+      waiters = /* @__PURE__ */ new Set();
+      sourcePatches = [];
+      selfResolver = () => void 0;
+      NESTED_SCAN_MAX_KEYS = 40;
+    }
+  });
 
   // src/core/common/react.ts
   function lazyProxy(resolve) {
@@ -442,18 +477,96 @@ ${slices.join("\n  ...  \n")}`);
   function byFunctionProps(...props) {
     return (exp) => props.every((p) => typeof exp[p] === "function") && typeof exp.__halcyon_probe__ === "undefined";
   }
-  var React = lazyProxy(
-    () => find(byFunctionProps("createElement", "useState", "useEffect", "useMemo"))
-  );
-  var ReactDOM = lazyProxy(
-    () => find(byFunctionProps("createPortal", "flushSync")) ?? find(byFunctionProps("createPortal"))
-  );
-  var useState = (...a) => React.useState(...a);
-  var useEffect = (...a) => React.useEffect(...a);
-  var useMemo = (...a) => React.useMemo(...a);
-  var useRef = (...a) => React.useRef(...a);
+  var React, ReactDOM, useState, useEffect, useMemo, useRef;
+  var init_react = __esm({
+    "src/core/common/react.ts"() {
+      "use strict";
+      init_react_shim();
+      init_webpack();
+      React = lazyProxy(
+        () => find(byFunctionProps("createElement", "useState", "useEffect", "useMemo"))
+      );
+      ReactDOM = lazyProxy(
+        () => find(byFunctionProps("createPortal", "flushSync")) ?? find(byFunctionProps("createPortal"))
+      );
+      useState = (...a) => React.useState(...a);
+      useEffect = (...a) => React.useEffect(...a);
+      useMemo = (...a) => React.useMemo(...a);
+      useRef = (...a) => React.useRef(...a);
+    }
+  });
+
+  // src/runtime/react-shim.ts
+  var init_react_shim = __esm({
+    "src/runtime/react-shim.ts"() {
+      "use strict";
+      init_react();
+    }
+  });
+
+  // src/core/common/discord.ts
+  var discord_exports = {};
+  __export(discord_exports, {
+    ChannelStore: () => ChannelStore,
+    Dispatcher: () => Dispatcher,
+    GuildChannelStore: () => GuildChannelStore,
+    GuildStore: () => GuildStore,
+    GuildSubscriptions: () => GuildSubscriptions,
+    MessageActions: () => MessageActions,
+    MessageStore: () => MessageStore,
+    SelectedChannelStore: () => SelectedChannelStore,
+    UserStore: () => UserStore,
+    getDispatcher: () => getDispatcher,
+    moment: () => moment
+  });
+  function getDispatcher() {
+    try {
+      const viaStore = UserStore?._dispatcher;
+      if (isFluxDispatcher(viaStore)) return viaStore;
+    } catch {
+    }
+    return find(isFluxDispatcher);
+  }
+  var Dispatcher, MessageStore, MessageActions, UserStore, ChannelStore, SelectedChannelStore, GuildStore, GuildChannelStore, GuildSubscriptions, moment;
+  var init_discord = __esm({
+    "src/core/common/discord.ts"() {
+      "use strict";
+      init_react_shim();
+      init_webpack();
+      Dispatcher = lazy(isFluxDispatcher);
+      MessageStore = lazy(
+        (m) => typeof m?.getMessage === "function" && typeof m?.getMessages === "function"
+      );
+      MessageActions = lazy(
+        (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
+      );
+      UserStore = lazy(
+        (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
+      );
+      ChannelStore = lazy(
+        (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
+      );
+      SelectedChannelStore = lazy(
+        (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
+      );
+      GuildStore = lazy(
+        (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
+      );
+      GuildChannelStore = lazy(
+        (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
+      );
+      GuildSubscriptions = lazy(
+        (m) => typeof m?.subscribeToGuild === "function" || typeof m?.subscribeToChannel === "function"
+      );
+      moment = lazy((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");
+    }
+  });
+
+  // src/userscript/main.ts
+  init_react_shim();
 
   // src/userscript/install-storage.ts
+  init_react_shim();
   var g = globalThis;
   try {
     const ls = g.localStorage;
@@ -468,7 +581,14 @@ ${slices.join("\n  ...  \n")}`);
   } catch {
   }
 
+  // src/core/runtime.ts
+  init_react_shim();
+  init_logger();
+  init_webpack();
+
   // src/core/settings/storage.ts
+  init_react_shim();
+  init_logger();
   var log2 = logger("settings");
   var PREFIX = "halcyon:";
   function selectBackend() {
@@ -574,7 +694,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 22:52:54" : "dev";
+      const build = true ? "2026-07-19 23:56:48" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -762,7 +882,14 @@ ${slices.join("\n  ...  \n")}`);
   };
   var runtime = new Runtime();
 
+  // src/plugins/index.ts
+  init_react_shim();
+
+  // src/plugins/settings-host/index.tsx
+  init_react_shim();
+
   // src/core/plugin.ts
+  init_react_shim();
   var BRAND = Symbol.for("halcyon.plugin");
   var ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   function definePlugin(definition) {
@@ -776,6 +903,13 @@ ${slices.join("\n  ...  \n")}`);
     }
     return Object.assign(definition, { [BRAND]: true });
   }
+
+  // src/plugins/settings-host/index.tsx
+  init_logger();
+  init_webpack();
+
+  // src/ui/inject-styles.ts
+  init_react_shim();
 
   // src/ui/tokens.css
   var tokens_default = '/*\n * Design tokens.\n *\n * Every color, size, radius, and duration used anywhere in Halcyon resolves to\n * one of these variables. Components never hardcode raw values. The palette is\n * flat by design: solid fills only, no gradients.\n *\n * Values mirror docs/ui-design-guide.md. If the two ever disagree, the guide\n * is the source of truth and this file is the bug.\n */\n\n.halcyon {\n  /* Accent */\n  --hc-accent: #0a84ff;\n  --hc-accent-pressed: #0768cc;\n\n  /* Semantic */\n  --hc-red: #ff453a;\n  --hc-orange: #ff9f0a;\n  --hc-yellow: #ffd60a;\n  --hc-green: #30d158;\n  --hc-teal: #64d2ff;\n  --hc-indigo: #5e5ce6;\n  --hc-pink: #ff375f;\n\n  /* Neutral surfaces */\n  --hc-bg-primary: #000000;\n  --hc-bg-secondary: #1c1c1e;\n  --hc-bg-tertiary: #2c2c2e;\n  --hc-bg-elevated: #2c2c2e;\n\n  /* Fills */\n  --hc-fill-primary: rgba(120, 120, 128, 0.36);\n  --hc-fill-secondary: rgba(120, 120, 128, 0.24);\n\n  /* Separators */\n  --hc-separator: rgba(84, 84, 88, 0.65);\n  --hc-separator-opaque: #38383a;\n\n  /* Labels */\n  --hc-label-primary: #ffffff;\n  --hc-label-secondary: rgba(235, 235, 245, 0.6);\n  --hc-label-tertiary: rgba(235, 235, 245, 0.3);\n  --hc-label-quaternary: rgba(235, 235, 245, 0.16);\n\n  /* Spacing (8pt grid) */\n  --hc-space-1: 4px;\n  --hc-space-2: 8px;\n  --hc-space-3: 12px;\n  --hc-space-4: 16px;\n  --hc-space-5: 20px;\n  --hc-space-6: 24px;\n  --hc-space-8: 32px;\n  --hc-space-10: 40px;\n\n  /* Radii */\n  --hc-radius-xs: 4px;\n  --hc-radius-sm: 6px;\n  --hc-radius-md: 10px;\n  --hc-radius-lg: 12px;\n  --hc-radius-xl: 16px;\n  --hc-radius-2xl: 22px;\n  --hc-radius-pill: 999px;\n\n  /* Elevation */\n  --hc-elev-1: 0 1px 2px rgba(0, 0, 0, 0.24);\n  --hc-elev-2: 0 4px 12px rgba(0, 0, 0, 0.32);\n  --hc-elev-3: 0 12px 32px rgba(0, 0, 0, 0.44);\n\n  /* Type scale \u2014 sizes paired with absolute line heights */\n  --hc-text-title1: 28px;\n  --hc-lh-title1: 34px;\n  --hc-text-title2: 22px;\n  --hc-lh-title2: 28px;\n  --hc-text-title3: 20px;\n  --hc-lh-title3: 25px;\n  --hc-text-headline: 17px;\n  --hc-lh-headline: 22px;\n  --hc-text-body: 17px;\n  --hc-lh-body: 22px;\n  --hc-text-callout: 16px;\n  --hc-lh-callout: 21px;\n  --hc-text-subhead: 15px;\n  --hc-lh-subhead: 20px;\n  --hc-text-footnote: 13px;\n  --hc-lh-footnote: 18px;\n  --hc-text-caption1: 12px;\n  --hc-lh-caption1: 16px;\n  --hc-text-caption2: 11px;\n  --hc-lh-caption2: 13px;\n\n  /* Motion */\n  --hc-ease: cubic-bezier(0.32, 0.72, 0, 1);\n  --hc-duration-fast: 200ms;\n  --hc-duration-slow: 300ms;\n\n  /* Font stack */\n  --hc-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",\n    "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;\n  --hc-font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Code",\n    Menlo, Consolas, monospace;\n}\n';
@@ -2182,6 +2316,149 @@ ${slices.join("\n  ...  \n")}`);
   padding: 1px 6px 1px 8px;
   border-radius: 3px;
 }
+
+/* \u2500\u2500 message-cleaner page \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+ * The self-message cleaner's operate surface. Scope/confirm reuse .hc-section
+ * and .hc-cell; these rules cover the action bar, the live status line, the
+ * preview list, and the stat readout. Decorates Halcyon's own panel, so every
+ * value is a token. */
+.hc-cleaner__actions {
+  display: flex;
+  gap: var(--hc-space-3);
+  margin: var(--hc-space-4) 0;
+}
+.hc-cleaner__actions .hc-btn {
+  flex: 1;
+}
+.hc-cleaner__status {
+  margin: var(--hc-space-3) 0;
+  padding: var(--hc-space-3) var(--hc-space-4);
+  background: var(--hc-fill-secondary);
+  border-radius: var(--hc-radius-md);
+}
+.hc-cleaner__status-state {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+.hc-cleaner__status-detail {
+  margin-top: 2px;
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  word-break: break-word;
+}
+.hc-cleaner__list {
+  display: flex;
+  flex-direction: column;
+}
+.hc-cleaner__item {
+  display: flex;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-4);
+  font-size: var(--hc-text-footnote);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__item:last-child {
+  border-bottom: none;
+}
+.hc-cleaner__item-time {
+  flex-shrink: 0;
+  color: var(--hc-accent);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__item-text {
+  color: var(--hc-label-primary);
+  word-break: break-word;
+}
+.hc-cleaner__more {
+  padding: var(--hc-space-2) var(--hc-space-4);
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+}
+.hc-cleaner__stat {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: var(--hc-space-2);
+}
+.hc-cleaner__stat-num {
+  font-size: var(--hc-text-title1);
+  font-weight: 700;
+  color: var(--hc-accent);
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__stat-unit {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+}
+
+/* \u2500\u2500 message-cleaner picker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.hc-cleaner__picker-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-3) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__picker-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 700;
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-primary);
+}
+.hc-cleaner__picker-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 360px;
+  padding: var(--hc-space-2);
+}
+.hc-cleaner__picker-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  cursor: pointer;
+  color: var(--hc-label-primary);
+  transition: background var(--hc-duration-fast) var(--hc-ease);
+}
+.hc-cleaner__picker-item:hover {
+  background: var(--hc-fill-secondary);
+}
+.hc-cleaner__picker-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--hc-fill-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-secondary);
+}
+.hc-cleaner__picker-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hc-cleaner__picker-name {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hc-cleaner__picker-empty {
+  padding: var(--hc-space-5);
+  text-align: center;
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-tertiary);
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -2200,7 +2477,17 @@ ${components_default}`;
     mounted = true;
   }
 
+  // src/ui/settings/overlay.tsx
+  init_react_shim();
+  init_react();
+  init_logger();
+
+  // src/ui/settings/SettingsRoot.tsx
+  init_react_shim();
+  init_react();
+
   // src/icons/index.tsx
+  init_react_shim();
   function Glyph({ size = 20, className, filled, children, ...rest }) {
     const label = rest["aria-label"];
     if (typeof size !== "number" || !Number.isFinite(size)) size = 20;
@@ -2296,7 +2583,12 @@ ${components_default}`;
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "2" }), /* @__PURE__ */ React.createElement("path", { d: "M8.5 8.5a5 5 0 000 7M15.5 8.5a5 5 0 010 7" }), /* @__PURE__ */ React.createElement("path", { d: "M6 6a9 9 0 000 12M18 6a9 9 0 010 12" }));
   }
 
+  // src/ui/settings/PluginsView.tsx
+  init_react_shim();
+  init_react();
+
   // src/ui/components/Toggle.tsx
+  init_react_shim();
   function Toggle({ checked, onChange, disabled, ...rest }) {
     return /* @__PURE__ */ React.createElement(
       "button",
@@ -2317,6 +2609,7 @@ ${components_default}`;
   }
 
   // src/ui/components/ListRow.tsx
+  init_react_shim();
   function ListRow({
     icon,
     iconBackground,
@@ -2356,16 +2649,23 @@ ${components_default}`;
   }
 
   // src/ui/components/Badge.tsx
+  init_react_shim();
   function Badge({ tone = "neutral", children }) {
     return /* @__PURE__ */ React.createElement("span", { className: "hc-badge", "data-tone": tone }, children);
   }
 
   // src/ui/components/EmptyState.tsx
+  init_react_shim();
   function EmptyState({ icon, title, subtitle, action }) {
     return /* @__PURE__ */ React.createElement("div", { className: "hc-empty" }, icon, /* @__PURE__ */ React.createElement("div", { className: "hc-empty__title" }, title), subtitle && /* @__PURE__ */ React.createElement("div", { className: "hc-empty__subtitle" }, subtitle), action && /* @__PURE__ */ React.createElement("div", { style: { marginTop: "var(--hc-space-5)" } }, action));
   }
 
+  // src/ui/settings/SettingsForm.tsx
+  init_react_shim();
+  init_react();
+
   // src/ui/components/NumberStepper.tsx
+  init_react_shim();
   function clamp(value, min, max) {
     if (min != null && value < min) return min;
     if (max != null && value > max) return max;
@@ -2398,6 +2698,7 @@ ${components_default}`;
   }
 
   // src/ui/components/TextInput.tsx
+  init_react_shim();
   function TextInput({ value, onChange, className, ...rest }) {
     return /* @__PURE__ */ React.createElement(
       "input",
@@ -2411,6 +2712,9 @@ ${components_default}`;
   }
 
   // src/ui/components/Select.tsx
+  init_react_shim();
+  init_react();
+  init_react();
   function Select({ value, options, onChange, ...rest }) {
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(-1);
@@ -2559,6 +2863,8 @@ ${components_default}`;
   }
 
   // src/ui/components/StringListEditor.tsx
+  init_react_shim();
+  init_react();
   function StringListEditor({ value, onChange, itemPlaceholder }) {
     const [draft, setDraft] = useState("");
     const commit = () => {
@@ -2609,6 +2915,7 @@ ${components_default}`;
   }
 
   // src/ui/components/Button.tsx
+  init_react_shim();
   function Button({
     variant = "secondary",
     size = "md",
@@ -2625,6 +2932,8 @@ ${components_default}`;
   }
 
   // src/ui/settings/hooks.ts
+  init_react_shim();
+  init_react();
   function useRuntimeList() {
     const [list, setList] = useState(() => runtime.list());
     useEffect(() => {
@@ -2634,17 +2943,17 @@ ${components_default}`;
     }, []);
     return list;
   }
-  function useSettingsSnapshot(settings4) {
+  function useSettingsSnapshot(settings5) {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubscribes = Object.keys(settings4.schema).map(
-        (key) => settings4.subscribe(key, () => bump((n) => n + 1))
+      const unsubscribes = Object.keys(settings5.schema).map(
+        (key) => settings5.subscribe(key, () => bump((n) => n + 1))
       );
       return () => {
         for (const off of unsubscribes) off();
       };
-    }, [settings4]);
-    return settings4.store;
+    }, [settings5]);
+    return settings5.store;
   }
 
   // src/ui/settings/SettingsForm.tsx
@@ -2660,16 +2969,16 @@ ${components_default}`;
       return false;
     }
   }
-  function SettingsForm({ settings: settings4 }) {
-    const store = useSettingsSnapshot(settings4);
+  function SettingsForm({ settings: settings5 }) {
+    const store = useSettingsSnapshot(settings5);
     const keys = useMemo(
-      () => Object.keys(settings4.schema).filter((key) => !settings4.schema[key].hidden),
-      [settings4]
+      () => Object.keys(settings5.schema).filter((key) => !settings5.schema[key].hidden),
+      [settings5]
     );
     const [draft, setDraft] = useState(() => seed(store, keys));
     useEffect(() => {
       setDraft(seed(store, keys));
-    }, [settings4]);
+    }, [settings5]);
     if (keys.length === 0) return null;
     const dirty = keys.filter((key) => !equal(draft[key], store[key]));
     const save = () => {
@@ -2678,7 +2987,7 @@ ${components_default}`;
     const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
-      const title = settings4.schema[key].group ?? "\u8BBE\u7F6E";
+      const title = settings5.schema[key].group ?? "\u8BBE\u7F6E";
       const last = sections[sections.length - 1];
       if (last && last.title === title) last.keys.push(key);
       else sections.push({ title, keys: [key] });
@@ -2687,7 +2996,7 @@ ${components_default}`;
       SettingField,
       {
         key,
-        def: settings4.schema[key],
+        def: settings5.schema[key],
         value: draft[key],
         onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
@@ -2760,6 +3069,7 @@ ${components_default}`;
   }
 
   // src/ui/settings/categories.ts
+  init_react_shim();
   var CATEGORIES = {
     utility: { label: "\u5B9E\u7528\u5DE5\u5177", color: "var(--hc-accent)", Icon: SlidersIcon },
     chat: { label: "\u804A\u5929", color: "var(--hc-green)", Icon: MessageIcon },
@@ -2899,6 +3209,9 @@ ${components_default}`;
   }
 
   // src/ui/settings/LogsView.tsx
+  init_react_shim();
+  init_react();
+  init_logger();
   var MAX_VISIBLE = 500;
   var PAGE_SIZE = 100;
   function LogsView() {
@@ -2968,7 +3281,11 @@ ${components_default}`;
     }
   }
 
+  // src/ui/settings/AboutView.tsx
+  init_react_shim();
+
   // src/ui/components/Section.tsx
+  init_react_shim();
   function Section({ title, note, children }) {
     return /* @__PURE__ */ React.createElement("div", { className: "hc-section" }, title && /* @__PURE__ */ React.createElement("div", { className: "hc-section__title" }, title), /* @__PURE__ */ React.createElement("div", { className: "hc-section__body" }, children), note && /* @__PURE__ */ React.createElement("div", { className: "hc-section__note" }, note));
   }
@@ -2977,7 +3294,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.8" : "dev";
+    const version = true ? "0.1.9" : "dev";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {
@@ -3392,7 +3709,12 @@ ${components_default}`;
     }
   });
 
+  // src/plugins/message-logger/index.tsx
+  init_react_shim();
+
   // src/core/patcher/index.ts
+  init_react_shim();
+  init_logger();
   var log6 = logger("patcher");
   var INSTALLED = Symbol("halcyon.patch");
   function ensureInstalled(target, method) {
@@ -3505,41 +3827,21 @@ ${components_default}`;
     }
   };
 
-  // src/core/common/discord.ts
-  var Dispatcher = lazy(isFluxDispatcher);
-  function getDispatcher() {
-    try {
-      const viaStore = UserStore?._dispatcher;
-      if (isFluxDispatcher(viaStore)) return viaStore;
-    } catch {
-    }
-    return find(isFluxDispatcher);
-  }
-  var MessageStore = lazy(
-    (m) => typeof m?.getMessage === "function" && typeof m?.getMessages === "function"
-  );
-  var MessageActions = lazy(
-    (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
-  );
-  var UserStore = lazy(
-    (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
-  );
-  var ChannelStore = lazy(
-    (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
-  );
-  var SelectedChannelStore = lazy(
-    (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
-  );
-  var GuildStore = lazy(
-    (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
-  );
-  var GuildChannelStore = lazy(
-    (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
-  );
-  var GuildSubscriptions = lazy(
-    (m) => typeof m?.subscribeToGuild === "function" || typeof m?.subscribeToChannel === "function"
-  );
-  var moment = lazy((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");
+  // src/plugins/message-logger/index.tsx
+  init_webpack();
+  init_discord();
+  init_react();
+  init_logger();
+
+  // src/plugins/message-logger/settings.ts
+  init_react_shim();
+
+  // src/core/settings/index.ts
+  init_react_shim();
+  init_logger();
+
+  // src/core/settings/types.ts
+  init_react_shim();
 
   // src/core/settings/index.ts
   var log7 = logger("settings");
@@ -3745,6 +4047,8 @@ ${components_default}`;
   });
 
   // src/plugins/message-logger/store.ts
+  init_react_shim();
+  init_logger();
   var log8 = logger("message-logger");
   var DATA_NS = "message-logger.log";
   var MessageLogStore = class {
@@ -3871,6 +4175,7 @@ ${components_default}`;
   var messageLog = new MessageLogStore();
 
   // src/plugins/message-logger/render-content.tsx
+  init_react_shim();
   var EMOJI_TOKEN = /<(a)?:([A-Za-z0-9_]+):(\d+)>/g;
   function renderContent(content) {
     const parts = [];
@@ -3906,6 +4211,10 @@ ${components_default}`;
   }
 
   // src/plugins/message-logger/ui/LogPage.tsx
+  init_react_shim();
+  init_react();
+  init_discord();
+  init_logger();
   var log9 = logger("message-logger");
   function useLog() {
     const [snapshot, setSnapshot] = useState(() => ({
@@ -4744,6 +5053,8 @@ ${components_default}`;
   });
 
   // src/plugins/show-username/index.tsx
+  init_react_shim();
+  init_logger();
   var log11 = logger("show-username");
   var settings2 = defineSettings({
     mode: {
@@ -4845,7 +5156,12 @@ ${components_default}`;
     }
   });
 
+  // src/plugins/guild-monitor/index.tsx
+  init_react_shim();
+  init_logger();
+
   // src/plugins/guild-monitor/settings.ts
+  init_react_shim();
   var settings3 = defineSettings({
     // Toggled from the plugin page (with the full risk note), not the generic
     // form, so it's hidden here — but persisted through the store like any value.
@@ -4867,6 +5183,9 @@ ${components_default}`;
   });
 
   // src/plugins/guild-monitor/subscribe.ts
+  init_react_shim();
+  init_discord();
+  init_logger();
   var log12 = logger("guild-monitor");
   var REFRESH_MS = 5 * 60 * 1e3;
   var timer;
@@ -4938,6 +5257,10 @@ ${components_default}`;
   }
 
   // src/plugins/guild-monitor/ui/MonitorPage.tsx
+  init_react_shim();
+  init_react();
+  init_discord();
+  init_webpack();
   function readGuilds() {
     try {
       const store = findStore("GuildStore") ?? GuildStore;
@@ -5027,11 +5350,609 @@ ${components_default}`;
     }
   });
 
+  // src/plugins/message-cleaner/index.tsx
+  init_react_shim();
+  init_logger();
+
+  // src/plugins/message-cleaner/settings.ts
+  init_react_shim();
+  var settings4 = defineSettings({
+    order: {
+      group: "\u9ED8\u8BA4\u53C2\u6570",
+      type: "select",
+      default: "desc",
+      label: "\u6E05\u7406\u65B9\u5411",
+      description: "\u53D7\u6761\u6570\u9650\u5236\u65F6\uFF0C\u4F18\u5148\u4ECE\u54EA\u4E00\u7AEF\u5F00\u59CB\u5220\u3002",
+      options: [
+        { value: "desc", label: "\u4ECE\u65B0\u5230\u8001" },
+        { value: "asc", label: "\u4ECE\u8001\u5230\u65B0" }
+      ]
+    },
+    limit: {
+      group: "\u9ED8\u8BA4\u53C2\u6570",
+      type: "number",
+      default: 100,
+      label: "\u6700\u591A\u5904\u7406\u6761\u6570",
+      description: "\u5355\u6B21\u9884\u89C8 / \u5220\u9664\u7684\u4E0A\u9650\u3002",
+      min: 1,
+      max: 5e3,
+      step: 50
+    },
+    delayMs: {
+      group: "\u9ED8\u8BA4\u53C2\u6570",
+      type: "number",
+      default: 1600,
+      label: "\u5220\u9664\u95F4\u9694\uFF08\u6BEB\u79D2\uFF09",
+      description: "\u4E24\u6B21\u5220\u9664\u4E4B\u95F4\u7684\u7B49\u5F85\uFF0C\u592A\u5FEB\u4F1A\u89E6\u53D1\u9650\u901F\uFF0C\u5EFA\u8BAE\u4E0D\u4F4E\u4E8E 1000\u3002",
+      min: 300,
+      max: 3e4,
+      step: 100
+    },
+    confirmBeforeDelete: {
+      group: "\u9ED8\u8BA4\u53C2\u6570",
+      type: "boolean",
+      default: true,
+      label: "\u5220\u9664\u524D\u4E8C\u6B21\u786E\u8BA4",
+      description: "\u70B9\u300C\u5220\u9664\u300D\u540E\u5F39\u51FA\u786E\u8BA4\u6846\uFF0C\u907F\u514D\u8BEF\u5220\u3002"
+    }
+  });
+
+  // src/plugins/message-cleaner/ui/CleanerPage.tsx
+  init_react_shim();
+  init_react();
+  init_logger();
+
+  // src/plugins/message-cleaner/cleaner.ts
+  init_react_shim();
+  init_discord();
+  init_logger();
+  var log14 = logger("message-cleaner");
+  var API_BASE = "https://discord.com/api/v10";
+  var skipList = /* @__PURE__ */ new Set();
+  var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  var EPOCH = 1420070400000n;
+  var tsToSf = (d) => String(BigInt(d.getTime()) - EPOCH << 22n);
+  function extractToken() {
+    try {
+      const chunks = window.webpackChunkdiscord_app;
+      if (Array.isArray(chunks)) {
+        let tok = null;
+        chunks.push([[Symbol()], {}, (req) => {
+          for (const id of Object.keys(req.m || {})) {
+            try {
+              for (const m of [req(id), req(id)?.default]) {
+                if (m && typeof m.getToken === "function") {
+                  const t = m.getToken();
+                  if (t && t.length > 20) {
+                    tok = t;
+                    return;
+                  }
+                }
+              }
+            } catch {
+            }
+          }
+        }]);
+        if (tok) return tok;
+      }
+    } catch {
+    }
+    try {
+      const t = window.localStorage.getItem("token");
+      if (t) return t.replace(/^"|"$/g, "");
+    } catch {
+    }
+    return null;
+  }
+  async function apiFetch(token, path, opts = {}, attempt = 0) {
+    let res;
+    try {
+      res = await fetch(API_BASE + path, {
+        ...opts,
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+          ...opts.headers || {}
+        }
+      });
+    } catch (e) {
+      if (attempt < 5) {
+        await sleep(3e3);
+        return apiFetch(token, path, opts, attempt + 1);
+      }
+      throw new Error(`\u7F51\u7EDC\u8BF7\u6C42\u5931\u8D25: ${e.message}`);
+    }
+    if (res.status === 429) {
+      const j = await res.json().catch(() => ({}));
+      const wait = j.retry_after ? Math.ceil(Number(j.retry_after) * 1e3) : Math.pow(2, attempt) * 1e3;
+      if (attempt < 5) {
+        await sleep(wait + 500);
+        return apiFetch(token, path, opts, attempt + 1);
+      }
+      throw new Error("\u89E6\u53D1\u9650\u901F\u4E14\u91CD\u8BD5\u6B21\u6570\u8017\u5C3D\u3002");
+    }
+    if (!res.ok) {
+      const b = await res.text().catch(() => "");
+      throw new Error(`API ${res.status}: ${b.slice(0, 120)}`);
+    }
+    return res.status === 204 ? null : res.json();
+  }
+  function currentUserId2() {
+    try {
+      return UserStore.getCurrentUser?.()?.id;
+    } catch {
+      return void 0;
+    }
+  }
+  function currentTarget() {
+    try {
+      const channelId = SelectedChannelStore.getChannelId?.();
+      if (!channelId) return null;
+      const channel = ChannelStore.getChannel?.(channelId);
+      const guildId = channel?.guild_id ?? "@me";
+      return { guildId, channelId, serverWide: false };
+    } catch {
+      return null;
+    }
+  }
+  function getGuilds() {
+    try {
+      const raw = GuildStore.getGuilds?.();
+      if (!raw) return [];
+      return Object.values(raw).map((g2) => ({
+        id: g2.id,
+        name: g2.name ?? "\u672A\u77E5",
+        icon: g2.icon ?? null
+      }));
+    } catch {
+      return [];
+    }
+  }
+  function getChannels(guildId) {
+    try {
+      const all = [];
+      const raw = ChannelStore.getMutableGuildChannelsForGuild?.(guildId);
+      if (raw) {
+        for (const ch of Object.values(raw)) {
+          if (ch && ch.type !== 4) all.push({ id: ch.id, name: ch.name ?? "\u672A\u77E5", type: ch.type });
+        }
+      }
+      if (all.length === 0) {
+        try {
+          const { GuildChannelStore: GuildChannelStore2 } = (init_discord(), __toCommonJS(discord_exports));
+          const result = GuildChannelStore2?.getChannels?.(guildId);
+          if (result) {
+            for (const group of Object.values(result)) {
+              if (!Array.isArray(group)) continue;
+              for (const entry of group) {
+                const ch = entry?.channel ?? entry;
+                if (ch && ch.id && ch.type !== 4) {
+                  all.push({ id: ch.id, name: ch.name ?? "\u672A\u77E5", type: ch.type ?? 0 });
+                }
+              }
+            }
+          }
+        } catch {
+        }
+      }
+      return all;
+    } catch {
+      return [];
+    }
+  }
+  async function collect(token, opts, meId, onProgress, ctrl) {
+    const out = [];
+    if (opts.serverWide && opts.guildId && opts.guildId !== "@me") {
+      let offset = 0;
+      while (out.length < opts.limit) {
+        if (ctrl.stopped) break;
+        onProgress("\u5168\u670D\u68C0\u7D22\u4E2D", `\u5DF2\u627E\u5230 ${out.length} \u6761\uFF08\u641C\u7D22\u63A5\u53E3\u8F83\u6162\uFF0C\u8BF7\u7A0D\u5019\uFF09`);
+        const params = new URLSearchParams({
+          author_id: meId,
+          offset: String(offset),
+          include_nsfw: "true",
+          sort_order: opts.order === "asc" ? "asc" : "desc"
+        });
+        if (opts.after) params.set("min_id", tsToSf(opts.after));
+        if (opts.before) params.set("max_id", tsToSf(opts.before));
+        let res;
+        try {
+          res = await apiFetch(token, `/guilds/${opts.guildId}/messages/search?${params}`);
+        } catch (e) {
+          throw new Error(`\u5168\u670D\u68C0\u7D22\u5931\u8D25\uFF1A${e.message}`);
+        }
+        if (res?.message === "Indexing") {
+          onProgress("\u5EFA\u7ACB\u7D22\u5F15\u4E2D", "Discord \u6B63\u5728\u5EFA\u7ACB\u5168\u670D\u7D22\u5F15\uFF0C10 \u79D2\u540E\u81EA\u52A8\u91CD\u8BD5\u2026");
+          await sleep(1e4);
+          continue;
+        }
+        if (!res?.messages || res.messages.length === 0) break;
+        for (const group of res.messages) {
+          const m = group.find((x) => x?.hit) ?? group.find((x) => x?.author?.id === meId) ?? group[0];
+          if (!m || m.author?.id !== meId || skipList.has(m.id)) continue;
+          out.push({ id: m.id, channelId: m.channel_id, content: m.content ?? "", timestamp: m.timestamp });
+          if (out.length >= opts.limit) break;
+        }
+        if (res.messages.length < 25) break;
+        offset += res.messages.length;
+        await sleep(1200);
+      }
+      return out;
+    }
+    if (!opts.channelId) throw new Error("\u8BF7\u586B\u5199\u9891\u9053 ID\uFF0C\u6216\u5F00\u542F\u300C\u5168\u670D\u626B\u63CF\u300D\u5E76\u586B\u5199\u670D\u52A1\u5668 ID\u3002");
+    let boundary = null;
+    if (opts.order === "desc") {
+      boundary = opts.before ? tsToSf(opts.before) : null;
+    } else {
+      boundary = opts.after ? tsToSf(opts.after) : "0";
+    }
+    while (out.length < opts.limit) {
+      if (ctrl.stopped) break;
+      const params = new URLSearchParams({ limit: "100" });
+      if (boundary) params.set(opts.order === "desc" ? "before" : "after", boundary);
+      let batch;
+      try {
+        batch = await apiFetch(token, `/channels/${opts.channelId}/messages?${params}`);
+      } catch (e) {
+        throw new Error(`\u8BFB\u53D6\u9891\u9053\u6D88\u606F\u5931\u8D25\uFF1A${e.message}`);
+      }
+      if (!Array.isArray(batch) || batch.length === 0) break;
+      for (const m of batch) {
+        const t = new Date(m.timestamp);
+        if (opts.order === "desc" && opts.after && t < opts.after) {
+          return out;
+        }
+        if (opts.order === "asc" && opts.before && t > opts.before) {
+          return out;
+        }
+        const inRange = (!opts.after || t >= opts.after) && (!opts.before || t <= opts.before);
+        if (m.author?.id === meId && inRange && !skipList.has(m.id)) {
+          out.push({ id: m.id, channelId: m.channel_id ?? opts.channelId, content: m.content ?? "", timestamp: m.timestamp });
+          if (out.length >= opts.limit) break;
+        }
+      }
+      boundary = batch[batch.length - 1].id;
+      onProgress("\u626B\u63CF\u4E2D", `\u5DF2\u627E\u5230 ${out.length} \u6761`);
+      await sleep(150);
+    }
+    return out;
+  }
+  async function remove(token, messages, opts, onProgress, ctrl) {
+    let deleted = 0;
+    let skipped = 0;
+    for (const m of messages) {
+      if (ctrl.stopped) break;
+      const t0 = Date.now();
+      try {
+        await apiFetch(token, `/channels/${m.channelId || opts.channelId}/messages/${m.id}`, { method: "DELETE" });
+        deleted++;
+      } catch (e) {
+        skipped++;
+        if (!String(e?.message ?? "").includes("404")) skipList.add(m.id);
+        log14.warn(`skip ${m.id}: ${e?.message ?? e}`);
+      }
+      onProgress("\u5220\u9664\u4E2D", `\u5DF2\u5220\u9664 ${deleted} / ${messages.length}${skipped ? `\uFF08\u8DF3\u8FC7 ${skipped}\uFF09` : ""}`);
+      const elapsed = Date.now() - t0;
+      if (elapsed < opts.delayMs) await sleep(opts.delayMs - elapsed);
+    }
+    return { deleted, skipped };
+  }
+  async function count(token, target, meId) {
+    let url;
+    const params = new URLSearchParams({ author_id: meId, include_nsfw: "true" });
+    if (target.serverWide && target.guildId && target.guildId !== "@me") {
+      url = `/guilds/${target.guildId}/messages/search?${params}`;
+    } else if (target.channelId) {
+      url = `/channels/${target.channelId}/messages/search?${params}`;
+    } else if (target.guildId && target.guildId !== "@me") {
+      url = `/guilds/${target.guildId}/messages/search?${params}`;
+    } else {
+      throw new Error("\u8BF7\u586B\u5199\u670D\u52A1\u5668 ID \u6216\u9891\u9053 ID\u3002");
+    }
+    const res = await apiFetch(token, url);
+    if (res?.message === "Indexing") return { total: 0, indexing: true };
+    return { total: res?.total_results ?? 0, indexing: false };
+  }
+
+  // src/plugins/message-cleaner/ui/CleanerPage.tsx
+  var log15 = logger("message-cleaner");
+  function formatTs(ts) {
+    const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+  function CleanerPage() {
+    const [token, setToken] = useState("");
+    const [guildId, setGuildId] = useState("");
+    const [channelId, setChannelId] = useState("");
+    const [serverWide, setServerWide] = useState(false);
+    const [afterStr, setAfterStr] = useState("");
+    const [beforeStr, setBeforeStr] = useState("");
+    const [order, setOrder] = useState(settings4.store.order);
+    const [disclaimer, setDisclaimer] = useState(false);
+    const [mode, setMode] = useState("idle");
+    const [previewed, setPreviewed] = useState([]);
+    const [state, setState] = useState("\u5F85\u673A");
+    const [detail, setDetail] = useState("\u5148\u83B7\u53D6 Token\uFF0C\u9009\u597D\u8303\u56F4\u5E76\u9884\u89C8\uFF0C\u786E\u8BA4\u540E\u518D\u5220\u9664\u3002");
+    const [statCount, setStatCount] = useState(null);
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [pickerGuilds, setPickerGuilds] = useState([]);
+    const [pickerChannels, setPickerChannels] = useState([]);
+    const [pickerLevel, setPickerLevel] = useState("guilds");
+    const [pickerGuildName, setPickerGuildName] = useState("");
+    const ctrlRef = useRef({ stopped: false });
+    const running = mode !== "idle";
+    useEffect(() => {
+      const tok = extractToken();
+      if (tok) {
+        setToken(tok);
+        setState("\u5DF2\u83B7\u53D6 Token");
+        setDetail("\u53EF\u70B9\u51FB\u300C\u5217\u8868\u300D\u9009\u62E9\u9891\u9053\uFF0C\u6216\u624B\u52A8\u586B\u5199 ID\u3002");
+      }
+    }, []);
+    const progress = (s, d) => {
+      setState(s);
+      setDetail(d);
+    };
+    const requireToken = () => {
+      const t = token.trim();
+      if (!t) throw new Error("\u8BF7\u5148\u83B7\u53D6\u6216\u586B\u5165 Token\u3002");
+      return t;
+    };
+    const buildOptions = () => ({
+      guildId: guildId.trim(),
+      channelId: serverWide ? "" : channelId.trim(),
+      serverWide,
+      order,
+      limit: settings4.store.limit,
+      delayMs: settings4.store.delayMs,
+      after: afterStr ? new Date(afterStr) : null,
+      before: beforeStr ? new Date(beforeStr) : null
+    });
+    const onAutoToken = () => {
+      const tok = extractToken();
+      if (tok) {
+        setToken(tok);
+        progress("Token \u5DF2\u83B7\u53D6", "\u53EF\u70B9\u51FB\u300C\u5217\u8868\u300D\u9009\u62E9\u9891\u9053\u3002");
+      } else progress("\u83B7\u53D6\u5931\u8D25", "\u8BF7\u624B\u52A8\u7C98\u8D34 Token\u3002");
+    };
+    const useCurrent = () => {
+      const target = currentTarget();
+      if (!target) {
+        progress("\u65E0\u6CD5\u8BFB\u53D6", "\u5F53\u524D\u4E0D\u5728\u67D0\u4E2A\u9891\u9053/\u79C1\u4FE1\u9875\u9762\u3002");
+        return;
+      }
+      setGuildId(target.guildId);
+      setChannelId(target.channelId);
+      setServerWide(false);
+      progress("\u5DF2\u586B\u5165\u5F53\u524D\u9891\u9053", `\u670D\u52A1\u5668 ${target.guildId} \xB7 \u9891\u9053 ${target.channelId}`);
+    };
+    const openPicker = () => {
+      const guilds = getGuilds();
+      setPickerGuilds([{ id: "@me", name: "\u79C1\u4FE1\u4E0E\u7FA4\u804A (DMs)", icon: null }, ...guilds]);
+      setPickerChannels([]);
+      setPickerLevel("guilds");
+      setPickerOpen(true);
+    };
+    const pickGuild = (g2) => {
+      setGuildId(g2.id);
+      if (g2.id === "@me") {
+        setPickerOpen(false);
+        progress("\u5DF2\u9009\u62E9\u79C1\u4FE1", "\u8BF7\u624B\u52A8\u586B\u5199\u79C1\u4FE1\u9891\u9053 ID\u3002");
+        return;
+      }
+      setPickerGuildName(g2.name);
+      const channels = getChannels(g2.id);
+      setPickerChannels([{ id: "", name: "\u2500\u2500 \u5168\u670D\u626B\u63CF\uFF08\u4E0D\u9650\u9891\u9053\uFF09\u2500\u2500", type: -1 }, ...channels]);
+      setPickerLevel("channels");
+    };
+    const pickChannel = (ch) => {
+      if (!ch.id) {
+        setServerWide(true);
+        setChannelId("");
+      } else {
+        setServerWide(false);
+        setChannelId(ch.id);
+      }
+      setPickerOpen(false);
+      progress("\u5DF2\u9009\u62E9", `${pickerGuildName} \u2192 ${ch.name || "\u5168\u670D"}`);
+    };
+    const syncNow = () => {
+      const now = /* @__PURE__ */ new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      setBeforeStr(now.toISOString().slice(0, 16));
+    };
+    const onPreview = async () => {
+      let tok;
+      try {
+        tok = requireToken();
+      } catch (e) {
+        progress("\u5931\u8D25", e.message);
+        return;
+      }
+      const meId = currentUserId2();
+      if (!meId) {
+        progress("\u5931\u8D25", "\u62FF\u4E0D\u5230\u5F53\u524D\u8D26\u53F7\uFF0C\u8BF7\u786E\u8BA4\u5DF2\u767B\u5F55 Discord\u3002");
+        return;
+      }
+      const opts = buildOptions();
+      if (opts.serverWide && (!opts.guildId || opts.guildId === "@me")) {
+        progress("\u5931\u8D25", "\u5168\u670D\u626B\u63CF\u9700\u8981\u586B\u5199\u670D\u52A1\u5668 ID\u3002");
+        return;
+      }
+      if (!opts.serverWide && !opts.channelId) {
+        progress("\u5931\u8D25", "\u8BF7\u586B\u5199\u9891\u9053 ID\uFF0C\u6216\u6539\u7528\u5168\u670D\u626B\u63CF\u3002");
+        return;
+      }
+      if (opts.after && opts.before && opts.after >= opts.before) {
+        progress("\u5931\u8D25", "\u8D77\u59CB\u65F6\u95F4\u5FC5\u987B\u65E9\u4E8E\u7ED3\u675F\u65F6\u95F4\u3002");
+        return;
+      }
+      ctrlRef.current = { stopped: false };
+      setMode("previewing");
+      setPreviewed([]);
+      progress("\u9884\u89C8\u4E2D", "\u6B63\u5728\u626B\u63CF\u4F60\u7684\u6D88\u606F\u2026");
+      try {
+        const found = await collect(tok, opts, meId, progress, ctrlRef.current);
+        setPreviewed(found);
+        progress(ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u9884\u89C8\u5B8C\u6210", `\u627E\u5230 ${found.length} \u6761\u4F60\u7684\u6D88\u606F\u3002`);
+      } catch (err) {
+        progress("\u5931\u8D25", err.message ?? String(err));
+        log15.error("preview failed", err);
+      } finally {
+        setMode("idle");
+      }
+    };
+    const onDelete = async () => {
+      if (previewed.length === 0) {
+        progress("\u8BF7\u5148\u9884\u89C8", "");
+        return;
+      }
+      if (settings4.store.confirmBeforeDelete) {
+        const ok = window.confirm(`\u5C06\u5220\u9664 ${previewed.length} \u6761\u6D88\u606F\uFF0C\u5220\u9664\u4E0D\u53EF\u6062\u590D\uFF0C\u786E\u8BA4\u7EE7\u7EED\uFF1F`);
+        if (!ok) return;
+      }
+      let tok;
+      try {
+        tok = requireToken();
+      } catch (e) {
+        progress("\u5931\u8D25", e.message);
+        return;
+      }
+      const opts = buildOptions();
+      ctrlRef.current = { stopped: false };
+      setMode("deleting");
+      progress("\u5220\u9664\u4E2D", `0 / ${previewed.length}`);
+      try {
+        const result = await remove(tok, previewed, opts, progress, ctrlRef.current);
+        progress(
+          ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u5B8C\u6210",
+          `\u5DF2\u5220\u9664 ${result.deleted} \u6761${result.skipped ? `\uFF0C\u8DF3\u8FC7 ${result.skipped} \u6761` : ""}\u3002`
+        );
+        setPreviewed([]);
+      } catch (err) {
+        progress("\u5931\u8D25", err.message ?? String(err));
+        log15.error("delete failed", err);
+      } finally {
+        setMode("idle");
+      }
+    };
+    const onStop = () => {
+      ctrlRef.current.stopped = true;
+      progress("\u505C\u6B62\u4E2D", "\u7B49\u5F85\u5F53\u524D\u8BF7\u6C42\u7ED3\u675F\u2026");
+    };
+    const onCount = async () => {
+      let tok;
+      try {
+        tok = requireToken();
+      } catch (e) {
+        progress("\u5931\u8D25", e.message);
+        return;
+      }
+      const meId = currentUserId2();
+      if (!meId) {
+        progress("\u5931\u8D25", "\u62FF\u4E0D\u5230\u5F53\u524D\u8D26\u53F7\u3002");
+        return;
+      }
+      const target = { guildId: guildId.trim(), channelId: serverWide ? "" : channelId.trim(), serverWide };
+      setStatCount(null);
+      progress("\u7EDF\u8BA1\u4E2D", "\u8C03\u7528\u641C\u7D22\u63A5\u53E3\u2026");
+      try {
+        const result = await count(tok, target, meId);
+        if (result.indexing) {
+          progress("\u5EFA\u7ACB\u7D22\u5F15\u4E2D", "Discord \u6B63\u5728\u5EFA\u7ACB\u7D22\u5F15\uFF0C\u7A0D\u540E\u518D\u8BD5\u3002");
+          return;
+        }
+        setStatCount(result.total);
+        progress("\u7EDF\u8BA1\u5B8C\u6210", `\u5171 ${result.total} \u6761\u53D1\u8A00\u3002`);
+      } catch (err) {
+        progress("\u5931\u8D25", err.message ?? String(err));
+      }
+    };
+    if (pickerOpen) {
+      return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-head" }, pickerLevel === "channels" && /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => setPickerLevel("guilds") }, "\u2190 \u8FD4\u56DE"), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__picker-title" }, pickerLevel === "guilds" ? "\u9009\u62E9\u670D\u52A1\u5668" : pickerGuildName), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => setPickerOpen(false) }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-list" }, pickerLevel === "guilds" ? pickerGuilds.map((g2) => /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: g2.id,
+          className: "hc-cleaner__picker-item",
+          onClick: () => pickGuild(g2),
+          role: "button",
+          tabIndex: 0,
+          onKeyDown: (e) => {
+            if (e.key === "Enter") pickGuild(g2);
+          }
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-icon" }, g2.icon ? /* @__PURE__ */ React.createElement("img", { src: `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.png?size=64`, alt: "" }) : g2.name.charAt(0)),
+        /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, g2.name)
+      )) : pickerChannels.map((ch) => /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: ch.id || "server-wide",
+          className: "hc-cleaner__picker-item",
+          onClick: () => pickChannel(ch),
+          role: "button",
+          tabIndex: 0,
+          onKeyDown: (e) => {
+            if (e.key === "Enter") pickChannel(ch);
+          }
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-icon" }, ch.id ? "#" : "\u{1F310}"),
+        /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, ch.name)
+      )), pickerLevel === "channels" && pickerChannels.length <= 1 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-empty" }, "\u6B64\u670D\u52A1\u5668\u6682\u65E0\u7F13\u5B58\u7684\u9891\u9053\uFF0C\u53EF\u624B\u52A8\u586B\u5199\u9891\u9053 ID\u3002")));
+    }
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u5220\u9664\u4E0D\u53EF\u6062\u590D\uFF0C\u4E14\u53EA\u4F1A\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u8BF7\u52A1\u5FC5\u5148\u9884\u89C8\u786E\u8BA4\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
+      Select,
+      {
+        value: order,
+        onChange: setOrder,
+        options: [
+          { value: "desc", label: "\u4ECE\u65B0\u5230\u8001" },
+          { value: "asc", label: "\u4ECE\u8001\u5230\u65B0" }
+        ]
+      }
+    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u786E\u8BA4", note: "\u5220\u9664\u662F\u4E0D\u53EF\u9006\u64CD\u4F5C\uFF0C\u8BF7\u5148\u9884\u89C8\u518D\u5220\u9664\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6211\u786E\u8BA4\u53EA\u5220\u9664\u81EA\u5DF1\u7684\u6D88\u606F\uFF0C\u4E14\u660E\u767D\u4E0D\u53EF\u6062\u590D")), /* @__PURE__ */ React.createElement(Toggle, { checked: disclaimer, onChange: setDisclaimer, "aria-label": "\u786E\u8BA4" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__actions" }, mode === "previewing" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u9884\u89C8") : /* @__PURE__ */ React.createElement(Button, { variant: "primary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running, onClick: onPreview }, "\u9884\u89C8"), mode === "deleting" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u5220\u9664") : /* @__PURE__ */ React.createElement(
+      Button,
+      {
+        variant: "destructive",
+        icon: /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }),
+        disabled: running || !disclaimer || previewed.length === 0,
+        onClick: onDelete
+      },
+      "\u5220\u9664\u9884\u89C8\uFF08",
+      previewed.length,
+      "\uFF09"
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-state" }, state), detail && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-detail" }, detail)), previewed.length > 0 && /* @__PURE__ */ React.createElement(Section, { title: `\u9884\u89C8\u7ED3\u679C\uFF08${previewed.length}\uFF09` }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__list" }, previewed.slice(0, 50).map((m) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__item", key: m.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-time" }, formatTs(m.timestamp)), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-text" }, m.content.trim() || "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09"))), previewed.length > 50 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u2026\u8FD8\u6709 ", previewed.length - 50, " \u6761\u672A\u5C55\u793A"))), /* @__PURE__ */ React.createElement(Section, { title: "\u7EDF\u8BA1", note: "\u7EDF\u8BA1\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u5386\u53F2\u53D1\u8A00\u603B\u6570\uFF08\u8C03\u7528\u641C\u7D22\u63A5\u53E3\uFF09\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running, onClick: onCount }, "\u7EDF\u8BA1\u6211\u7684\u53D1\u8A00\u6570")), statCount != null && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cleaner__stat" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-num" }, statCount), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-unit" }, "\u6761"))));
+  }
+
+  // src/plugins/message-cleaner/index.tsx
+  var log16 = logger("message-cleaner");
+  var message_cleaner_default = definePlugin({
+    id: "message-cleaner",
+    name: "\u6D88\u606F\u6E05\u7406",
+    description: "\u6279\u91CF\u5220\u9664\u4F60\u81EA\u5DF1\u5728\u67D0\u4E2A\u9891\u9053\u6216\u6574\u4E2A\u670D\u52A1\u5668\u7684\u5386\u53F2\u6D88\u606F\uFF08\u81EA\u52A9\u51B2\u6C34\u673A\uFF09\u3002\u5148\u9884\u89C8\u518D\u5220\u9664\uFF0C\u4EC5\u9650\u672C\u4EBA\u6D88\u606F\uFF0C\u5220\u9664\u4E0D\u53EF\u6062\u590D\u3002",
+    authors: [{ name: "caitemm" }, { name: "catie" }],
+    category: "privacy",
+    settings: settings4,
+    page: {
+      title: "\u6E05\u7406",
+      icon: TrashIcon,
+      component: CleanerPage
+    },
+    start() {
+      log16.info("message-cleaner ready");
+    },
+    stop() {
+    }
+  });
+
   // src/plugins/index.ts
-  var plugins = [settings_host_default, message_logger_default, show_username_default, guild_monitor_default];
+  var plugins = [settings_host_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default];
 
   // src/userscript/main.ts
-  var log14 = logger("userscript");
+  init_webpack();
+  init_logger();
+  var log17 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -5046,6 +5967,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log14.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log14.error("userscript boot failed", err));
+    log17.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log17.error("userscript boot failed", err));
 })();

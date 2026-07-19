@@ -1399,3 +1399,146 @@
   padding: 1px 6px 1px 8px;
   border-radius: 3px;
 }
+
+/* ── message-cleaner page ─────────────────────────────────────────────────
+ * The self-message cleaner's operate surface. Scope/confirm reuse .hc-section
+ * and .hc-cell; these rules cover the action bar, the live status line, the
+ * preview list, and the stat readout. Decorates Halcyon's own panel, so every
+ * value is a token. */
+.hc-cleaner__actions {
+  display: flex;
+  gap: var(--hc-space-3);
+  margin: var(--hc-space-4) 0;
+}
+.hc-cleaner__actions .hc-btn {
+  flex: 1;
+}
+.hc-cleaner__status {
+  margin: var(--hc-space-3) 0;
+  padding: var(--hc-space-3) var(--hc-space-4);
+  background: var(--hc-fill-secondary);
+  border-radius: var(--hc-radius-md);
+}
+.hc-cleaner__status-state {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+.hc-cleaner__status-detail {
+  margin-top: 2px;
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  word-break: break-word;
+}
+.hc-cleaner__list {
+  display: flex;
+  flex-direction: column;
+}
+.hc-cleaner__item {
+  display: flex;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-4);
+  font-size: var(--hc-text-footnote);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__item:last-child {
+  border-bottom: none;
+}
+.hc-cleaner__item-time {
+  flex-shrink: 0;
+  color: var(--hc-accent);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__item-text {
+  color: var(--hc-label-primary);
+  word-break: break-word;
+}
+.hc-cleaner__more {
+  padding: var(--hc-space-2) var(--hc-space-4);
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+}
+.hc-cleaner__stat {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: var(--hc-space-2);
+}
+.hc-cleaner__stat-num {
+  font-size: var(--hc-text-title1);
+  font-weight: 700;
+  color: var(--hc-accent);
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__stat-unit {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+}
+
+/* ── message-cleaner picker ─────────────────────────────────────────────── */
+.hc-cleaner__picker-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-3) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__picker-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 700;
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-primary);
+}
+.hc-cleaner__picker-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 360px;
+  padding: var(--hc-space-2);
+}
+.hc-cleaner__picker-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  cursor: pointer;
+  color: var(--hc-label-primary);
+  transition: background var(--hc-duration-fast) var(--hc-ease);
+}
+.hc-cleaner__picker-item:hover {
+  background: var(--hc-fill-secondary);
+}
+.hc-cleaner__picker-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--hc-fill-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-secondary);
+}
+.hc-cleaner__picker-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hc-cleaner__picker-name {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hc-cleaner__picker-empty {
+  padding: var(--hc-space-5);
+  text-align: center;
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-tertiary);
+}

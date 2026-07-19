@@ -9,5 +9,6 @@ import settingsHost from "./settings-host";
 import messageLogger from "./message-logger";
 import showUsername from "./show-username";
 import guildMonitor from "./guild-monitor";
+import messageCleaner from "./message-cleaner";
 
-export const plugins: Plugin[] = [settingsHost, messageLogger, showUsername, guildMonitor];
+export const plugins: Plugin[] = [settingsHost, messageLogger, showUsername, guildMonitor, messageCleaner];
