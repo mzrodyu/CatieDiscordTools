@@ -1,0 +1,16 @@
+node_modules/
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.tsbuildinfo
+halcyon-settings-backup-*.json
+
+# Build output is ignored except the two artifacts users install directly
+# from the repository (userscript one-click install, unpacked extension).
+dist/*
+!dist/halcyon.user.js
+!dist/extension/
+
+# Local Claude Code settings
+.claude/

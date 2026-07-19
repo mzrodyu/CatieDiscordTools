@@ -1,0 +1,1211 @@
+/*
+ * Component styles.
+ *
+ * Class-based, scoped under `.halcyon`. All values reference tokens.css; there
+ * are no raw colors or sizes here. Interaction states use flat fills and
+ * opacity, never gradients.
+ */
+
+.halcyon,
+.halcyon * {
+  box-sizing: border-box;
+}
+
+.halcyon {
+  font-family: var(--hc-font);
+  color: var(--hc-label-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Typographic helpers ------------------------------------------------- */
+
+.hc-title2 {
+  font-size: var(--hc-text-title2);
+  line-height: var(--hc-lh-title2);
+  font-weight: 700;
+}
+
+.hc-title3 {
+  font-size: var(--hc-text-title3);
+  line-height: var(--hc-lh-title3);
+  font-weight: 600;
+}
+
+.hc-headline {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+}
+
+.hc-body {
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  font-weight: 400;
+}
+
+.hc-callout {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+}
+
+.hc-footnote {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-muted {
+  color: var(--hc-label-secondary);
+}
+
+/* --- Button -------------------------------------------------------------- */
+
+.hc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-2);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  font-weight: 600;
+  border-radius: var(--hc-radius-md);
+  padding: 0 var(--hc-space-4);
+  height: 40px;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    opacity var(--hc-duration-fast) var(--hc-ease),
+    transform var(--hc-duration-fast) var(--hc-ease);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.hc-btn:active {
+  transform: scale(0.98);
+}
+
+.hc-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+}
+
+.hc-btn--sm {
+  height: 32px;
+  font-size: var(--hc-text-subhead);
+  padding: 0 var(--hc-space-3);
+}
+
+.hc-btn--lg {
+  height: 50px;
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-btn--primary {
+  background: var(--hc-accent);
+  color: #ffffff;
+}
+
+.hc-btn--primary:hover:not(:disabled) {
+  background: var(--hc-accent-pressed);
+}
+
+.hc-btn--secondary {
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-primary);
+}
+
+.hc-btn--secondary:hover:not(:disabled) {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-btn--plain {
+  background: transparent;
+  color: var(--hc-accent);
+  padding-left: var(--hc-space-2);
+  padding-right: var(--hc-space-2);
+}
+
+.hc-btn--plain:hover:not(:disabled) {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-btn--destructive {
+  background: transparent;
+  color: var(--hc-red);
+}
+
+.hc-btn--destructive:hover:not(:disabled) {
+  background: rgba(255, 69, 58, 0.16);
+}
+
+/* --- Toggle -------------------------------------------------------------- */
+
+.hc-toggle {
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-fill-secondary);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-toggle[data-on="true"] {
+  background: var(--hc-green);
+}
+
+.hc-toggle:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hc-toggle__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: var(--hc-elev-1);
+  transition: transform var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-toggle[data-on="true"] .hc-toggle__knob {
+  transform: translateX(20px);
+}
+
+/* --- Section ------------------------------------------------------------- */
+
+.hc-section {
+  margin-top: var(--hc-space-6);
+}
+
+.hc-section:first-child {
+  margin-top: 0;
+}
+
+.hc-section__title {
+  font-size: var(--hc-text-subhead);
+  line-height: var(--hc-lh-subhead);
+  color: var(--hc-label-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 var(--hc-space-4);
+  margin-bottom: var(--hc-space-2);
+}
+
+.hc-section__body {
+  background: var(--hc-bg-secondary);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+}
+
+.hc-section__note {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+  padding: var(--hc-space-2) var(--hc-space-4) 0;
+}
+
+/* --- List row ------------------------------------------------------------ */
+
+.hc-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  min-height: 44px;
+  padding: var(--hc-space-2) var(--hc-space-4);
+  position: relative;
+}
+
+.hc-row + .hc-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 56px;
+  right: 0;
+  height: 1px;
+  background: var(--hc-separator);
+  transform: scaleY(0.5);
+}
+
+.hc-row--button {
+  cursor: pointer;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-row--button:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-row--button:active {
+  background: var(--hc-fill-primary);
+}
+
+.hc-row__icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--hc-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.hc-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-row__title {
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  color: var(--hc-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-row__subtitle {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-row__accessory {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  color: var(--hc-label-secondary);
+}
+
+.hc-row__chevron {
+  color: var(--hc-label-tertiary);
+}
+
+/* --- Text input ---------------------------------------------------------- */
+
+.hc-input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  background: var(--hc-fill-primary);
+  border: 2px solid transparent;
+  border-radius: var(--hc-radius-md);
+  padding: 0 var(--hc-space-3);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  outline: none;
+  transition: border-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-input::placeholder {
+  color: var(--hc-label-tertiary);
+}
+
+.hc-input:focus {
+  border-color: var(--hc-accent);
+}
+
+/* --- Number stepper ------------------------------------------------------ */
+
+.hc-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: var(--hc-fill-primary);
+  border-radius: var(--hc-radius-md);
+  overflow: hidden;
+}
+
+.hc-stepper__btn {
+  width: 36px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--hc-label-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-stepper__btn:hover:not(:disabled) {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-stepper__btn:disabled {
+  color: var(--hc-label-quaternary);
+  cursor: default;
+}
+
+.hc-stepper__value {
+  min-width: 44px;
+  text-align: center;
+  font-size: var(--hc-text-callout);
+  font-variant-numeric: tabular-nums;
+  color: var(--hc-label-primary);
+}
+
+/* --- Select -------------------------------------------------------------- */
+
+/* Self-drawn dropdown: pill button + floating iOS-style menu sheet. */
+.hc-select {
+  position: relative;
+  display: inline-block;
+}
+
+.hc-select__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 32px;
+  background: var(--hc-fill-primary);
+  border: none;
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  padding: 0 var(--hc-space-3);
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+}
+
+.hc-select__button:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-select__button:focus-visible {
+  box-shadow: 0 0 0 2px var(--hc-accent);
+}
+
+.hc-select__chevron {
+  color: var(--hc-label-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.hc-select__chevron[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+.hc-select__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10000;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: var(--hc-space-1);
+  background: var(--hc-bg-elevated, #2c2c2e);
+  border-radius: var(--hc-radius-lg, 12px);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 10px 32px rgba(0, 0, 0, 0.45);
+  animation: hc-select-pop 0.14s ease;
+}
+
+@keyframes hc-select-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hc-select__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-3);
+  width: 100%;
+  border: none;
+  background: none;
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  text-align: left;
+  padding: 7px var(--hc-space-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hc-select__option[data-active="true"] {
+  background: var(--hc-fill-primary);
+}
+
+.hc-select__option[data-selected="true"] {
+  color: var(--hc-accent);
+}
+
+.hc-select__check {
+  flex: none;
+  color: var(--hc-accent);
+}
+
+/* --- String list --------------------------------------------------------- */
+
+.hc-strlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-4) var(--hc-space-3);
+}
+
+.hc-strlist__item {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+}
+
+.hc-strlist__add {
+  display: flex;
+  gap: var(--hc-space-2);
+}
+
+.hc-iconbtn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--hc-radius-md);
+  border: none;
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-iconbtn:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-iconbtn--danger:hover {
+  color: var(--hc-red);
+}
+
+/* --- Badge --------------------------------------------------------------- */
+
+.hc-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--hc-space-2);
+  border-radius: var(--hc-radius-pill);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption1);
+  font-weight: 600;
+}
+
+.hc-badge[data-tone="neutral"] {
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-secondary);
+}
+
+.hc-badge[data-tone="accent"] {
+  background: rgba(10, 132, 255, 0.2);
+  color: var(--hc-accent);
+}
+
+.hc-badge[data-tone="green"] {
+  background: rgba(48, 209, 88, 0.2);
+  color: var(--hc-green);
+}
+
+.hc-badge[data-tone="red"] {
+  background: rgba(255, 69, 58, 0.2);
+  color: var(--hc-red);
+}
+
+.hc-badge[data-tone="orange"] {
+  background: rgba(255, 159, 10, 0.2);
+  color: var(--hc-orange);
+}
+
+/* --- Empty state --------------------------------------------------------- */
+
+.hc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--hc-space-10) var(--hc-space-6);
+  color: var(--hc-label-tertiary);
+}
+
+.hc-empty__title {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+  color: var(--hc-label-secondary);
+  margin-top: var(--hc-space-4);
+}
+
+.hc-empty__subtitle {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  color: var(--hc-label-tertiary);
+  margin-top: var(--hc-space-2);
+  max-width: 320px;
+}
+
+/* --- Overlay + panel (fallback entry point) ------------------------------ */
+
+.hc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  animation: hc-fade var(--hc-duration-slow) var(--hc-ease);
+}
+
+.hc-panel {
+  width: min(900px, 92vw);
+  height: min(720px, 88vh);
+  background: var(--hc-bg-primary);
+  border-radius: var(--hc-radius-xl);
+  box-shadow: var(--hc-elev-3);
+  display: flex;
+  overflow: hidden;
+  animation: hc-rise var(--hc-duration-slow) var(--hc-ease);
+}
+
+.hc-panel__sidebar {
+  width: 220px;
+  flex: none;
+  background: var(--hc-bg-secondary);
+  border-right: 1px solid var(--hc-separator-opaque);
+  padding: var(--hc-space-4) var(--hc-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-panel__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-4);
+  color: var(--hc-label-primary);
+}
+
+.hc-panel__brand-name {
+  font-size: var(--hc-text-headline);
+  font-weight: 700;
+}
+
+.hc-navitem {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-secondary);
+  cursor: pointer;
+  font-size: var(--hc-text-callout);
+  border: none;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-navitem:hover {
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-primary);
+}
+
+.hc-navitem[data-active="true"] {
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-primary);
+}
+
+.hc-panel__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator-opaque);
+}
+
+.hc-panel__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-8);
+}
+
+.hc-embed {
+  /* When embedded in Discord's own settings pane rather than the overlay. */
+  padding: var(--hc-space-2) 0 var(--hc-space-8);
+}
+
+@keyframes hc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Respect the OS "reduce motion" preference. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-overlay,
+  .hc-panel,
+  .hc-btn,
+  .hc-toggle__knob {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* --- Setting cells (schema-driven form) ---------------------------------- */
+
+.hc-cell {
+  padding: var(--hc-space-2) var(--hc-space-4);
+  position: relative;
+}
+
+.hc-cell + .hc-cell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--hc-space-4);
+  right: 0;
+  height: 1px;
+  background: var(--hc-separator);
+  transform: scaleY(0.5);
+}
+
+.hc-cell--row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  min-height: 44px;
+}
+
+.hc-cell__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-cell__label {
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  color: var(--hc-label-primary);
+}
+
+.hc-cell__desc {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-cell__control {
+  flex: none;
+}
+
+.hc-cell__stacked {
+  padding-top: var(--hc-space-2);
+}
+
+/* --- Toolbar (search + actions) ------------------------------------------ */
+
+.hc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  margin-bottom: var(--hc-space-4);
+}
+
+.hc-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 36px;
+  padding: 0 var(--hc-space-3);
+  background: var(--hc-fill-primary);
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-tertiary);
+}
+
+.hc-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+}
+
+.hc-search input::placeholder {
+  color: var(--hc-label-tertiary);
+}
+
+/* --- Plugin detail header ------------------------------------------------ */
+
+.hc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-1);
+  background: transparent;
+  border: none;
+  color: var(--hc-accent);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) 0;
+  margin-bottom: var(--hc-space-4);
+}
+
+.hc-detail-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-3);
+  margin-bottom: var(--hc-space-5);
+}
+
+.hc-detail-head__icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--hc-radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.hc-detail-head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-detail-head__name {
+  font-size: var(--hc-text-title3);
+  line-height: var(--hc-lh-title3);
+  font-weight: 600;
+}
+
+.hc-detail-head__desc {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  color: var(--hc-label-secondary);
+  margin-top: 2px;
+}
+
+.hc-detail-head__meta {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-tertiary);
+  margin-top: var(--hc-space-2);
+}
+
+/* --- Log viewer ---------------------------------------------------------- */
+
+.hc-logs {
+  font-family: var(--hc-font-mono);
+  font-size: var(--hc-text-footnote);
+  line-height: 1.7;
+  background: var(--hc-bg-secondary);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-space-3);
+  overflow-x: auto;
+}
+
+.hc-logline {
+  display: flex;
+  gap: var(--hc-space-2);
+  white-space: pre;
+  padding: 1px 0;
+}
+
+.hc-logline__time {
+  color: var(--hc-label-tertiary);
+  flex: none;
+}
+
+.hc-logline__scope {
+  color: var(--hc-label-secondary);
+  flex: none;
+}
+
+.hc-logline__msg {
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hc-logline[data-level="warn"] .hc-logline__msg {
+  color: var(--hc-orange);
+}
+
+.hc-logline[data-level="error"] .hc-logline__msg {
+  color: var(--hc-red);
+}
+
+.hc-logline[data-level="debug"] .hc-logline__msg {
+  color: var(--hc-label-secondary);
+}
+
+/* --- About --------------------------------------------------------------- */
+
+.hc-about__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hc-about__value {
+  color: var(--hc-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Generic vertical rhythm --------------------------------------------- */
+
+.hc-stack > * + * {
+  margin-top: var(--hc-space-4);
+}
+
+.hc-inline-note {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  color: var(--hc-orange);
+  font-size: var(--hc-text-footnote);
+}
+
+.hc-inline-note--danger {
+  color: var(--hc-red);
+}
+
+/* --- Detail head toggle stays top-aligned with the icon ------------------ */
+
+.hc-detail-head > span {
+  flex: none;
+  padding-top: var(--hc-space-1);
+}
+
+/* --- About hero ---------------------------------------------------------- */
+
+.hc-about-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) 0 var(--hc-space-4);
+  color: var(--hc-label-primary);
+}
+
+.hc-about-hero__name {
+  font-size: var(--hc-text-title2);
+  line-height: var(--hc-lh-title2);
+  font-weight: 700;
+}
+
+.hc-about-hero__ver {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+/* --- Tabs (used by plugin pages) ----------------------------------------- */
+
+.hc-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  margin-bottom: var(--hc-space-4);
+}
+
+.hc-tabs__spacer {
+  flex: 1;
+}
+
+.hc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 32px;
+  padding: 0 var(--hc-space-3);
+  border: none;
+  border-radius: var(--hc-radius-md);
+  background: transparent;
+  color: var(--hc-label-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-tab:hover {
+  color: var(--hc-label-primary);
+}
+
+.hc-tab[data-active="true"] {
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-primary);
+}
+
+/* --- Captured message entries -------------------------------------------- */
+
+.hc-msglist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-2);
+}
+
+.hc-msg {
+  background: var(--hc-bg-secondary);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-space-3) var(--hc-space-4);
+  border-left: 2px solid var(--hc-red);
+}
+
+.hc-msg__head {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  margin-bottom: var(--hc-space-1);
+}
+
+.hc-msg__author {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+
+.hc-msg__where {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-msg__time {
+  margin-left: auto;
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-msg__body {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hc-msg__empty {
+  color: var(--hc-label-tertiary);
+  font-style: italic;
+}
+
+.hc-msg__meta {
+  margin-top: var(--hc-space-1);
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-msg__versions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-1);
+}
+
+.hc-msg__version {
+  display: flex;
+  gap: var(--hc-space-2);
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+}
+
+.hc-msg__vtag {
+  flex: none;
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--hc-text-footnote);
+  padding-top: 2px;
+}
+
+.hc-msg__vbody {
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The `edited` tone reuses the orange rule via a modifier. */
+.hc-msg--edited {
+  border-left-color: var(--hc-orange);
+}
+
+/* --- Deleted message (in-chat) ------------------------------------------- */
+
+/*
+ * Applied to Discord's own message row when a deleted message is kept in place.
+ * These live outside the .halcyon scope on purpose — they decorate Discord
+ * elements — so literal values, no tokens. One base class plus a per-style
+ * modifier chosen in the plugin's settings.
+ */
+
+/* Style: red tint (default) — flat red wash + left bar. */
+.hc-deleted--tint {
+  background-color: rgba(255, 69, 58, 0.1);
+  box-shadow: inset 2px 0 0 #ff453a;
+}
+
+/* Style: red text — content turns red, no background. */
+.hc-deleted--text [class*="messageContent"],
+.hc-deleted--text [class*="contents"] > div:not([class*="header"]) {
+  color: #f04747 !important;
+}
+.hc-deleted--text [class*="messageContent"] a {
+  color: #ff6b6b !important;
+}
+
+/* Style: ghost — the whole row fades. */
+.hc-deleted--ghost {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+/* Style: strike — red strikethrough over the text. */
+.hc-deleted--strike [class*="messageContent"] {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 69, 58, 0.7);
+  text-decoration-thickness: 1.5px;
+}
+.hc-deleted--strike {
+  box-shadow: inset 2px 0 0 rgba(255, 69, 58, 0.5);
+}
+
+/* "This message was deleted (…)": marker row under the content. One base
+ * class plus a look modifier chosen in settings. */
+.hc-deleted-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  color: #f04747;
+  user-select: none;
+}
+.hc-deleted-marker__icon {
+  flex: none;
+}
+
+/* Look: badge — pill-shaped chip. */
+.hc-deleted-marker--badge {
+  display: inline-flex;
+  background: rgba(255, 69, 58, 0.12);
+  border-radius: 9999px;
+  padding: 2px 10px;
+  margin-top: 4px;
+}
+
+/* Look: quote — indented behind a red bar, like a blockquote. */
+.hc-deleted-marker--quote {
+  border-left: 3px solid rgba(255, 69, 58, 0.7);
+  padding-left: 8px;
+  margin-top: 4px;
+  color: rgba(240, 71, 71, 0.85);
+}
+
+/* --- Username next to nickname (show-username plugin) --------------------- */
+
+/*
+ * Appended inside Discord's message header, so literal values, no tokens.
+ * One base class plus a per-style modifier chosen in the plugin's settings.
+ */
+.hc-username {
+  font-size: 0.75rem;
+  font-weight: 500;
+  vertical-align: baseline;
+}
+
+.hc-username--muted {
+  color: var(--text-muted, #949ba4);
+}
+
+.hc-username--pill {
+  color: var(--text-muted, #949ba4);
+  background: rgba(128, 132, 142, 0.16);
+  border-radius: 9999px;
+  padding: 0 6px;
+  line-height: 1.35;
+  display: inline-block;
+}
+
+.hc-username--at {
+  color: #949cf7;
+}
+
+.hc-username--paren {
+  color: var(--text-muted, #949ba4);
+  font-weight: 400;
+}
+
+/* --- Inline edit history (in-chat) ---------------------------------------- */
+
+/*
+ * Old versions of an edited message, rendered above the current content by the
+ * message-logger content patch. Like .hc-deleted this decorates Discord's own
+ * DOM, so literal values, no tokens. Dimmed + struck through so the current
+ * text stays visually primary.
+ */
+.hc-edit-history__version {
+  color: rgba(255, 69, 58, 0.75);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 69, 58, 0.4);
+  word-break: break-word;
+  white-space: pre-wrap;
+}

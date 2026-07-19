@@ -1,0 +1,102 @@
+/*
+ * Design tokens.
+ *
+ * Every color, size, radius, and duration used anywhere in Halcyon resolves to
+ * one of these variables. Components never hardcode raw values. The palette is
+ * flat by design: solid fills only, no gradients.
+ *
+ * Values mirror docs/ui-design-guide.md. If the two ever disagree, the guide
+ * is the source of truth and this file is the bug.
+ */
+
+.halcyon {
+  /* Accent */
+  --hc-accent: #0a84ff;
+  --hc-accent-pressed: #0768cc;
+
+  /* Semantic */
+  --hc-red: #ff453a;
+  --hc-orange: #ff9f0a;
+  --hc-yellow: #ffd60a;
+  --hc-green: #30d158;
+  --hc-teal: #64d2ff;
+  --hc-indigo: #5e5ce6;
+  --hc-pink: #ff375f;
+
+  /* Neutral surfaces */
+  --hc-bg-primary: #000000;
+  --hc-bg-secondary: #1c1c1e;
+  --hc-bg-tertiary: #2c2c2e;
+  --hc-bg-elevated: #2c2c2e;
+
+  /* Fills */
+  --hc-fill-primary: rgba(120, 120, 128, 0.36);
+  --hc-fill-secondary: rgba(120, 120, 128, 0.24);
+
+  /* Separators */
+  --hc-separator: rgba(84, 84, 88, 0.65);
+  --hc-separator-opaque: #38383a;
+
+  /* Labels */
+  --hc-label-primary: #ffffff;
+  --hc-label-secondary: rgba(235, 235, 245, 0.6);
+  --hc-label-tertiary: rgba(235, 235, 245, 0.3);
+  --hc-label-quaternary: rgba(235, 235, 245, 0.16);
+
+  /* Spacing (8pt grid) */
+  --hc-space-1: 4px;
+  --hc-space-2: 8px;
+  --hc-space-3: 12px;
+  --hc-space-4: 16px;
+  --hc-space-5: 20px;
+  --hc-space-6: 24px;
+  --hc-space-8: 32px;
+  --hc-space-10: 40px;
+
+  /* Radii */
+  --hc-radius-xs: 4px;
+  --hc-radius-sm: 6px;
+  --hc-radius-md: 10px;
+  --hc-radius-lg: 12px;
+  --hc-radius-xl: 16px;
+  --hc-radius-2xl: 22px;
+  --hc-radius-pill: 999px;
+
+  /* Elevation */
+  --hc-elev-1: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --hc-elev-2: 0 4px 12px rgba(0, 0, 0, 0.32);
+  --hc-elev-3: 0 12px 32px rgba(0, 0, 0, 0.44);
+
+  /* Type scale — sizes paired with absolute line heights */
+  --hc-text-title1: 28px;
+  --hc-lh-title1: 34px;
+  --hc-text-title2: 22px;
+  --hc-lh-title2: 28px;
+  --hc-text-title3: 20px;
+  --hc-lh-title3: 25px;
+  --hc-text-headline: 17px;
+  --hc-lh-headline: 22px;
+  --hc-text-body: 17px;
+  --hc-lh-body: 22px;
+  --hc-text-callout: 16px;
+  --hc-lh-callout: 21px;
+  --hc-text-subhead: 15px;
+  --hc-lh-subhead: 20px;
+  --hc-text-footnote: 13px;
+  --hc-lh-footnote: 18px;
+  --hc-text-caption1: 12px;
+  --hc-lh-caption1: 16px;
+  --hc-text-caption2: 11px;
+  --hc-lh-caption2: 13px;
+
+  /* Motion */
+  --hc-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --hc-duration-fast: 200ms;
+  --hc-duration-slow: 300ms;
+
+  /* Font stack */
+  --hc-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+  --hc-font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Code",
+    Menlo, Consolas, monospace;
+}
