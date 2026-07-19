@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.1
+// @version      0.1.2
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -567,7 +567,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:37:59" : "dev";
+      const build = true ? "2026-07-19 20:44:57" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -1772,6 +1772,29 @@ ${slices.join("\n  ...  \n")}`);
   color: var(--hc-label-primary);
 }
 
+/* --- Pager ----------------------------------------------------------------- */
+
+.hc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-3);
+  margin-top: var(--hc-space-4);
+}
+
+.hc-pager__label {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 96px;
+  text-align: center;
+}
+
+.hc-pager .hc-tab:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* --- Captured message entries -------------------------------------------- */
 
 .hc-msglist {
@@ -2392,7 +2415,14 @@ ${components_default}`;
     const store = useSettingsSnapshot(settings3);
     const keys = Object.keys(settings3.schema).filter((key) => !settings3.schema[key].hidden);
     if (keys.length === 0) return null;
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-section" }, /* @__PURE__ */ React.createElement("div", { className: "hc-section__title" }, "\u8BBE\u7F6E"), /* @__PURE__ */ React.createElement("div", { className: "hc-section__body" }, keys.map((key) => /* @__PURE__ */ React.createElement(
+    const sections = [];
+    for (const key of keys) {
+      const title = settings3.schema[key].group ?? "\u8BBE\u7F6E";
+      const last = sections[sections.length - 1];
+      if (last && last.title === title) last.keys.push(key);
+      else sections.push({ title, keys: [key] });
+    }
+    return /* @__PURE__ */ React.createElement(React.Fragment, null, sections.map((section, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-section", key: `${section.title}-${index}` }, /* @__PURE__ */ React.createElement("div", { className: "hc-section__title" }, section.title), /* @__PURE__ */ React.createElement("div", { className: "hc-section__body" }, section.keys.map((key) => /* @__PURE__ */ React.createElement(
       SettingField,
       {
         key,
@@ -2402,7 +2432,7 @@ ${components_default}`;
           store[key] = next;
         }
       }
-    ))));
+    ))))));
   }
   function SettingField({ def, value, onChange }) {
     const label = /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, def.label), def.description && /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, def.description));
@@ -2583,8 +2613,10 @@ ${components_default}`;
 
   // src/ui/settings/LogsView.tsx
   var MAX_VISIBLE = 500;
+  var PAGE_SIZE = 100;
   function LogsView() {
     const [entries, setEntries] = useState(() => getLogHistory().slice());
+    const [page, setPage] = useState(0);
     const scrollRef = useRef(null);
     useEffect(() => {
       setEntries(getLogHistory().slice());
@@ -2595,10 +2627,15 @@ ${components_default}`;
         });
       });
     }, []);
+    const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+    const clamped = Math.min(page, pageCount - 1);
+    const end = entries.length - clamped * PAGE_SIZE;
+    const visible = entries.slice(Math.max(0, end - PAGE_SIZE), end);
     useEffect(() => {
+      if (clamped !== 0) return;
       const el = scrollRef.current;
       if (el) el.scrollTop = el.scrollHeight;
-    }, [entries]);
+    }, [entries, clamped]);
     if (entries.length === 0) {
       return /* @__PURE__ */ React.createElement(
         EmptyState,
@@ -2609,7 +2646,25 @@ ${components_default}`;
         }
       );
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-logs", ref: scrollRef }, entries.map((entry, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-logline", "data-level": entry.level, key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-logline__time" }, formatTime(entry.time)), /* @__PURE__ */ React.createElement("span", { className: "hc-logline__scope" }, entry.scope), /* @__PURE__ */ React.createElement("span", { className: "hc-logline__msg" }, entry.parts.map(stringify).join(" ")))));
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-logs", ref: scrollRef }, visible.map((entry, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-logline", "data-level": entry.level, key: `${entry.time}-${index}` }, /* @__PURE__ */ React.createElement("span", { className: "hc-logline__time" }, formatTime(entry.time)), /* @__PURE__ */ React.createElement("span", { className: "hc-logline__scope" }, entry.scope), /* @__PURE__ */ React.createElement("span", { className: "hc-logline__msg" }, entry.parts.map(stringify).join(" "))))), pageCount > 1 && /* @__PURE__ */ React.createElement("div", { className: "hc-pager" }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-tab",
+        disabled: clamped >= pageCount - 1,
+        onClick: () => setPage(Math.min(pageCount - 1, clamped + 1))
+      },
+      "\u2190 \u66F4\u65E9"
+    ), /* @__PURE__ */ React.createElement("span", { className: "hc-pager__label" }, clamped === 0 ? "\u5B9E\u65F6" : `\u7B2C ${pageCount - clamped} / ${pageCount} \u9875`), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-tab",
+        disabled: clamped === 0,
+        onClick: () => setPage(Math.max(0, clamped - 1))
+      },
+      "\u66F4\u65B0 \u2192"
+    )));
   }
   function formatTime(time) {
     const date = new Date(time);
@@ -2635,7 +2690,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.1" : "dev";
+    const version = true ? "0.1.2" : "dev";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {
@@ -3268,13 +3323,34 @@ ${components_default}`;
 
   // src/plugins/message-logger/settings.ts
   var settings = defineSettings({
+    // --- 记录 -----------------------------------------------------------------
     keepDeletedInChat: {
+      group: "\u8BB0\u5F55",
       type: "boolean",
       default: true,
       label: "\u5728\u804A\u5929\u4E2D\u4FDD\u7559\u88AB\u5220\u6D88\u606F",
       description: "\u88AB\u5220\u9664\u7684\u6D88\u606F\u4E0D\u518D\u6D88\u5931\uFF0C\u800C\u662F\u6807\u8BB0\u4FDD\u7559\u5728\u539F\u4F4D\u3002\u9700\u8981\u5BA2\u6237\u7AEF\u8865\u4E01\u751F\u6548\u3002"
     },
+    logEdits: {
+      group: "\u8BB0\u5F55",
+      type: "boolean",
+      default: true,
+      label: "\u8BB0\u5F55\u7F16\u8F91\u5386\u53F2",
+      description: "\u4FDD\u5B58\u6BCF\u6761\u6D88\u606F\u88AB\u7F16\u8F91\u524D\u7684\u5185\u5BB9\u3002"
+    },
+    retention: {
+      group: "\u8BB0\u5F55",
+      type: "number",
+      default: 50,
+      label: "\u6BCF\u9891\u9053\u4FDD\u7559\u6761\u6570",
+      description: "0 \u8868\u793A\u4E0D\u9650\u5236\u3002\u4E0A\u9650 500\u3002",
+      min: 0,
+      max: 500,
+      step: 10
+    },
+    // --- 外观 -----------------------------------------------------------------
     deleteStyle: {
+      group: "\u5916\u89C2",
       type: "select",
       default: "tint",
       label: "\u88AB\u5220\u6D88\u606F\u6837\u5F0F",
@@ -3287,12 +3363,14 @@ ${components_default}`;
       ]
     },
     showDeletedMarker: {
+      group: "\u5916\u89C2",
       type: "boolean",
       default: true,
       label: "\u663E\u793A\u5220\u9664\u6807\u8BB0\u884C",
       description: "\u5728\u88AB\u5220\u6D88\u606F\u4E0B\u65B9\u663E\u793A\u201C\u6B64\u6D88\u606F\u5DF2\u5220\u9664\u201D\u4E0E\u5220\u9664\u65F6\u95F4\u3002"
     },
     markerIcon: {
+      group: "\u5916\u89C2",
       type: "select",
       default: "trash",
       label: "\u6807\u8BB0\u56FE\u6807",
@@ -3305,6 +3383,7 @@ ${components_default}`;
       ]
     },
     markerLook: {
+      group: "\u5916\u89C2",
       type: "select",
       default: "plain",
       label: "\u6807\u8BB0\u5916\u89C2",
@@ -3316,6 +3395,7 @@ ${components_default}`;
       ]
     },
     markerTime: {
+      group: "\u5916\u89C2",
       type: "select",
       default: "time",
       label: "\u5220\u9664\u65F6\u95F4\u683C\u5F0F",
@@ -3326,37 +3406,25 @@ ${components_default}`;
         { value: "none", label: "\u4E0D\u663E\u793A\u65F6\u95F4" }
       ]
     },
-    logEdits: {
-      type: "boolean",
-      default: true,
-      label: "\u8BB0\u5F55\u7F16\u8F91\u5386\u53F2",
-      description: "\u4FDD\u5B58\u6BCF\u6761\u6D88\u606F\u88AB\u7F16\u8F91\u524D\u7684\u5185\u5BB9\u3002"
-    },
-    retention: {
-      type: "number",
-      default: 50,
-      label: "\u6BCF\u9891\u9053\u4FDD\u7559\u6761\u6570",
-      description: "0 \u8868\u793A\u4E0D\u9650\u5236\u3002\u4E0A\u9650 500\u3002",
-      min: 0,
-      max: 500,
-      step: 10
-    },
-    // --- 屏蔽对象 ---------------------------------------------------------
+    // --- 屏蔽对象 ---------------------------------------------------------------
     // Every rule below gates BOTH capture paths: the recorder (log page) and
     // the in-chat red retention, via isIgnored().
     ignoreBots: {
+      group: "\u5C4F\u853D\u5BF9\u8C61",
       type: "boolean",
       default: false,
       label: "\u5C4F\u853D\u673A\u5668\u4EBA",
       description: "\u673A\u5668\u4EBA\u7684\u6D88\u606F\u4E0D\u8BB0\u5F55\u3001\u4E0D\u5728\u804A\u5929\u4E2D\u4FDD\u7559\u3002"
     },
     ignoreSelf: {
+      group: "\u5C4F\u853D\u5BF9\u8C61",
       type: "boolean",
       default: false,
       label: "\u5C4F\u853D\u81EA\u5DF1",
       description: "\u4F60\u81EA\u5DF1\u5220\u9664\u6216\u7F16\u8F91\u7684\u6D88\u606F\u4E0D\u8BB0\u5F55\u3001\u4E0D\u5728\u804A\u5929\u4E2D\u4FDD\u7559\u3002"
     },
     ignoredUsers: {
+      group: "\u5C4F\u853D\u5BF9\u8C61",
       type: "string-list",
       default: [],
       label: "\u5C4F\u853D\u7684\u7528\u6237",
@@ -3364,6 +3432,7 @@ ${components_default}`;
       itemPlaceholder: "\u7528\u6237 ID"
     },
     ignoredChannels: {
+      group: "\u5C4F\u853D\u5BF9\u8C61",
       type: "string-list",
       default: [],
       label: "\u5C4F\u853D\u7684\u9891\u9053",
@@ -3528,10 +3597,16 @@ ${components_default}`;
     }, []);
     return snapshot;
   }
+  var PAGE_SIZE2 = 25;
   function LogPage() {
     const { deleted, edited } = useLog();
     const [tab, setTab] = useState("deleted");
-    const rows = tab === "deleted" ? deleted.length : edited.length;
+    const [pages, setPages] = useState({ deleted: 0, edited: 0 });
+    const entries = tab === "deleted" ? deleted : edited;
+    const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE2));
+    const page = Math.min(pages[tab], pageCount - 1);
+    const visible = entries.slice(page * PAGE_SIZE2, (page + 1) * PAGE_SIZE2);
+    const goTo = (next) => setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
     return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -3560,24 +3635,37 @@ ${components_default}`;
         size: "sm",
         variant: "destructive",
         onClick: () => messageLog.clear(),
-        disabled: rows === 0
+        disabled: entries.length === 0
       },
       "\u6E05\u7A7A"
-    )), tab === "deleted" ? deleted.length === 0 ? /* @__PURE__ */ React.createElement(
+    )), entries.length === 0 ? tab === "deleted" ? /* @__PURE__ */ React.createElement(
       EmptyState,
       {
         icon: /* @__PURE__ */ React.createElement(TrashIcon, { size: 48 }),
         title: "\u8FD8\u6CA1\u6709\u8BB0\u5F55",
         subtitle: "\u88AB\u5220\u9664\u7684\u6D88\u606F\u4F1A\u5728\u8FD9\u91CC\u4FDD\u7559\uFF0C\u542F\u7528\u63D2\u4EF6\u540E\u5373\u65F6\u751F\u6548\u3002"
       }
-    ) : /* @__PURE__ */ React.createElement("div", { className: "hc-msglist" }, deleted.map((entry) => /* @__PURE__ */ React.createElement(DeletedRow, { key: `${entry.channelId}-${entry.id}`, entry }))) : edited.length === 0 ? /* @__PURE__ */ React.createElement(
+    ) : /* @__PURE__ */ React.createElement(
       EmptyState,
       {
         icon: /* @__PURE__ */ React.createElement(PencilIcon, { size: 48 }),
         title: "\u8FD8\u6CA1\u6709\u7F16\u8F91\u8BB0\u5F55",
         subtitle: "\u6D88\u606F\u88AB\u7F16\u8F91\u524D\u7684\u5185\u5BB9\u4F1A\u4FDD\u7559\u5728\u8FD9\u91CC\u3002"
       }
-    ) : /* @__PURE__ */ React.createElement("div", { className: "hc-msglist" }, edited.map((entry) => /* @__PURE__ */ React.createElement(EditedRow, { key: `${entry.channelId}-${entry.id}`, entry }))));
+    ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-msglist" }, tab === "deleted" ? visible.map((entry) => /* @__PURE__ */ React.createElement(DeletedRow, { key: `${entry.channelId}-${entry.id}`, entry })) : visible.map((entry) => /* @__PURE__ */ React.createElement(EditedRow, { key: `${entry.channelId}-${entry.id}`, entry }))), pageCount > 1 && /* @__PURE__ */ React.createElement(Pager, { page, pageCount, onChange: goTo })));
+  }
+  function Pager(props) {
+    const { page, pageCount, onChange } = props;
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-pager" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => onChange(page - 1), disabled: page === 0 }, "\u4E0A\u4E00\u9875"), /* @__PURE__ */ React.createElement("span", { className: "hc-pager__label" }, "\u7B2C ", page + 1, " / ", pageCount, " \u9875"), /* @__PURE__ */ React.createElement(
+      Button,
+      {
+        size: "sm",
+        variant: "plain",
+        onClick: () => onChange(page + 1),
+        disabled: page >= pageCount - 1
+      },
+      "\u4E0B\u4E00\u9875"
+    ));
   }
   function DeletedRow({ entry }) {
     return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__where" }, channelLabel(entry.channelId)), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt))), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? entry.content : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(

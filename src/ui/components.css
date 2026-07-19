@@ -996,6 +996,29 @@
   color: var(--hc-label-primary);
 }
 
+/* --- Pager ----------------------------------------------------------------- */
+
+.hc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-3);
+  margin-top: var(--hc-space-4);
+}
+
+.hc-pager__label {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 96px;
+  text-align: center;
+}
+
+.hc-pager .hc-tab:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* --- Captured message entries -------------------------------------------- */
 
 .hc-msglist {

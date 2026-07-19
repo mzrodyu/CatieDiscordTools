@@ -21,6 +21,12 @@ interface CommonFields<T> {
   description?: string;
   /** Value used before the user changes anything. */
   default: T;
+  /**
+   * Section header this setting renders under. Consecutive settings sharing a
+   * group become one iOS-style grouped card; settings without a group go into
+   * the default "设置" card. Declaration order is preserved.
+   */
+  group?: string;
   /** Hide from the generated form (still readable/writable in code). */
   hidden?: boolean;
   /** When it returns true, the control renders disabled. */

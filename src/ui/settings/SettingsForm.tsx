@@ -19,22 +19,35 @@ export function SettingsForm({ settings }: { settings: BoundSettings }): React.R
 
   if (keys.length === 0) return null;
 
+  // Split into consecutive runs sharing a `group`, each run one grouped card.
+  const sections: Array<{ title: string; keys: string[] }> = [];
+  for (const key of keys) {
+    const title = settings.schema[key].group ?? "设置";
+    const last = sections[sections.length - 1];
+    if (last && last.title === title) last.keys.push(key);
+    else sections.push({ title, keys: [key] });
+  }
+
   return (
-    <div className="hc-section">
-      <div className="hc-section__title">设置</div>
-      <div className="hc-section__body">
-        {keys.map((key) => (
-          <SettingField
-            key={key}
-            def={settings.schema[key]}
-            value={store[key]}
-            onChange={(next) => {
-              store[key] = next;
-            }}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      {sections.map((section, index) => (
+        <div className="hc-section" key={`${section.title}-${index}`}>
+          <div className="hc-section__title">{section.title}</div>
+          <div className="hc-section__body">
+            {section.keys.map((key) => (
+              <SettingField
+                key={key}
+                def={settings.schema[key]}
+                value={store[key]}
+                onChange={(next) => {
+                  store[key] = next;
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
 

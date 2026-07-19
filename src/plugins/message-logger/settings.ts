@@ -2,18 +2,40 @@
 //
 // Kept small on purpose: what to capture, whose messages to skip, and how much
 // to retain. Everything here is declarative; the runtime turns it into a live,
-// persisted store and the settings UI renders it.
+// persisted store and the settings UI renders it, one grouped card per `group`.
 
 import { defineSettings } from "../../core/settings";
 
 export const settings = defineSettings({
+  // --- 记录 -----------------------------------------------------------------
   keepDeletedInChat: {
+    group: "记录",
     type: "boolean",
     default: true,
     label: "在聊天中保留被删消息",
     description: "被删除的消息不再消失，而是标记保留在原位。需要客户端补丁生效。"
   },
+  logEdits: {
+    group: "记录",
+    type: "boolean",
+    default: true,
+    label: "记录编辑历史",
+    description: "保存每条消息被编辑前的内容。"
+  },
+  retention: {
+    group: "记录",
+    type: "number",
+    default: 50,
+    label: "每频道保留条数",
+    description: "0 表示不限制。上限 500。",
+    min: 0,
+    max: 500,
+    step: 10
+  },
+
+  // --- 外观 -----------------------------------------------------------------
   deleteStyle: {
+    group: "外观",
     type: "select",
     default: "tint",
     label: "被删消息样式",
@@ -26,12 +48,14 @@ export const settings = defineSettings({
     ]
   },
   showDeletedMarker: {
+    group: "外观",
     type: "boolean",
     default: true,
     label: "显示删除标记行",
     description: "在被删消息下方显示“此消息已删除”与删除时间。"
   },
   markerIcon: {
+    group: "外观",
     type: "select",
     default: "trash",
     label: "标记图标",
@@ -44,6 +68,7 @@ export const settings = defineSettings({
     ]
   },
   markerLook: {
+    group: "外观",
     type: "select",
     default: "plain",
     label: "标记外观",
@@ -55,6 +80,7 @@ export const settings = defineSettings({
     ]
   },
   markerTime: {
+    group: "外观",
     type: "select",
     default: "time",
     label: "删除时间格式",
@@ -65,37 +91,26 @@ export const settings = defineSettings({
       { value: "none", label: "不显示时间" }
     ]
   },
-  logEdits: {
-    type: "boolean",
-    default: true,
-    label: "记录编辑历史",
-    description: "保存每条消息被编辑前的内容。"
-  },
-  retention: {
-    type: "number",
-    default: 50,
-    label: "每频道保留条数",
-    description: "0 表示不限制。上限 500。",
-    min: 0,
-    max: 500,
-    step: 10
-  },
-  // --- 屏蔽对象 ---------------------------------------------------------
+
+  // --- 屏蔽对象 ---------------------------------------------------------------
   // Every rule below gates BOTH capture paths: the recorder (log page) and
   // the in-chat red retention, via isIgnored().
   ignoreBots: {
+    group: "屏蔽对象",
     type: "boolean",
     default: false,
     label: "屏蔽机器人",
     description: "机器人的消息不记录、不在聊天中保留。"
   },
   ignoreSelf: {
+    group: "屏蔽对象",
     type: "boolean",
     default: false,
     label: "屏蔽自己",
     description: "你自己删除或编辑的消息不记录、不在聊天中保留。"
   },
   ignoredUsers: {
+    group: "屏蔽对象",
     type: "string-list",
     default: [],
     label: "屏蔽的用户",
@@ -103,6 +118,7 @@ export const settings = defineSettings({
     itemPlaceholder: "用户 ID"
   },
   ignoredChannels: {
+    group: "屏蔽对象",
     type: "string-list",
     default: [],
     label: "屏蔽的频道",

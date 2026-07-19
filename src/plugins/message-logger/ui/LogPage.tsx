@@ -31,11 +31,22 @@ function useLog(): { deleted: readonly DeletedEntry[]; edited: readonly EditedEn
   return snapshot;
 }
 
+const PAGE_SIZE = 25;
+
 export function LogPage(): React.ReactElement {
   const { deleted, edited } = useLog();
   const [tab, setTab] = useState<Tab>("deleted");
+  // Page index per tab, so switching tabs doesn't lose your place.
+  const [pages, setPages] = useState<Record<Tab, number>>({ deleted: 0, edited: 0 });
 
-  const rows = tab === "deleted" ? deleted.length : edited.length;
+  const entries = tab === "deleted" ? deleted : edited;
+  const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+  // Entries shrink on clear/retention; clamp rather than showing a blank page.
+  const page = Math.min(pages[tab], pageCount - 1);
+  const visible = entries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const goTo = (next: number) =>
+    setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
 
   return (
     <div>
@@ -68,39 +79,62 @@ export function LogPage(): React.ReactElement {
           size="sm"
           variant="destructive"
           onClick={() => messageLog.clear()}
-          disabled={rows === 0}
+          disabled={entries.length === 0}
         >
           清空
         </Button>
       </div>
 
-      {tab === "deleted" ? (
-        deleted.length === 0 ? (
+      {entries.length === 0 ? (
+        tab === "deleted" ? (
           <EmptyState
             icon={<TrashIcon size={48} />}
             title="还没有记录"
             subtitle="被删除的消息会在这里保留，启用插件后即时生效。"
           />
         ) : (
-          <div className="hc-msglist">
-            {deleted.map((entry) => (
-              <DeletedRow key={`${entry.channelId}-${entry.id}`} entry={entry} />
-            ))}
-          </div>
+          <EmptyState
+            icon={<PencilIcon size={48} />}
+            title="还没有编辑记录"
+            subtitle="消息被编辑前的内容会保留在这里。"
+          />
         )
-      ) : edited.length === 0 ? (
-        <EmptyState
-          icon={<PencilIcon size={48} />}
-          title="还没有编辑记录"
-          subtitle="消息被编辑前的内容会保留在这里。"
-        />
       ) : (
-        <div className="hc-msglist">
-          {edited.map((entry) => (
-            <EditedRow key={`${entry.channelId}-${entry.id}`} entry={entry} />
-          ))}
-        </div>
+        <>
+          <div className="hc-msglist">
+            {tab === "deleted"
+              ? (visible as readonly DeletedEntry[]).map((entry) => (
+                  <DeletedRow key={`${entry.channelId}-${entry.id}`} entry={entry} />
+                ))
+              : (visible as readonly EditedEntry[]).map((entry) => (
+                  <EditedRow key={`${entry.channelId}-${entry.id}`} entry={entry} />
+                ))}
+          </div>
+          {pageCount > 1 && <Pager page={page} pageCount={pageCount} onChange={goTo} />}
+        </>
       )}
+    </div>
+  );
+}
+
+function Pager(props: { page: number; pageCount: number; onChange: (next: number) => void }): React.ReactElement {
+  const { page, pageCount, onChange } = props;
+  return (
+    <div className="hc-pager">
+      <Button size="sm" variant="plain" onClick={() => onChange(page - 1)} disabled={page === 0}>
+        上一页
+      </Button>
+      <span className="hc-pager__label">
+        第 {page + 1} / {pageCount} 页
+      </span>
+      <Button
+        size="sm"
+        variant="plain"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= pageCount - 1}
+      >
+        下一页
+      </Button>
     </div>
   );
 }
