@@ -10,8 +10,9 @@
 <br>
 
 [![一键安装油猴脚本](https://img.shields.io/badge/🐒_一键安装油猴脚本-点这里-2ea44f?style=for-the-badge)](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon.user.js)
+[![下载浏览器扩展](https://img.shields.io/badge/🧩_下载浏览器扩展-.zip-3b82f6?style=for-the-badge)](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon-extension.zip)
 
-<sub>需先安装 <a href="https://www.tampermonkey.net/">Tampermonkey（油猴）</a>，装好后点上面按钮即自动弹出安装页 · <a href="#安装三选一">其它安装方式</a></sub>
+<sub>油猴：需先安装 <a href="https://www.tampermonkey.net/">Tampermonkey</a>，点按钮即弹出安装页 · 扩展：下载后解压，在 <code>chrome://extensions</code> 开「开发者模式」加载 · <a href="#安装三选一">详细教程</a></sub>
 
 </div>
 
@@ -70,11 +71,11 @@ Halcyon 的定位是 **稳定、可读、克制**：
 
 ### 方式二：浏览器扩展
 
-同样适用于 Discord 网页版，加载更早、更稳定。仓库里自带打包好的产物（`dist/extension/`），下载源码 zip 就能用：
+同样适用于 Discord 网页版，加载更早、更稳定：
 
-1. 点仓库右上角绿色「Code」按钮 → 「Download ZIP」，解压
+1. [**下载 halcyon-extension.zip**](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon-extension.zip)，解压到一个不会被误删的目录
 2. 打开 `chrome://extensions`，开启右上角「开发者模式」
-3. 点「加载已解压的扩展程序」，选择解压出来的 `dist/extension/` 目录
+3. 点「加载已解压的扩展程序」，选择刚解压出来的目录
 4. 刷新 Discord 网页版标签页
 
 Chrome / Edge / Opera 需 111+；Firefox 128+ 也支持。扩展版的设置存在 `chrome.storage` 里（主世界只有同步接口，异步的 `chrome.storage` 通过一个隔离世界的桥接脚本 + 同步内存镜像对接）。

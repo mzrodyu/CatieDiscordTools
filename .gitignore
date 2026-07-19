@@ -6,10 +6,11 @@ node_modules/
 *.tsbuildinfo
 halcyon-settings-backup-*.json
 
-# Build output is ignored except the two artifacts users install directly
-# from the repository (userscript one-click install, unpacked extension).
+# Build output is ignored except the artifacts users install directly from
+# the repository (userscript one-click install, extension zip + unpacked dir).
 dist/*
 !dist/halcyon.user.js
+!dist/halcyon-extension.zip
 !dist/extension/
 
 # Local Claude Code settings

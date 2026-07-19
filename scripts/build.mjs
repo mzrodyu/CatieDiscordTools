@@ -13,7 +13,8 @@
 import { build, context } from "esbuild";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { deflateRawSync } from "node:zlib";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -112,6 +113,79 @@ function copyExtensionAssets() {
   mkdirSync(outDir, { recursive: true });
   copyFileSync(r("src/extension/manifest.json"), resolve(outDir, "manifest.json"));
   copyFileSync(r("src/extension/bridge.js"), resolve(outDir, "bridge.js"));
+  zipDirectory(outDir, r("dist/halcyon-extension.zip"));
+}
+
+// --- minimal zip writer ------------------------------------------------------
+//
+// dist/halcyon-extension.zip is committed to the repository so users can grab
+// the extension with one click instead of downloading the whole source tree.
+// A hand-rolled writer keeps the build free of dependencies; the format bits
+// below are the minimum a zip needs (local headers + central directory).
+
+const CRC_TABLE = new Uint32Array(256).map((_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (const byte of buf) c = CRC_TABLE[(c ^ byte) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function zipDirectory(dir, outFile) {
+  const entries = readdirSync(dir).filter((name) => statSync(resolve(dir, name)).isFile());
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+
+  for (const name of entries) {
+    const data = readFileSync(resolve(dir, name));
+    const nameBuf = Buffer.from(name, "utf8");
+    const crc = crc32(data);
+    const deflated = deflateRawSync(data, { level: 9 });
+    // Store uncompressed when deflate does not help (already-minified payloads rarely hit this).
+    const useDeflate = deflated.length < data.length;
+    const body = useDeflate ? deflated : data;
+    const method = useDeflate ? 8 : 0;
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0); // local file header signature
+    local.writeUInt16LE(20, 4); // version needed
+    local.writeUInt16LE(method, 8);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(body.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    locals.push(local, nameBuf, body);
+
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0); // central directory signature
+    central.writeUInt16LE(20, 4); // version made by
+    central.writeUInt16LE(20, 6); // version needed
+    central.writeUInt16LE(method, 10);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(body.length, 20);
+    central.writeUInt32LE(data.length, 24);
+    central.writeUInt16LE(nameBuf.length, 28);
+    central.writeUInt32LE(offset, 42);
+    centrals.push(central, nameBuf);
+
+    offset += 30 + nameBuf.length + body.length;
+  }
+
+  const centralStart = offset;
+  const centralBuf = Buffer.concat(centrals);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); // end of central directory signature
+  end.writeUInt16LE(entries.length, 8);
+  end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(centralBuf.length, 12);
+  end.writeUInt32LE(centralStart, 16);
+
+  writeFileSync(outFile, Buffer.concat([...locals, centralBuf, end]));
 }
 
 if (watch) {
