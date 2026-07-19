@@ -129,6 +129,11 @@ function PluginDetail({ view, onBack }: { view: PluginView; onBack: () => void }
   const plugin = runtime.getPlugin(view.id);
   const meta = CATEGORIES[view.category];
   const Icon: React.FC<IconProps> = meta.Icon;
+  // Plugins can carry both a page and a settings form (message-logger: the
+  // captured-message log plus its 记录/外观/屏蔽对象 cards). Offer both behind
+  // segment tabs instead of letting the page shadow the settings.
+  const hasBoth = Boolean(plugin?.page && plugin?.settings);
+  const [section, setSection] = useState<"page" | "settings">("page");
 
   return (
     <div>
@@ -175,7 +180,28 @@ function PluginDetail({ view, onBack }: { view: PluginView; onBack: () => void }
         </div>
       )}
 
-      {plugin?.page ? (
+      {hasBoth && (
+        <div className="hc-segment">
+          <button
+            type="button"
+            className="hc-segment__item"
+            data-active={section === "page"}
+            onClick={() => setSection("page")}
+          >
+            {plugin!.page!.title || "记录"}
+          </button>
+          <button
+            type="button"
+            className="hc-segment__item"
+            data-active={section === "settings"}
+            onClick={() => setSection("settings")}
+          >
+            设置
+          </button>
+        </div>
+      )}
+
+      {plugin?.page && (!hasBoth || section === "page") ? (
         <plugin.page.component />
       ) : plugin?.settings ? (
         <SettingsForm settings={plugin.settings} />

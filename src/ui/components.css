@@ -992,6 +992,43 @@
   color: var(--hc-label-primary);
 }
 
+/* --- Segmented control ------------------------------------------------------ */
+
+.hc-segment {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: var(--hc-space-4);
+  background: var(--hc-fill-primary);
+  border-radius: var(--hc-radius-md);
+  width: fit-content;
+}
+
+.hc-segment__item {
+  border: none;
+  background: transparent;
+  color: var(--hc-label-secondary);
+  font-family: inherit;
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  height: 28px;
+  padding: 0 var(--hc-space-4);
+  border-radius: calc(var(--hc-radius-md) - 2px);
+  cursor: pointer;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-segment__item:hover {
+  color: var(--hc-label-primary);
+}
+
+.hc-segment__item[data-active="true"] {
+  background: var(--hc-bg-elevated, #2c2c2e);
+  color: var(--hc-label-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
 /* --- Pager ----------------------------------------------------------------- */
 
 .hc-pager {

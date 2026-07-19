@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.3
+// @version      0.1.4
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -567,7 +567,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:48:44" : "dev";
+      const build = true ? "2026-07-19 20:54:53" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -1768,6 +1768,43 @@ ${slices.join("\n  ...  \n")}`);
   color: var(--hc-label-primary);
 }
 
+/* --- Segmented control ------------------------------------------------------ */
+
+.hc-segment {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: var(--hc-space-4);
+  background: var(--hc-fill-primary);
+  border-radius: var(--hc-radius-md);
+  width: fit-content;
+}
+
+.hc-segment__item {
+  border: none;
+  background: transparent;
+  color: var(--hc-label-secondary);
+  font-family: inherit;
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  height: 28px;
+  padding: 0 var(--hc-space-4);
+  border-radius: calc(var(--hc-radius-md) - 2px);
+  cursor: pointer;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-segment__item:hover {
+  color: var(--hc-label-primary);
+}
+
+.hc-segment__item[data-active="true"] {
+  background: var(--hc-bg-elevated, #2c2c2e);
+  color: var(--hc-label-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
 /* --- Pager ----------------------------------------------------------------- */
 
 .hc-pager {
@@ -2630,6 +2667,8 @@ ${components_default}`;
     const plugin = runtime.getPlugin(view.id);
     const meta = CATEGORIES[view.category];
     const Icon = meta.Icon;
+    const hasBoth = Boolean(plugin?.page && plugin?.settings);
+    const [section, setSection] = useState("page");
     return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "hc-back", onClick: onBack }, /* @__PURE__ */ React.createElement(ChevronLeftIcon, { size: 20 }), "\u63D2\u4EF6"), /* @__PURE__ */ React.createElement("div", { className: "hc-detail-head" }, /* @__PURE__ */ React.createElement("div", { className: "hc-detail-head__icon", style: { background: meta.color } }, /* @__PURE__ */ React.createElement(Icon, { size: 26 })), /* @__PURE__ */ React.createElement("div", { className: "hc-detail-head__text" }, /* @__PURE__ */ React.createElement("div", { className: "hc-detail-head__name" }, view.name), /* @__PURE__ */ React.createElement("div", { className: "hc-detail-head__desc" }, view.description), /* @__PURE__ */ React.createElement("div", { className: "hc-detail-head__meta" }, view.authors.map((a) => a.name).join("\u3001"))), /* @__PURE__ */ React.createElement(
       "span",
       {
@@ -2645,7 +2684,25 @@ ${components_default}`;
           "aria-label": `\u542F\u7528 ${view.name}`
         }
       )
-    )), view.needsRestart && /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note" }, /* @__PURE__ */ React.createElement(RefreshIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u8FD9\u4E2A\u63D2\u4EF6\u5305\u542B\u52A0\u8F7D\u671F\u8865\u4E01\uFF0C\u9700\u8981\u91CD\u542F Discord \u624D\u80FD\u5B8C\u5168\u751F\u6548\u3002")), view.state === "errored" && /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u63D2\u4EF6\u542F\u52A8\u65F6\u629B\u51FA\u5F02\u5E38\uFF0C\u5DF2\u88AB\u81EA\u52A8\u505C\u7528\uFF0C\u8BE6\u60C5\u89C1\u65E5\u5FD7\u3002")), plugin?.page ? /* @__PURE__ */ React.createElement(plugin.page.component, null) : plugin?.settings ? /* @__PURE__ */ React.createElement(SettingsForm, { settings: plugin.settings }) : /* @__PURE__ */ React.createElement(EmptyState, { title: "\u6CA1\u6709\u53EF\u914D\u7F6E\u9879", subtitle: "\u8FD9\u4E2A\u63D2\u4EF6\u5F00\u7BB1\u5373\u7528\uFF0C\u65E0\u9700\u8BBE\u7F6E\u3002" }));
+    )), view.needsRestart && /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note" }, /* @__PURE__ */ React.createElement(RefreshIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u8FD9\u4E2A\u63D2\u4EF6\u5305\u542B\u52A0\u8F7D\u671F\u8865\u4E01\uFF0C\u9700\u8981\u91CD\u542F Discord \u624D\u80FD\u5B8C\u5168\u751F\u6548\u3002")), view.state === "errored" && /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u63D2\u4EF6\u542F\u52A8\u65F6\u629B\u51FA\u5F02\u5E38\uFF0C\u5DF2\u88AB\u81EA\u52A8\u505C\u7528\uFF0C\u8BE6\u60C5\u89C1\u65E5\u5FD7\u3002")), hasBoth && /* @__PURE__ */ React.createElement("div", { className: "hc-segment" }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-segment__item",
+        "data-active": section === "page",
+        onClick: () => setSection("page")
+      },
+      plugin.page.title || "\u8BB0\u5F55"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-segment__item",
+        "data-active": section === "settings",
+        onClick: () => setSection("settings")
+      },
+      "\u8BBE\u7F6E"
+    )), plugin?.page && (!hasBoth || section === "page") ? /* @__PURE__ */ React.createElement(plugin.page.component, null) : plugin?.settings ? /* @__PURE__ */ React.createElement(SettingsForm, { settings: plugin.settings }) : /* @__PURE__ */ React.createElement(EmptyState, { title: "\u6CA1\u6709\u53EF\u914D\u7F6E\u9879", subtitle: "\u8FD9\u4E2A\u63D2\u4EF6\u5F00\u7BB1\u5373\u7528\uFF0C\u65E0\u9700\u8BBE\u7F6E\u3002" }));
   }
 
   // src/ui/settings/LogsView.tsx
@@ -2727,7 +2784,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.3" : "dev";
+    const version = true ? "0.1.4" : "dev";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {
