@@ -10,10 +10,10 @@ A restrained, iOS-styled plugin system / client mod for the Discord web &amp; de
 <br>
 <br>
 
-[![一键安装油猴脚本](https://img.shields.io/badge/🐒_一键安装油猴脚本-点这里-2ea44f?style=for-the-badge)](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon.user.js)
+[![Greasy Fork 一键安装](https://img.shields.io/badge/🐵_Greasy_Fork-一键安装-670000?style=for-the-badge)](https://greasyfork.org/scripts/587776-halcyon-for-discord)
 [![下载浏览器扩展](https://img.shields.io/badge/🧩_下载浏览器扩展-.zip-3b82f6?style=for-the-badge)](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon-extension.zip)
 
-<sub>油猴：需先安装 <a href="https://www.tampermonkey.net/">Tampermonkey</a>，点按钮即弹出安装页 · 扩展：下载后解压，在 <code>chrome://extensions</code> 开「开发者模式」加载 · <a href="#安装三选一">详细教程</a></sub>
+<sub>油猴：装 <a href="https://www.tampermonkey.net/">Tampermonkey</a> 后点上方按钮，跳到 Greasy Fork 弹出安装页，并支持后续自动更新 · 备用：<a href="https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon.user.js">从 GitHub 直装</a> · 扩展：下载解压后在 <code>chrome://extensions</code> 开「开发者模式」加载 · <a href="#安装三选一">详细教程</a></sub>
 
 </div>
 
@@ -68,7 +68,7 @@ Halcyon 的定位是 **稳定、可读、克制**：
 适用于 Discord **网页版**（`discord.com/app`），不用装 Node、不用命令行。
 
 1. 给浏览器装一个用户脚本管理器：[Tampermonkey（油猴）](https://www.tampermonkey.net/) 或 [Violentmonkey](https://violentmonkey.github.io/)
-2. 点击这个链接：[**安装 Halcyon 用户脚本**](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon.user.js) —— 油猴会自动弹出安装确认页，点「安装」
+2. 打开 [**Halcyon 的 Greasy Fork 页面**](https://greasyfork.org/scripts/587776-halcyon-for-discord)，点绿色「安装此脚本」按钮 —— 油猴会自动弹出安装确认页，点「安装」；之后有新版本会自动更新。备用：也可以直接点 [从 GitHub 安装](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon.user.js)
 3. 刷新 Discord 网页版标签页，完成
 
 > Chrome / Edge 用户注意：浏览器需开启扩展的「开发者模式」（`chrome://extensions` 右上角），油猴才能执行用户脚本，这是 Manifest V3 的限制。
