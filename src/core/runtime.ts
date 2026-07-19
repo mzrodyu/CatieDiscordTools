@@ -107,6 +107,18 @@ class Runtime {
     // re-read enable-state and pick up patches for any plugin that turned out
     // to be enabled but wasn't known when prepare() ran.
     this.enabledMap = (loadNamespace(ENABLED_NS) as Record<string, boolean>) ?? {};
+
+    // Same reason, for per-plugin settings. register() binds persistence
+    // synchronously at construction — which in the extension runs before the
+    // chrome.storage mirror has hydrated, so every store would otherwise be
+    // stuck on its declared defaults while the saved values sit unread in
+    // storage. Re-binding here reloads them now that storage is authoritative,
+    // before any plugin start() reads a setting or the settings UI mounts.
+    // Idempotent, and a plain no-op on synchronous backends (userscript/desktop).
+    for (const { plugin } of this.records.values()) {
+      plugin.settings?.__bind(plugin.id);
+    }
+
     this.registerBootPatches();
 
     await awaitCoreReady();

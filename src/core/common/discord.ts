@@ -54,5 +54,25 @@ export const SelectedChannelStore = lazy<any>(
   (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
 );
 
+/** Guilds (servers) the current account has joined. */
+export const GuildStore = lazy<any>(
+  (m) => typeof m?.getGuild === "function" && typeof m?.getGuilds === "function"
+);
+
+/** A guild's channels, grouped and queryable. */
+export const GuildChannelStore = lazy<any>(
+  (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
+);
+
+/**
+ * Discord's own guild-subscription actions. This is the client's high-level
+ * entry point for opcode-14 gateway subscriptions; we call it rather than
+ * hand-assembling gateway frames, so a bad payload can never reach the socket.
+ * Absent on some builds — callers must null-check and degrade to a no-op.
+ */
+export const GuildSubscriptions = lazy<any>(
+  (m) => typeof m?.subscribeToGuild === "function" || typeof m?.subscribeToChannel === "function"
+);
+
 /** Relative / absolute timestamp formatting used across the client. */
 export const moment = lazy<any>((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");

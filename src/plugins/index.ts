@@ -8,5 +8,6 @@ import type { Plugin } from "../core/plugin";
 import settingsHost from "./settings-host";
 import messageLogger from "./message-logger";
 import showUsername from "./show-username";
+import guildMonitor from "./guild-monitor";
 
-export const plugins: Plugin[] = [settingsHost, messageLogger, showUsername];
+export const plugins: Plugin[] = [settingsHost, messageLogger, showUsername, guildMonitor];

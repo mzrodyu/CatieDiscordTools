@@ -1141,6 +1141,33 @@
   color: var(--hc-label-secondary);
 }
 
+/* Attachment thumbnails. Constrained so wide/tall media never spills past the
+ * message card — a single image caps at the content width, and the row wraps
+ * when there are several. */
+.hc-msg__media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-2);
+  margin-top: var(--hc-space-2);
+  min-width: 0;
+}
+
+.hc-msg__media a {
+  color: var(--hc-accent);
+  font-size: var(--hc-text-footnote);
+  word-break: break-all;
+}
+
+.hc-msg__thumb {
+  max-width: 100%;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-fill-secondary);
+}
+
 .hc-msg__versions {
   display: flex;
   flex-direction: column;

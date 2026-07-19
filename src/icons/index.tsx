@@ -288,3 +288,23 @@ export function ChevronLeftIcon(props: IconProps) {
     </Glyph>
   );
 }
+
+export function ServerIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="4" y="4" width="16" height="6" rx="2" />
+      <rect x="4" y="14" width="16" height="6" rx="2" />
+      <path d="M8 7h.01M8 17h.01" />
+    </Glyph>
+  );
+}
+
+export function BroadcastIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M8.5 8.5a5 5 0 000 7M15.5 8.5a5 5 0 010 7" />
+      <path d="M6 6a9 9 0 000 12M18 6a9 9 0 010 12" />
+    </Glyph>
+  );
+}
