@@ -1297,6 +1297,19 @@
   color: rgba(240, 71, 71, 0.85);
 }
 
+/* Tone: edited — same marker layout, calmer amber so an edit doesn't read as a
+ * deletion. Overrides the red the delete marker uses. */
+.hc-deleted-marker--edited {
+  color: #e0a53f;
+}
+.hc-deleted-marker--edited.hc-deleted-marker--badge {
+  background: rgba(224, 165, 63, 0.14);
+}
+.hc-deleted-marker--edited.hc-deleted-marker--quote {
+  border-left-color: rgba(224, 165, 63, 0.7);
+  color: rgba(224, 165, 63, 0.9);
+}
+
 /* --- Username next to nickname (show-username plugin) --------------------- */
 
 /*
@@ -1343,6 +1356,19 @@
 .hc-edit-history__version {
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+/* Per-version edit time, shown inline at the end of each old-version line.
+ * Muted and compact; opacity keeps it tied to whatever the version style is,
+ * and text-decoration:none stops the strike style from striking the time. */
+.hc-edit-history__time {
+  margin-left: 6px;
+  font-size: 0.72em;
+  opacity: 0.55;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  vertical-align: baseline;
 }
 
 /* The old-version line mirrors the deleted-message style (tint/text/ghost/

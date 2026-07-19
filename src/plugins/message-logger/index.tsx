@@ -643,13 +643,20 @@ function formatDeletedAt(at: number | undefined, mode: string): string | undefin
   return d.toLocaleTimeString("zh-CN", { hour12: false });
 }
 
-/** The "此消息已删除" line; icon, look, and time format come from settings. */
-function DeletedMarker(props: { deletedAt?: number }): React.ReactElement {
+/**
+ * A marker line under a message — "此消息已删除" or "此消息已编辑" — with the icon,
+ * look, and time format taken from settings. `edited` gives it a calmer amber
+ * tone so an edit doesn't read as a deletion.
+ */
+function MessageMarker(props: { text: string; at?: number; edited?: boolean }): React.ReactElement {
   const s = settings.store;
   const icon = MARKER_ICON_PATHS[s.markerIcon]?.();
-  const stamp = formatDeletedAt(props.deletedAt, s.markerTime);
+  const stamp = formatDeletedAt(props.at, s.markerTime);
+  const cls =
+    `hc-deleted-marker hc-deleted-marker--${s.markerLook || "plain"}` +
+    (props.edited ? " hc-deleted-marker--edited" : "");
   return (
-    <div className={`hc-deleted-marker hc-deleted-marker--${s.markerLook || "plain"}`}>
+    <div className={cls}>
       {icon && (
         <svg
           className="hc-deleted-marker__icon"
@@ -666,7 +673,7 @@ function DeletedMarker(props: { deletedAt?: number }): React.ReactElement {
           {icon}
         </svg>
       )}
-      <span>此消息已删除{stamp ? `（${stamp}）` : ""}</span>
+      <span>{props.text}{stamp ? `（${stamp}）` : ""}</span>
     </div>
   );
 }
@@ -674,7 +681,7 @@ function DeletedMarker(props: { deletedAt?: number }): React.ReactElement {
 // The settings that decide what the in-chat extras look like. A mounted
 // MessageExtras subscribes to these so flipping any of them in settings updates
 // the message on screen at once — Discord won't re-render the row for us.
-const MARKER_SETTING_KEYS = ["logEdits", "deleteStyle", "showDeletedMarker", "markerIcon", "markerLook", "markerTime"] as const;
+const MARKER_SETTING_KEYS = ["logEdits", "deleteStyle", "showDeletedMarker", "showEditedMarker", "markerIcon", "markerLook", "markerTime"] as const;
 
 /** Re-render the calling component whenever any in-chat appearance setting changes. */
 function useMlogSettings(): void {
@@ -696,7 +703,9 @@ function useMlogSettings(): void {
 function MessageExtras(props: {
   history?: Array<{ content: string; at: number }>;
   deletedAt?: number;
+  editedAt?: number;
   isDeleted: boolean;
+  isEdited: boolean;
 }): React.ReactElement | null {
   useMlogSettings();
   const s = settings.store;
@@ -705,20 +714,33 @@ function MessageExtras(props: {
   if (s.logEdits && props.history && props.history.length > 0) {
     nodes.push(
       <div className="hc-edit-history" key="hc-edit-history">
-        {props.history.map((version, index) => (
-          <div
-            className={`hc-edit-history__version hc-edit-history__version--${s.deleteStyle || "tint"}`}
-            key={index}
-          >
-            {renderContent(version.content)}
-          </div>
-        ))}
+        {props.history.map((version, index) => {
+          // Each old version carries the time it was superseded; show it inline
+          // at the end of the line (always HH:MM:SS — datetime would be too long
+          // per row), so "when was each edit" reads down the stack.
+          const time = formatDeletedAt(version.at, "time");
+          return (
+            <div
+              className={`hc-edit-history__version hc-edit-history__version--${s.deleteStyle || "tint"}`}
+              key={index}
+            >
+              {renderContent(version.content)}
+              {time ? <span className="hc-edit-history__time">{time}</span> : null}
+            </div>
+          );
+        })}
       </div>
     );
   }
 
+  // Deleted takes precedence: a message that was edited *then* deleted shows
+  // the deletion marker, not both.
+  if (s.showEditedMarker && props.isEdited && !props.isDeleted) {
+    nodes.push(<MessageMarker key="hc-edited-marker" text="此消息已编辑" at={props.editedAt} edited />);
+  }
+
   if (s.showDeletedMarker && props.isDeleted) {
-    nodes.push(<DeletedMarker key="hc-deleted-marker" deletedAt={props.deletedAt} />);
+    nodes.push(<MessageMarker key="hc-deleted-marker" text="此消息已删除" at={props.deletedAt} />);
   }
 
   return nodes.length ? <>{nodes}</> : null;
@@ -973,13 +995,27 @@ export default definePlugin({
       const record = messageLog.findDeleted(String(channelId), String(id));
       const hasHistory = Boolean(entry && entry.history.length > 0);
       const isDeleted = Boolean(record) || message?.deleted === true;
+      // Discord's own edited_timestamp marks any edited message, so the marker
+      // shows even for edits made before the recorder was running; our own
+      // record's updatedAt is the fallback time source.
+      const editedTs = message?.edited_timestamp ?? message?.editedTimestamp;
+      const isEdited = editedTs != null || hasHistory;
+      const editedAt = editedTs != null ? toMillis(editedTs) : entry?.updatedAt;
 
-      // Mount whenever either extra *could* appear — even if its toggle is off
-      // right now — so flipping logEdits / showDeletedMarker in settings takes
-      // effect on this message live (MessageExtras re-renders itself).
-      if (!hasHistory && !isDeleted) return null;
+      // Mount whenever any extra *could* appear — even if its toggle is off
+      // right now — so flipping a toggle in settings takes effect on this
+      // message live (MessageExtras re-renders itself).
+      if (!hasHistory && !isDeleted && !isEdited) return null;
 
-      return <MessageExtras history={entry?.history} deletedAt={record?.deletedAt} isDeleted={isDeleted} />;
+      return (
+        <MessageExtras
+          history={entry?.history}
+          deletedAt={record?.deletedAt}
+          editedAt={editedAt}
+          isDeleted={isDeleted}
+          isEdited={isEdited}
+        />
+      );
     } catch {
       return null;
     }

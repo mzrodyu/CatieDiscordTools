@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.7
+// @version      0.1.8
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -574,7 +574,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 22:33:11" : "dev";
+      const build = true ? "2026-07-19 22:52:54" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -2080,6 +2080,19 @@ ${slices.join("\n  ...  \n")}`);
   color: rgba(240, 71, 71, 0.85);
 }
 
+/* Tone: edited \u2014 same marker layout, calmer amber so an edit doesn't read as a
+ * deletion. Overrides the red the delete marker uses. */
+.hc-deleted-marker--edited {
+  color: #e0a53f;
+}
+.hc-deleted-marker--edited.hc-deleted-marker--badge {
+  background: rgba(224, 165, 63, 0.14);
+}
+.hc-deleted-marker--edited.hc-deleted-marker--quote {
+  border-left-color: rgba(224, 165, 63, 0.7);
+  color: rgba(224, 165, 63, 0.9);
+}
+
 /* --- Username next to nickname (show-username plugin) --------------------- */
 
 /*
@@ -2126,6 +2139,19 @@ ${slices.join("\n  ...  \n")}`);
 .hc-edit-history__version {
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+/* Per-version edit time, shown inline at the end of each old-version line.
+ * Muted and compact; opacity keeps it tied to whatever the version style is,
+ * and text-decoration:none stops the strike style from striking the time. */
+.hc-edit-history__time {
+  margin-left: 6px;
+  font-size: 0.72em;
+  opacity: 0.55;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  vertical-align: baseline;
 }
 
 /* The old-version line mirrors the deleted-message style (tint/text/ghost/
@@ -2951,7 +2977,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.7" : "dev";
+    const version = true ? "0.1.8" : "dev";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {
@@ -3639,12 +3665,19 @@ ${components_default}`;
       label: "\u663E\u793A\u5220\u9664\u6807\u8BB0\u884C",
       description: "\u5728\u88AB\u5220\u6D88\u606F\u4E0B\u65B9\u663E\u793A\u201C\u6B64\u6D88\u606F\u5DF2\u5220\u9664\u201D\u4E0E\u5220\u9664\u65F6\u95F4\u3002"
     },
+    showEditedMarker: {
+      group: "\u5916\u89C2",
+      type: "boolean",
+      default: true,
+      label: "\u663E\u793A\u7F16\u8F91\u6807\u8BB0\u884C",
+      description: "\u5728\u7F16\u8F91\u8FC7\u7684\u6D88\u606F\u65C1\u663E\u793A\u201C\u6B64\u6D88\u606F\u5DF2\u7F16\u8F91\u201D\u4E0E\u7F16\u8F91\u65F6\u95F4\uFF08\u6CBF\u7528\u4E0B\u65B9\u6807\u8BB0\u7684\u56FE\u6807 / \u5916\u89C2 / \u65F6\u95F4\u8BBE\u7F6E\uFF09\u3002"
+    },
     markerIcon: {
       group: "\u5916\u89C2",
       type: "select",
       default: "trash",
       label: "\u6807\u8BB0\u56FE\u6807",
-      description: "\u5220\u9664\u6807\u8BB0\u884C\u524D\u7684\u56FE\u6807\u3002",
+      description: "\u6807\u8BB0\u884C\u524D\u7684\u56FE\u6807\uFF08\u5220\u9664 / \u7F16\u8F91\u901A\u7528\uFF09\u3002",
       options: [
         { value: "trash", label: "\u{1F5D1} \u5783\u573E\u6876" },
         { value: "shield", label: "\u{1F6E1} \u76FE\u724C" },
@@ -3657,7 +3690,7 @@ ${components_default}`;
       type: "select",
       default: "plain",
       label: "\u6807\u8BB0\u5916\u89C2",
-      description: "\u5220\u9664\u6807\u8BB0\u884C\u7684\u5448\u73B0\u65B9\u5F0F\u3002",
+      description: "\u6807\u8BB0\u884C\u7684\u5448\u73B0\u65B9\u5F0F\uFF08\u5220\u9664 / \u7F16\u8F91\u901A\u7528\uFF09\u3002",
       options: [
         { value: "plain", label: "\u7EAF\u6587\u5B57" },
         { value: "badge", label: "\u5706\u89D2\u5FBD\u7AE0" },
@@ -3668,7 +3701,7 @@ ${components_default}`;
       group: "\u5916\u89C2",
       type: "select",
       default: "time",
-      label: "\u5220\u9664\u65F6\u95F4\u683C\u5F0F",
+      label: "\u6807\u8BB0\u65F6\u95F4\u683C\u5F0F",
       description: "\u6807\u8BB0\u884C\u91CC\u65F6\u95F4\u7684\u663E\u793A\u65B9\u5F0F\u3002",
       options: [
         { value: "time", label: "\u4EC5\u65F6\u95F4\uFF0803:19:42\uFF09" },
@@ -4434,11 +4467,12 @@ ${components_default}`;
     }
     return d.toLocaleTimeString("zh-CN", { hour12: false });
   }
-  function DeletedMarker(props) {
+  function MessageMarker(props) {
     const s = settings.store;
     const icon = MARKER_ICON_PATHS[s.markerIcon]?.();
-    const stamp = formatDeletedAt(props.deletedAt, s.markerTime);
-    return /* @__PURE__ */ React.createElement("div", { className: `hc-deleted-marker hc-deleted-marker--${s.markerLook || "plain"}` }, icon && /* @__PURE__ */ React.createElement(
+    const stamp = formatDeletedAt(props.at, s.markerTime);
+    const cls = `hc-deleted-marker hc-deleted-marker--${s.markerLook || "plain"}` + (props.edited ? " hc-deleted-marker--edited" : "");
+    return /* @__PURE__ */ React.createElement("div", { className: cls }, icon && /* @__PURE__ */ React.createElement(
       "svg",
       {
         className: "hc-deleted-marker__icon",
@@ -4453,9 +4487,9 @@ ${components_default}`;
         "aria-hidden": true
       },
       icon
-    ), /* @__PURE__ */ React.createElement("span", null, "\u6B64\u6D88\u606F\u5DF2\u5220\u9664", stamp ? `\uFF08${stamp}\uFF09` : ""));
+    ), /* @__PURE__ */ React.createElement("span", null, props.text, stamp ? `\uFF08${stamp}\uFF09` : ""));
   }
-  var MARKER_SETTING_KEYS = ["logEdits", "deleteStyle", "showDeletedMarker", "markerIcon", "markerLook", "markerTime"];
+  var MARKER_SETTING_KEYS = ["logEdits", "deleteStyle", "showDeletedMarker", "showEditedMarker", "markerIcon", "markerLook", "markerTime"];
   function useMlogSettings() {
     const [, bump] = useState(0);
     useEffect(() => {
@@ -4469,18 +4503,25 @@ ${components_default}`;
     const nodes = [];
     if (s.logEdits && props.history && props.history.length > 0) {
       nodes.push(
-        /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history", key: "hc-edit-history" }, props.history.map((version, index) => /* @__PURE__ */ React.createElement(
-          "div",
-          {
-            className: `hc-edit-history__version hc-edit-history__version--${s.deleteStyle || "tint"}`,
-            key: index
-          },
-          renderContent(version.content)
-        )))
+        /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history", key: "hc-edit-history" }, props.history.map((version, index) => {
+          const time = formatDeletedAt(version.at, "time");
+          return /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              className: `hc-edit-history__version hc-edit-history__version--${s.deleteStyle || "tint"}`,
+              key: index
+            },
+            renderContent(version.content),
+            time ? /* @__PURE__ */ React.createElement("span", { className: "hc-edit-history__time" }, time) : null
+          );
+        }))
       );
     }
+    if (s.showEditedMarker && props.isEdited && !props.isDeleted) {
+      nodes.push(/* @__PURE__ */ React.createElement(MessageMarker, { key: "hc-edited-marker", text: "\u6B64\u6D88\u606F\u5DF2\u7F16\u8F91", at: props.editedAt, edited: true }));
+    }
     if (s.showDeletedMarker && props.isDeleted) {
-      nodes.push(/* @__PURE__ */ React.createElement(DeletedMarker, { key: "hc-deleted-marker", deletedAt: props.deletedAt }));
+      nodes.push(/* @__PURE__ */ React.createElement(MessageMarker, { key: "hc-deleted-marker", text: "\u6B64\u6D88\u606F\u5DF2\u5220\u9664", at: props.deletedAt }));
     }
     return nodes.length ? /* @__PURE__ */ React.createElement(React.Fragment, null, nodes) : null;
   }
@@ -4682,8 +4723,20 @@ ${components_default}`;
         const record2 = messageLog.findDeleted(String(channelId), String(id));
         const hasHistory = Boolean(entry && entry.history.length > 0);
         const isDeleted = Boolean(record2) || message?.deleted === true;
-        if (!hasHistory && !isDeleted) return null;
-        return /* @__PURE__ */ React.createElement(MessageExtras, { history: entry?.history, deletedAt: record2?.deletedAt, isDeleted });
+        const editedTs = message?.edited_timestamp ?? message?.editedTimestamp;
+        const isEdited = editedTs != null || hasHistory;
+        const editedAt = editedTs != null ? toMillis(editedTs) : entry?.updatedAt;
+        if (!hasHistory && !isDeleted && !isEdited) return null;
+        return /* @__PURE__ */ React.createElement(
+          MessageExtras,
+          {
+            history: entry?.history,
+            deletedAt: record2?.deletedAt,
+            editedAt,
+            isDeleted,
+            isEdited
+          }
+        );
       } catch {
         return null;
       }

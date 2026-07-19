@@ -54,12 +54,19 @@ export const settings = defineSettings({
     label: "显示删除标记行",
     description: "在被删消息下方显示“此消息已删除”与删除时间。"
   },
+  showEditedMarker: {
+    group: "外观",
+    type: "boolean",
+    default: true,
+    label: "显示编辑标记行",
+    description: "在编辑过的消息旁显示“此消息已编辑”与编辑时间（沿用下方标记的图标 / 外观 / 时间设置）。"
+  },
   markerIcon: {
     group: "外观",
     type: "select",
     default: "trash",
     label: "标记图标",
-    description: "删除标记行前的图标。",
+    description: "标记行前的图标（删除 / 编辑通用）。",
     options: [
       { value: "trash", label: "🗑 垃圾桶" },
       { value: "shield", label: "🛡 盾牌" },
@@ -72,7 +79,7 @@ export const settings = defineSettings({
     type: "select",
     default: "plain",
     label: "标记外观",
-    description: "删除标记行的呈现方式。",
+    description: "标记行的呈现方式（删除 / 编辑通用）。",
     options: [
       { value: "plain", label: "纯文字" },
       { value: "badge", label: "圆角徽章" },
@@ -83,7 +90,7 @@ export const settings = defineSettings({
     group: "外观",
     type: "select",
     default: "time",
-    label: "删除时间格式",
+    label: "标记时间格式",
     description: "标记行里时间的显示方式。",
     options: [
       { value: "time", label: "仅时间（03:19:42）" },
