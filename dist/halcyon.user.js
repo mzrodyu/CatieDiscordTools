@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.2
+// @version      0.1.3
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -567,7 +567,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:44:57" : "dev";
+      const build = true ? "2026-07-19 20:48:44" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -1179,11 +1179,7 @@ ${slices.join("\n  ...  \n")}`);
 }
 
 .hc-select__menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 10000;
-  min-width: 100%;
+  /* Positioned by its portal wrapper (fixed, anchored to the button). */
   max-height: 280px;
   overflow-y: auto;
   padding: var(--hc-space-1);
@@ -2235,16 +2231,45 @@ ${components_default}`;
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(-1);
     const rootRef = useRef(null);
+    const menuRef = useRef(null);
+    const [menuPos, setMenuPos] = useState(null);
     const current = options.find((o) => o.value === value);
     useEffect(() => {
       if (!open) return;
       const onPress = (e) => {
-        if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+        const t = e.target;
+        if (rootRef.current?.contains(t)) return;
+        if (menuRef.current?.contains(t)) return;
+        setOpen(false);
       };
       document.addEventListener("pointerdown", onPress, true);
       return () => document.removeEventListener("pointerdown", onPress, true);
     }, [open]);
+    useEffect(() => {
+      if (!open) return;
+      const onMove = (e) => {
+        if (menuRef.current && e.target instanceof Node && menuRef.current.contains(e.target)) return;
+        setOpen(false);
+      };
+      window.addEventListener("scroll", onMove, true);
+      window.addEventListener("resize", onMove);
+      return () => {
+        window.removeEventListener("scroll", onMove, true);
+        window.removeEventListener("resize", onMove);
+      };
+    }, [open]);
     const openMenu = () => {
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (rect) {
+        const estimated = Math.min(280, options.length * 36 + 10);
+        const below = rect.bottom + 6;
+        const top = below + estimated > window.innerHeight - 8 ? Math.max(8, rect.top - 6 - estimated) : below;
+        setMenuPos({
+          top,
+          right: Math.max(8, window.innerWidth - rect.right),
+          width: rect.width
+        });
+      }
       setActive(Math.max(0, options.findIndex((o) => o.value === value)));
       setOpen(true);
     };
@@ -2304,37 +2329,49 @@ ${components_default}`;
         },
         /* @__PURE__ */ React.createElement("path", { d: "M6 9l6 6 6-6" })
       )
-    ), open && /* @__PURE__ */ React.createElement("div", { className: "hc-select__menu", role: "listbox" }, options.map((opt, index) => /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        key: opt.value,
-        role: "option",
-        "aria-selected": opt.value === value,
-        className: "hc-select__option",
-        "data-active": index === active,
-        "data-selected": opt.value === value,
-        onPointerEnter: () => setActive(index),
-        onClick: () => pick(opt.value)
-      },
-      /* @__PURE__ */ React.createElement("span", { className: "hc-select__optlabel" }, opt.label),
-      opt.value === value && /* @__PURE__ */ React.createElement(
-        "svg",
+    ), open && menuPos && ReactDOM.createPortal(
+      /* @__PURE__ */ React.createElement(
+        "div",
         {
-          className: "hc-select__check",
-          width: "14",
-          height: "14",
-          viewBox: "0 0 24 24",
-          fill: "none",
-          stroke: "currentColor",
-          strokeWidth: 2.5,
-          strokeLinecap: "round",
-          strokeLinejoin: "round",
-          "aria-hidden": true
+          className: "halcyon",
+          ref: menuRef,
+          style: { position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 1e4 },
+          onKeyDown: onKeyDown2
         },
-        /* @__PURE__ */ React.createElement("path", { d: "M5 12.5l4.5 4.5L19 7" })
-      )
-    ))));
+        /* @__PURE__ */ React.createElement("div", { className: "hc-select__menu", role: "listbox", style: { minWidth: menuPos.width } }, options.map((opt, index) => /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            key: opt.value,
+            role: "option",
+            "aria-selected": opt.value === value,
+            className: "hc-select__option",
+            "data-active": index === active,
+            "data-selected": opt.value === value,
+            onPointerEnter: () => setActive(index),
+            onClick: () => pick(opt.value)
+          },
+          /* @__PURE__ */ React.createElement("span", { className: "hc-select__optlabel" }, opt.label),
+          opt.value === value && /* @__PURE__ */ React.createElement(
+            "svg",
+            {
+              className: "hc-select__check",
+              width: "14",
+              height: "14",
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: 2.5,
+              strokeLinecap: "round",
+              strokeLinejoin: "round",
+              "aria-hidden": true
+            },
+            /* @__PURE__ */ React.createElement("path", { d: "M5 12.5l4.5 4.5L19 7" })
+          )
+        )))
+      ),
+      document.body
+    ));
   }
 
   // src/ui/components/StringListEditor.tsx
@@ -2690,7 +2727,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.2" : "dev";
+    const version = true ? "0.1.3" : "dev";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {

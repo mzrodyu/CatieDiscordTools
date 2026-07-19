@@ -5,10 +5,15 @@
 // be themed. The resting control is a pill button showing the current label;
 // the menu is a rounded, elevated sheet with a checkmark on the active row.
 // Keyboard: Enter/Space/ArrowDown open, arrows move, Enter picks, Esc closes.
+//
+// The open menu renders through a portal to <body> with fixed positioning:
+// settings cards clip their children (overflow:hidden for the rounded
+// corners), so an in-place absolute menu gets cut off at the card edge.
 
 // Lazy hook wrappers, NOT `const {...} = React`: a top-level destructure
 // snapshots the lazy proxy before Discord's React exists and yields undefined.
 import { useState, useRef, useEffect } from "../../core/common/react";
+import { ReactDOM } from "../../core/common/react";
 
 export interface SelectOption {
   value: string;
@@ -26,21 +31,57 @@ export function Select({ value, options, onChange, ...rest }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  // Fixed-position coordinates for the portaled menu, derived from the button.
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number; width: number } | null>(null);
 
   const current = options.find((o) => o.value === value);
 
   // Close on any outside pointer press (capture phase so Discord's own
-  // stopPropagation-happy handlers can't swallow it).
+  // stopPropagation-happy handlers can't swallow it). The menu lives in a
+  // portal, so check both the control and the menu subtree.
   useEffect(() => {
     if (!open) return;
     const onPress = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("pointerdown", onPress, true);
     return () => document.removeEventListener("pointerdown", onPress, true);
   }, [open]);
 
+  // Any scroll or resize outside the menu shifts the anchor; close rather than
+  // chase it (matches how iOS dismisses popovers).
+  useEffect(() => {
+    if (!open) return;
+    const onMove = (e: Event) => {
+      if (menuRef.current && e.target instanceof Node && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    window.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onMove);
+    return () => {
+      window.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onMove);
+    };
+  }, [open]);
+
   const openMenu = () => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (rect) {
+      // Estimated menu height (rows + padding), capped by the CSS max-height.
+      const estimated = Math.min(280, options.length * 36 + 10);
+      const below = rect.bottom + 6;
+      // Flip above the button when the estimate would spill past the viewport.
+      const top = below + estimated > window.innerHeight - 8 ? Math.max(8, rect.top - 6 - estimated) : below;
+      setMenuPos({
+        top,
+        right: Math.max(8, window.innerWidth - rect.right),
+        width: rect.width
+      });
+    }
     setActive(Math.max(0, options.findIndex((o) => o.value === value)));
     setOpen(true);
   };
@@ -103,41 +144,53 @@ export function Select({ value, options, onChange, ...rest }: SelectProps) {
         </svg>
       </button>
 
-      {open && (
-        <div className="hc-select__menu" role="listbox">
-          {options.map((opt, index) => (
-            <button
-              type="button"
-              key={opt.value}
-              role="option"
-              aria-selected={opt.value === value}
-              className="hc-select__option"
-              data-active={index === active}
-              data-selected={opt.value === value}
-              onPointerEnter={() => setActive(index)}
-              onClick={() => pick(opt.value)}
-            >
-              <span className="hc-select__optlabel">{opt.label}</span>
-              {opt.value === value && (
-                <svg
-                  className="hc-select__check"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
+      {open &&
+        menuPos &&
+        (ReactDOM.createPortal(
+          <div
+            // The portal target is <body>, outside .halcyon, so the design
+            // tokens/styles need re-scoping here.
+            className="halcyon"
+            ref={menuRef}
+            style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 10000 }}
+            onKeyDown={onKeyDown}
+          >
+            <div className="hc-select__menu" role="listbox" style={{ minWidth: menuPos.width }}>
+              {options.map((opt, index) => (
+                <button
+                  type="button"
+                  key={opt.value}
+                  role="option"
+                  aria-selected={opt.value === value}
+                  className="hc-select__option"
+                  data-active={index === active}
+                  data-selected={opt.value === value}
+                  onPointerEnter={() => setActive(index)}
+                  onClick={() => pick(opt.value)}
                 >
-                  <path d="M5 12.5l4.5 4.5L19 7" />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+                  <span className="hc-select__optlabel">{opt.label}</span>
+                  {opt.value === value && (
+                    <svg
+                      className="hc-select__check"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M5 12.5l4.5 4.5L19 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body
+        ) as React.ReactElement)}
     </div>
   );
 }
