@@ -567,7 +567,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:23:41" : "dev";
+      const build = true ? "2026-07-19 20:29:16" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -2208,13 +2208,12 @@ ${components_default}`;
   }
 
   // src/ui/components/Select.tsx
-  var { useState: useState2, useRef: useRef2, useEffect: useEffect2 } = React;
   function Select({ value, options, onChange, ...rest }) {
-    const [open, setOpen] = useState2(false);
-    const [active, setActive] = useState2(-1);
-    const rootRef = useRef2(null);
+    const [open, setOpen] = useState(false);
+    const [active, setActive] = useState(-1);
+    const rootRef = useRef(null);
     const current = options.find((o) => o.value === value);
-    useEffect2(() => {
+    useEffect(() => {
       if (!open) return;
       const onPress = (e) => {
         if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
@@ -2316,9 +2315,8 @@ ${components_default}`;
   }
 
   // src/ui/components/StringListEditor.tsx
-  var { useState: useState3 } = React;
   function StringListEditor({ value, onChange, itemPlaceholder }) {
-    const [draft, setDraft] = useState3("");
+    const [draft, setDraft] = useState("");
     const commit = () => {
       const next = draft.trim();
       if (!next || value.includes(next)) {

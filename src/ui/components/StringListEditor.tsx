@@ -6,7 +6,9 @@
 import { TrashIcon, PlusIcon } from "@halcyon/icons";
 import { TextInput } from "./TextInput";
 
-const { useState } = React;
+// Lazy hook wrapper, NOT `const {...} = React`: a top-level destructure
+// snapshots the lazy proxy before Discord's React exists and yields undefined.
+import { useState } from "../../core/common/react";
 
 export interface StringListEditorProps {
   value: string[];

@@ -6,7 +6,9 @@
 // the menu is a rounded, elevated sheet with a checkmark on the active row.
 // Keyboard: Enter/Space/ArrowDown open, arrows move, Enter picks, Esc closes.
 
-const { useState, useRef, useEffect } = React;
+// Lazy hook wrappers, NOT `const {...} = React`: a top-level destructure
+// snapshots the lazy proxy before Discord's React exists and yields undefined.
+import { useState, useRef, useEffect } from "../../core/common/react";
 
 export interface SelectOption {
   value: string;
