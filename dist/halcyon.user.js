@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.4
+// @version      0.1.5
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -447,6 +447,7 @@ ${slices.join("\n  ...  \n")}`);
   );
   var useState = (...a) => React.useState(...a);
   var useEffect = (...a) => React.useEffect(...a);
+  var useMemo = (...a) => React.useMemo(...a);
   var useRef = (...a) => React.useRef(...a);
 
   // src/userscript/install-storage.ts
@@ -567,7 +568,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:54:53" : "dev";
+      const build = true ? "2026-07-19 21:06:19" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -1768,6 +1769,36 @@ ${slices.join("\n  ...  \n")}`);
   color: var(--hc-label-primary);
 }
 
+/* --- Save bar --------------------------------------------------------------- */
+
+.hc-savebar {
+  position: sticky;
+  bottom: var(--hc-space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-4);
+  margin-top: var(--hc-space-4);
+  padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-4);
+  background: var(--hc-bg-elevated, #2c2c2e);
+  border-radius: var(--hc-radius-lg);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+  animation: hc-select-pop 0.14s ease;
+}
+
+.hc-savebar__label {
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-secondary);
+}
+
+.hc-savebar__actions {
+  display: flex;
+  gap: var(--hc-space-2);
+  flex: none;
+}
+
 /* --- Segmented control ------------------------------------------------------ */
 
 .hc-segment {
@@ -2461,6 +2492,22 @@ ${components_default}`;
     )));
   }
 
+  // src/ui/components/Button.tsx
+  function Button({
+    variant = "secondary",
+    size = "md",
+    icon,
+    className,
+    children,
+    type = "button",
+    ...rest
+  }) {
+    const classes = ["hc-btn", `hc-btn--${variant}`];
+    if (size !== "md") classes.push(`hc-btn--${size}`);
+    if (className) classes.push(className);
+    return /* @__PURE__ */ React.createElement("button", { type, className: classes.join(" "), ...rest }, icon, children != null && children !== false && /* @__PURE__ */ React.createElement("span", null, children));
+  }
+
   // src/ui/settings/hooks.ts
   function useRuntimeList() {
     const [list, setList] = useState(() => runtime.list());
@@ -2485,10 +2532,34 @@ ${components_default}`;
   }
 
   // src/ui/settings/SettingsForm.tsx
+  function clone(value) {
+    if (value === null || typeof value !== "object") return value;
+    return JSON.parse(JSON.stringify(value));
+  }
+  function equal(a, b) {
+    if (a === b) return true;
+    try {
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch {
+      return false;
+    }
+  }
   function SettingsForm({ settings: settings3 }) {
     const store = useSettingsSnapshot(settings3);
-    const keys = Object.keys(settings3.schema).filter((key) => !settings3.schema[key].hidden);
+    const keys = useMemo(
+      () => Object.keys(settings3.schema).filter((key) => !settings3.schema[key].hidden),
+      [settings3]
+    );
+    const [draft, setDraft] = useState(() => seed(store, keys));
+    useEffect(() => {
+      setDraft(seed(store, keys));
+    }, [settings3]);
     if (keys.length === 0) return null;
+    const dirty = keys.filter((key) => !equal(draft[key], store[key]));
+    const save = () => {
+      for (const key of dirty) store[key] = clone(draft[key]);
+    };
+    const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
       const title = settings3.schema[key].group ?? "\u8BBE\u7F6E";
@@ -2501,12 +2572,15 @@ ${components_default}`;
       {
         key,
         def: settings3.schema[key],
-        value: store[key],
-        onChange: (next) => {
-          store[key] = next;
-        }
+        value: draft[key],
+        onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
-    ))))));
+    ))))), dirty.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-savebar" }, /* @__PURE__ */ React.createElement("span", { className: "hc-savebar__label" }, "\u6709 ", dirty.length, " \u9879\u672A\u4FDD\u5B58\u7684\u4FEE\u6539"), /* @__PURE__ */ React.createElement("div", { className: "hc-savebar__actions" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: discard }, "\u653E\u5F03"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "primary", onClick: save }, "\u4FDD\u5B58"))));
+  }
+  function seed(store, keys) {
+    const out = {};
+    for (const key of keys) out[key] = clone(store[key]);
+    return out;
   }
   function SettingField({ def, value, onChange }) {
     const label = /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, def.label), def.description && /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, def.description));
@@ -2784,7 +2858,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.4" : "dev";
+    const version = true ? "0.1.5" : "dev";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {
@@ -3660,22 +3734,6 @@ ${components_default}`;
     }
   };
   var messageLog = new MessageLogStore();
-
-  // src/ui/components/Button.tsx
-  function Button({
-    variant = "secondary",
-    size = "md",
-    icon,
-    className,
-    children,
-    type = "button",
-    ...rest
-  }) {
-    const classes = ["hc-btn", `hc-btn--${variant}`];
-    if (size !== "md") classes.push(`hc-btn--${size}`);
-    if (className) classes.push(className);
-    return /* @__PURE__ */ React.createElement("button", { type, className: classes.join(" "), ...rest }, icon, children != null && children !== false && /* @__PURE__ */ React.createElement("span", null, children));
-  }
 
   // src/plugins/message-logger/ui/LogPage.tsx
   var log9 = logger("message-logger");
