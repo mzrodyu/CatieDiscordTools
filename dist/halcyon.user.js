@@ -567,7 +567,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:15:20" : "dev";
+      const build = true ? "2026-07-19 20:23:41" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -4013,9 +4013,9 @@ ${components_default}`;
     };
   }
   var MARKER_ICON_PATHS = {
-    trash: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("path", { d: "M4.5 7h15" }), /* @__PURE__ */ React.createElement("path", { d: "M9.25 7V5.5A1.5 1.5 0 0110.75 4h2.5a1.5 1.5 0 011.5 1.5V7" }), /* @__PURE__ */ React.createElement("path", { d: "M6.5 7l.85 11.1A2 2 0 009.34 20h5.32a2 2 0 001.99-1.9L17.5 7" })),
-    shield: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("path", { d: "M12 3.5l7 2.6v5c0 4.4-3 7.3-7 8.9-4-1.6-7-4.5-7-8.9v-5l7-2.6z" }), /* @__PURE__ */ React.createElement("path", { d: "M9.5 12l1.8 1.8 3.2-3.6" })),
-    warning: /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("path", { d: "M12 4.5L3.5 19h17L12 4.5z" }), /* @__PURE__ */ React.createElement("path", { d: "M12 10v4" }), /* @__PURE__ */ React.createElement("path", { d: "M12 16.75h.01" }))
+    trash: () => /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("path", { d: "M4.5 7h15" }), /* @__PURE__ */ React.createElement("path", { d: "M9.25 7V5.5A1.5 1.5 0 0110.75 4h2.5a1.5 1.5 0 011.5 1.5V7" }), /* @__PURE__ */ React.createElement("path", { d: "M6.5 7l.85 11.1A2 2 0 009.34 20h5.32a2 2 0 001.99-1.9L17.5 7" })),
+    shield: () => /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("path", { d: "M12 3.5l7 2.6v5c0 4.4-3 7.3-7 8.9-4-1.6-7-4.5-7-8.9v-5l7-2.6z" }), /* @__PURE__ */ React.createElement("path", { d: "M9.5 12l1.8 1.8 3.2-3.6" })),
+    warning: () => /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("path", { d: "M12 4.5L3.5 19h17L12 4.5z" }), /* @__PURE__ */ React.createElement("path", { d: "M12 10v4" }), /* @__PURE__ */ React.createElement("path", { d: "M12 16.75h.01" }))
   };
   function formatDeletedAt(at, mode) {
     if (at == null || mode === "none") return void 0;
@@ -4028,7 +4028,7 @@ ${components_default}`;
   }
   function DeletedMarker(props) {
     const s = settings.store;
-    const icon = MARKER_ICON_PATHS[s.markerIcon];
+    const icon = MARKER_ICON_PATHS[s.markerIcon]?.();
     const stamp = formatDeletedAt(props.deletedAt, s.markerTime);
     return /* @__PURE__ */ React.createElement("div", { className: `hc-deleted-marker hc-deleted-marker--${s.markerLook || "plain"}` }, icon && /* @__PURE__ */ React.createElement(
       "svg",

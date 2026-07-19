@@ -591,21 +591,25 @@ function attachRecorderEverywhere(): Unpatch {
 
 // --- deleted-message marker -------------------------------------------------
 
-const MARKER_ICON_PATHS: Record<string, React.ReactNode> = {
-  trash: (
+// Thunks, not elements: this table sits at module top level, which is
+// evaluated while the bundle IIFE runs — before Discord's React exists.
+// Creating the elements eagerly here crashed every build at document-start
+// ("React.createElement is not a function"), taking the whole runtime down.
+const MARKER_ICON_PATHS: Record<string, () => React.ReactNode> = {
+  trash: () => (
     <>
       <path d="M4.5 7h15" />
       <path d="M9.25 7V5.5A1.5 1.5 0 0110.75 4h2.5a1.5 1.5 0 011.5 1.5V7" />
       <path d="M6.5 7l.85 11.1A2 2 0 009.34 20h5.32a2 2 0 001.99-1.9L17.5 7" />
     </>
   ),
-  shield: (
+  shield: () => (
     <>
       <path d="M12 3.5l7 2.6v5c0 4.4-3 7.3-7 8.9-4-1.6-7-4.5-7-8.9v-5l7-2.6z" />
       <path d="M9.5 12l1.8 1.8 3.2-3.6" />
     </>
   ),
-  warning: (
+  warning: () => (
     <>
       <path d="M12 4.5L3.5 19h17L12 4.5z" />
       <path d="M12 10v4" />
@@ -627,7 +631,7 @@ function formatDeletedAt(at: number | undefined, mode: string): string | undefin
 /** The "此消息已删除" line; icon, look, and time format come from settings. */
 function DeletedMarker(props: { deletedAt?: number }): React.ReactElement {
   const s = settings.store;
-  const icon = MARKER_ICON_PATHS[s.markerIcon];
+  const icon = MARKER_ICON_PATHS[s.markerIcon]?.();
   const stamp = formatDeletedAt(props.deletedAt, s.markerTime);
   return (
     <div className={`hc-deleted-marker hc-deleted-marker--${s.markerLook || "plain"}`}>
