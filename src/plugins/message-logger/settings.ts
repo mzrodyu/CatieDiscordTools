@@ -71,18 +71,6 @@ export const settings = defineSettings({
     label: "记录编辑历史",
     description: "保存每条消息被编辑前的内容。"
   },
-  ignoreBots: {
-    type: "boolean",
-    default: false,
-    label: "忽略机器人",
-    description: "不记录机器人发送的消息。"
-  },
-  ignoreSelf: {
-    type: "boolean",
-    default: false,
-    label: "忽略自己",
-    description: "不记录你自己删除或编辑的消息。"
-  },
   retention: {
     type: "number",
     default: 50,
@@ -92,18 +80,33 @@ export const settings = defineSettings({
     max: 500,
     step: 10
   },
+  // --- 屏蔽对象 ---------------------------------------------------------
+  // Every rule below gates BOTH capture paths: the recorder (log page) and
+  // the in-chat red retention, via isIgnored().
+  ignoreBots: {
+    type: "boolean",
+    default: false,
+    label: "屏蔽机器人",
+    description: "机器人的消息不记录、不在聊天中保留。"
+  },
+  ignoreSelf: {
+    type: "boolean",
+    default: false,
+    label: "屏蔽自己",
+    description: "你自己删除或编辑的消息不记录、不在聊天中保留。"
+  },
   ignoredUsers: {
     type: "string-list",
     default: [],
-    label: "忽略的用户",
-    description: "按用户 ID 忽略。",
+    label: "屏蔽的用户",
+    description: "这些用户的消息不记录、不在聊天中保留。",
     itemPlaceholder: "用户 ID"
   },
   ignoredChannels: {
     type: "string-list",
     default: [],
-    label: "忽略的频道",
-    description: "按频道 ID 忽略。",
+    label: "屏蔽的频道",
+    description: "这些频道里的消息不记录、不在聊天中保留。",
     itemPlaceholder: "频道 ID"
   }
 });

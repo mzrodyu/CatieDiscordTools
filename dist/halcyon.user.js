@@ -567,7 +567,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:29:16" : "dev";
+      const build = true ? "2026-07-19 20:35:03" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -3332,18 +3332,6 @@ ${components_default}`;
       label: "\u8BB0\u5F55\u7F16\u8F91\u5386\u53F2",
       description: "\u4FDD\u5B58\u6BCF\u6761\u6D88\u606F\u88AB\u7F16\u8F91\u524D\u7684\u5185\u5BB9\u3002"
     },
-    ignoreBots: {
-      type: "boolean",
-      default: false,
-      label: "\u5FFD\u7565\u673A\u5668\u4EBA",
-      description: "\u4E0D\u8BB0\u5F55\u673A\u5668\u4EBA\u53D1\u9001\u7684\u6D88\u606F\u3002"
-    },
-    ignoreSelf: {
-      type: "boolean",
-      default: false,
-      label: "\u5FFD\u7565\u81EA\u5DF1",
-      description: "\u4E0D\u8BB0\u5F55\u4F60\u81EA\u5DF1\u5220\u9664\u6216\u7F16\u8F91\u7684\u6D88\u606F\u3002"
-    },
     retention: {
       type: "number",
       default: 50,
@@ -3353,18 +3341,33 @@ ${components_default}`;
       max: 500,
       step: 10
     },
+    // --- 屏蔽对象 ---------------------------------------------------------
+    // Every rule below gates BOTH capture paths: the recorder (log page) and
+    // the in-chat red retention, via isIgnored().
+    ignoreBots: {
+      type: "boolean",
+      default: false,
+      label: "\u5C4F\u853D\u673A\u5668\u4EBA",
+      description: "\u673A\u5668\u4EBA\u7684\u6D88\u606F\u4E0D\u8BB0\u5F55\u3001\u4E0D\u5728\u804A\u5929\u4E2D\u4FDD\u7559\u3002"
+    },
+    ignoreSelf: {
+      type: "boolean",
+      default: false,
+      label: "\u5C4F\u853D\u81EA\u5DF1",
+      description: "\u4F60\u81EA\u5DF1\u5220\u9664\u6216\u7F16\u8F91\u7684\u6D88\u606F\u4E0D\u8BB0\u5F55\u3001\u4E0D\u5728\u804A\u5929\u4E2D\u4FDD\u7559\u3002"
+    },
     ignoredUsers: {
       type: "string-list",
       default: [],
-      label: "\u5FFD\u7565\u7684\u7528\u6237",
-      description: "\u6309\u7528\u6237 ID \u5FFD\u7565\u3002",
+      label: "\u5C4F\u853D\u7684\u7528\u6237",
+      description: "\u8FD9\u4E9B\u7528\u6237\u7684\u6D88\u606F\u4E0D\u8BB0\u5F55\u3001\u4E0D\u5728\u804A\u5929\u4E2D\u4FDD\u7559\u3002",
       itemPlaceholder: "\u7528\u6237 ID"
     },
     ignoredChannels: {
       type: "string-list",
       default: [],
-      label: "\u5FFD\u7565\u7684\u9891\u9053",
-      description: "\u6309\u9891\u9053 ID \u5FFD\u7565\u3002",
+      label: "\u5C4F\u853D\u7684\u9891\u9053",
+      description: "\u8FD9\u4E9B\u9891\u9053\u91CC\u7684\u6D88\u606F\u4E0D\u8BB0\u5F55\u3001\u4E0D\u5728\u804A\u5929\u4E2D\u4FDD\u7559\u3002",
       itemPlaceholder: "\u9891\u9053 ID"
     }
   });
@@ -3853,7 +3856,9 @@ ${components_default}`;
       if (id && (minId === void 0 || compareIds(id, minId) < 0)) minId = id;
     }
     const revived = mine.filter(
-      (d) => !present.has(d.id) && (minId === void 0 || compareIds(d.id, minId) >= 0)
+      (d) => !present.has(d.id) && (minId === void 0 || compareIds(d.id, minId) >= 0) && // Respect the ignore rules at revive time too, so toggling "屏蔽机器人"
+      // or "屏蔽自己" takes effect for already-recorded messages on reload.
+      !isIgnored(channelId, d.author)
     );
     if (!revived.length) return;
     const descending = msgs.length >= 2 ? compareIds(String(msgs[0].id), String(msgs[msgs.length - 1].id)) > 0 : true;

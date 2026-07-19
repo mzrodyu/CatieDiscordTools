@@ -365,7 +365,12 @@ function resurrectIntoLoad(action: any): void {
   }
 
   const revived = mine.filter(
-    (d) => !present.has(d.id) && (minId === undefined || compareIds(d.id, minId) >= 0)
+    (d) =>
+      !present.has(d.id) &&
+      (minId === undefined || compareIds(d.id, minId) >= 0) &&
+      // Respect the ignore rules at revive time too, so toggling "屏蔽机器人"
+      // or "屏蔽自己" takes effect for already-recorded messages on reload.
+      !isIgnored(channelId, d.author)
   );
   if (!revived.length) return;
 
