@@ -2,9 +2,10 @@
 
 # Halcyon
 
-一个面向 Discord 桌面客户端的插件系统，专注克制的 iOS 风格设计与稳定的插件 API。
+一个面向 Discord 桌面客户端的插件系统，专注克制的 iOS 风格设计与稳定的插件 API。<br/>
+A restrained, iOS-styled plugin system / client mod for the Discord web &amp; desktop client.
 
-<sub>Discord client mod · iOS-style UI · SVG icons · No gradients</sub>
+<sub>Discord client mod · plugin system · message logger / anti-delete 防撤回 · userscript · browser extension · iOS-style UI</sub>
 
 <br>
 <br>
@@ -17,6 +18,8 @@
 </div>
 
 ---
+
+> **English** · Halcyon is a plugin system and client mod for the Discord **web & desktop** client, with an iOS-style settings UI. Built-in plugins include a **message logger** (anti-delete, edit history with per-edit timestamps, channel & server names, emoji rendering) and **show username**. Ships three ways — a **userscript** (Tampermonkey / Violentmonkey), a **browser extension** (Chrome / Edge / Firefox), and **desktop injection**. Written in TypeScript + React. Open source, GPL-3.0. Press `Ctrl/Cmd+Shift+H` inside Discord to open the settings panel.
 
 ## 这是什么
 
@@ -52,7 +55,7 @@ Halcyon 的定位是 **稳定、可读、克制**：
 
 | 插件 | 简介 |
 | --- | --- |
-| `message-logger` | 保留被删除的消息、记录编辑历史、支持忽略名单和日志导出 |
+| `message-logger` | 消息记录 / 防撤回：保留被删除的消息、记录编辑历史（每个版本带时间戳）、显示频道与服务器名、渲染表情，支持忽略名单与日志导出 |
 | `show-username` | 在昵称旁边显示账号用户名，多种样式可选，防止相似昵称冒充 |
 | `guild-monitor` | 主动订阅选定服务器的频道，捕捉未打开频道里的消息（有封号风险，默认关闭） |
 
