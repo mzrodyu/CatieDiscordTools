@@ -694,7 +694,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 23:56:48" : "dev";
+      const build = true ? "2026-07-19 23:59:31" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -5486,10 +5486,12 @@ ${components_default}`;
   }
   function currentTarget() {
     try {
-      const channelId = SelectedChannelStore.getChannelId?.();
-      if (!channelId) return null;
+      const raw = SelectedChannelStore.getChannelId?.();
+      if (!raw) return null;
+      const channelId = String(raw);
       const channel = ChannelStore.getChannel?.(channelId);
-      const guildId = channel?.guild_id ?? "@me";
+      const gid = channel?.guild_id ?? channel?.guildId;
+      const guildId = gid ? String(gid) : "@me";
       return { guildId, channelId, serverWide: false };
     } catch {
       return null;

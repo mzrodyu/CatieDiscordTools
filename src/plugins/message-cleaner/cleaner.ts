@@ -131,10 +131,12 @@ export function currentUserId(): string | undefined {
 
 export function currentTarget(): CleanTarget | null {
   try {
-    const channelId = SelectedChannelStore.getChannelId?.();
-    if (!channelId) return null;
+    const raw = SelectedChannelStore.getChannelId?.();
+    if (!raw) return null;
+    const channelId = String(raw);
     const channel = ChannelStore.getChannel?.(channelId);
-    const guildId = channel?.guild_id ?? "@me";
+    const gid = channel?.guild_id ?? channel?.guildId;
+    const guildId = gid ? String(gid) : "@me";
     return { guildId, channelId, serverWide: false };
   } catch { return null; }
 }
