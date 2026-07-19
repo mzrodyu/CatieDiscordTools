@@ -6,6 +6,13 @@
 
 <sub>Discord client mod · iOS-style UI · SVG icons · No gradients</sub>
 
+<br>
+<br>
+
+[![一键安装油猴脚本](https://img.shields.io/badge/🐒_一键安装油猴脚本-点这里-2ea44f?style=for-the-badge)](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon.user.js)
+
+<sub>需先安装 <a href="https://www.tampermonkey.net/">Tampermonkey（油猴）</a>，装好后点上面按钮即自动弹出安装页 · <a href="#安装三选一">其它安装方式</a></sub>
+
 </div>
 
 ---
