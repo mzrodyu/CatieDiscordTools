@@ -44,9 +44,14 @@ export const UserStore = lazy<any>(
   (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
 );
 
-/** Channel metadata. */
+/**
+ * Channel metadata. Resolved by the store's registered name rather than a bare
+ * shape probe: `getChannel`/`hasChannel` also appear on lighter lookalike
+ * modules, and matching one of those returns empty channels (so the log showed
+ * raw channel ids instead of names). The name is stable across releases.
+ */
 export const ChannelStore = lazy<any>(
-  (m) => typeof m?.getChannel === "function" && typeof m?.hasChannel === "function"
+  (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
 );
 
 /** The currently focused channel / guild. */
@@ -54,9 +59,13 @@ export const SelectedChannelStore = lazy<any>(
   (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
 );
 
-/** Guilds (servers) the current account has joined. */
+/**
+ * Guilds (servers) the current account has joined. Resolved by store name for
+ * the same reason as ChannelStore — a `getGuild`/`getGuilds` shape-alike can
+ * shadow the real store and hand back an empty guild map.
+ */
 export const GuildStore = lazy<any>(
-  (m) => typeof m?.getGuild === "function" && typeof m?.getGuilds === "function"
+  (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
 );
 
 /** A guild's channels, grouped and queryable. */

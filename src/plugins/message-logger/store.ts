@@ -49,6 +49,7 @@ export interface DeletedEntry {
 export interface EditedEntry {
   id: string;
   channelId: string;
+  guildId?: string;
   author: Author;
   /** Oldest first; the last item is the most recent superseded version. */
   history: Array<{ content: string; at: number }>;
@@ -106,12 +107,12 @@ class MessageLogStore {
     this.emit();
   }
 
-  recordEdit(id: string, channelId: string, author: Author, previous: string): void {
+  recordEdit(id: string, channelId: string, author: Author, previous: string, guildId?: string): void {
     const now = Date.now();
     let entry = this.edited.find((e) => e.id === id);
 
     if (!entry) {
-      entry = { id, channelId, author, history: [{ content: previous, at: now }], updatedAt: now };
+      entry = { id, channelId, guildId, author, history: [{ content: previous, at: now }], updatedAt: now };
       this.edited.unshift(entry);
     } else {
       const last = entry.history[entry.history.length - 1];

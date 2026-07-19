@@ -1115,6 +1115,16 @@
   color: var(--hc-label-secondary);
 }
 
+.hc-msg__guild {
+  color: var(--hc-label-secondary);
+  font-weight: 600;
+}
+
+.hc-msg__sep {
+  color: var(--hc-label-tertiary);
+  margin: 0 4px;
+}
+
 .hc-msg__time {
   margin-left: auto;
   font-size: var(--hc-text-caption1);
@@ -1168,6 +1178,16 @@
   background: var(--hc-fill-secondary);
 }
 
+/* Inline custom emoji, sized to the surrounding text like Discord's own. */
+.hc-emoji {
+  display: inline-block;
+  width: 1.375em;
+  height: 1.375em;
+  margin: 0 1px;
+  object-fit: contain;
+  vertical-align: bottom;
+}
+
 .hc-msg__versions {
   display: flex;
   flex-direction: column;
@@ -1205,38 +1225,42 @@
 /*
  * Applied to Discord's own message row when a deleted message is kept in place.
  * These live outside the .halcyon scope on purpose — they decorate Discord
- * elements — so literal values, no tokens. One base class plus a per-style
- * modifier chosen in the plugin's settings.
+ * elements — so literal values, no tokens.
+ *
+ * The row itself only carries the stable .hc-deleted hook; the chosen style is
+ * a class on <html> (hc-mlog-<style>). Splitting them lets a style change take
+ * effect immediately — swap the root class and every kept message updates —
+ * instead of the pick only landing on rows Discord repaints after the change.
  */
 
 /* Style: red tint (default) — flat red wash + left bar. */
-.hc-deleted--tint {
+.hc-mlog-tint .hc-deleted {
   background-color: rgba(255, 69, 58, 0.1);
   box-shadow: inset 2px 0 0 #ff453a;
 }
 
 /* Style: red text — content turns red, no background. */
-.hc-deleted--text [class*="messageContent"],
-.hc-deleted--text [class*="contents"] > div:not([class*="header"]) {
+.hc-mlog-text .hc-deleted [class*="messageContent"],
+.hc-mlog-text .hc-deleted [class*="contents"] > div:not([class*="header"]) {
   color: #f04747 !important;
 }
-.hc-deleted--text [class*="messageContent"] a {
+.hc-mlog-text .hc-deleted [class*="messageContent"] a {
   color: #ff6b6b !important;
 }
 
 /* Style: ghost — the whole row fades. */
-.hc-deleted--ghost {
+.hc-mlog-ghost .hc-deleted {
   opacity: 0.45;
   filter: saturate(0.6);
 }
 
 /* Style: strike — red strikethrough over the text. */
-.hc-deleted--strike [class*="messageContent"] {
+.hc-mlog-strike .hc-deleted [class*="messageContent"] {
   text-decoration: line-through;
   text-decoration-color: rgba(255, 69, 58, 0.7);
   text-decoration-thickness: 1.5px;
 }
-.hc-deleted--strike {
+.hc-mlog-strike .hc-deleted {
   box-shadow: inset 2px 0 0 rgba(255, 69, 58, 0.5);
 }
 
@@ -1312,13 +1336,40 @@
 /*
  * Old versions of an edited message, rendered above the current content by the
  * message-logger content patch. Like .hc-deleted this decorates Discord's own
- * DOM, so literal values, no tokens. Dimmed + struck through so the current
- * text stays visually primary.
+ * DOM, so literal values, no tokens. The base class only handles wrapping; a
+ * per-style modifier (chosen in settings) sets the look. MessageExtras re-reads
+ * the modifier on every render, so changing the style applies live.
  */
 .hc-edit-history__version {
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* The old-version line mirrors the deleted-message style (tint/text/ghost/
+ * strike) so both share one setting; strike stays its natural default look. */
+
+/* Style: red strikethrough — struck out in red, like removed text. */
+.hc-edit-history__version--strike {
   color: rgba(255, 69, 58, 0.75);
   text-decoration: line-through;
   text-decoration-color: rgba(255, 69, 58, 0.4);
-  word-break: break-word;
-  white-space: pre-wrap;
+}
+
+/* Style: red text — red, no strikethrough. */
+.hc-edit-history__version--text {
+  color: rgba(255, 69, 58, 0.85);
+}
+
+/* Style: ghost — faded out, keeps the normal text color. */
+.hc-edit-history__version--ghost {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+/* Style: tint — red wash + left bar, as a quote-like block on the line. */
+.hc-edit-history__version--tint {
+  background-color: rgba(255, 69, 58, 0.1);
+  box-shadow: inset 2px 0 0 #ff453a;
+  padding: 1px 6px 1px 8px;
+  border-radius: 3px;
 }

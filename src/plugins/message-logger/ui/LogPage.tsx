@@ -5,9 +5,10 @@
 // works whether or not the optional in-chat patches applied.
 
 import { useEffect, useState } from "../../../core/common/react";
-import { ChannelStore } from "../../../core/common/discord";
+import { ChannelStore, GuildStore } from "../../../core/common/discord";
 import { logger } from "../../../core/logger";
 import { messageLog, type DeletedEntry, type EditedEntry } from "../store";
+import { renderContent } from "../render-content";
 import { Button } from "../../../ui/components/Button";
 import { EmptyState } from "../../../ui/components/EmptyState";
 import { Badge } from "../../../ui/components/Badge";
@@ -145,12 +146,12 @@ function DeletedRow({ entry }: { entry: DeletedEntry }): React.ReactElement {
       <div className="hc-msg__head">
         <span className="hc-msg__author">{entry.author.name}</span>
         {entry.author.bot && <Badge tone="neutral">BOT</Badge>}
-        <span className="hc-msg__where">{channelLabel(entry.channelId)}</span>
+        <Location channelId={entry.channelId} guildId={entry.guildId} />
         <span className="hc-msg__time">{formatTime(entry.deletedAt)}</span>
       </div>
       <div className="hc-msg__body">
         {entry.content ? (
-          entry.content
+          renderContent(entry.content)
         ) : entry.stickers?.length ? (
           <span>🏷️ 贴纸：{entry.stickers.map((s) => s.name).join("、")}</span>
         ) : entry.attachmentsRich?.length || entry.embeds?.length ? (
@@ -190,14 +191,16 @@ function EditedRow({ entry }: { entry: EditedEntry }): React.ReactElement {
     <div className="hc-msg">
       <div className="hc-msg__head">
         <span className="hc-msg__author">{entry.author.name}</span>
-        <span className="hc-msg__where">{channelLabel(entry.channelId)}</span>
+        <Location channelId={entry.channelId} guildId={entry.guildId} />
         <span className="hc-msg__time">{formatTime(entry.updatedAt)}</span>
       </div>
       <div className="hc-msg__versions">
         {entry.history.map((version, index) => (
           <div className="hc-msg__version" key={index}>
             <span className="hc-msg__vtag">v{index + 1}</span>
-            <span className="hc-msg__vbody">{version.content || "（空）"}</span>
+            <span className="hc-msg__vbody">
+              {version.content ? renderContent(version.content) : "（空）"}
+            </span>
           </div>
         ))}
       </div>
@@ -205,14 +208,48 @@ function EditedRow({ entry }: { entry: EditedEntry }): React.ReactElement {
   );
 }
 
-function channelLabel(channelId: string): string {
+// Resolve a message's origin to readable names. The channel comes from
+// ChannelStore; the guild from the stored guildId, or the channel's own
+// guild_id when that's absent. Anything unresolved (a channel not cached this
+// session) falls back to the raw id rather than showing nothing.
+function resolveLocation(channelId: string, guildId?: string): { guild?: string; channel: string } {
+  let channelName: string | undefined;
+  let gid = guildId;
+  let isDM = false;
   try {
-    const channel = ChannelStore.getChannel(channelId);
-    if (channel?.name) return `#${channel.name}`;
+    const channel = ChannelStore.getChannel?.(channelId);
+    if (channel) {
+      if (channel.name) channelName = String(channel.name);
+      gid = gid ?? channel.guild_id ?? channel.guildId ?? undefined;
+      isDM = channel.type === 1 || channel.type === 3;
+    }
   } catch {
-    // ChannelStore may not be ready; fall back to the id.
+    // store not ready; fall through to the id
   }
-  return `#${channelId}`;
+
+  let guildName: string | undefined;
+  try {
+    if (gid) {
+      const guild = GuildStore.getGuild?.(gid);
+      if (guild?.name) guildName = String(guild.name);
+    }
+  } catch {
+    // store not ready
+  }
+
+  const channel = channelName ? `#${channelName}` : isDM ? "私信" : `#${channelId}`;
+  return { guild: guildName, channel };
+}
+
+function Location({ channelId, guildId }: { channelId: string; guildId?: string }): React.ReactElement {
+  const loc = resolveLocation(channelId, guildId);
+  return (
+    <span className="hc-msg__where">
+      {loc.guild && <span className="hc-msg__guild">{loc.guild}</span>}
+      {loc.guild && <span className="hc-msg__sep">›</span>}
+      <span>{loc.channel}</span>
+    </span>
+  );
 }
 
 function formatTime(time: number): string {

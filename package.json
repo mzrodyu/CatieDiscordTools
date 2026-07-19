@@ -1,6 +1,6 @@
 {
   "name": "halcyon",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "description": "A plugin runtime for the Discord desktop client with a restrained iOS-style interface.",
   "author": "caitemm (mzrodyu)",

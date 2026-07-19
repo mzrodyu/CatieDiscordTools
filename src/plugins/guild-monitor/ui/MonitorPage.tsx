@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "../../../core/common/react";
 import { GuildStore } from "../../../core/common/discord";
+import { findStore } from "../../../core/modules/webpack";
 import { Toggle } from "../../../ui/components/Toggle";
 import { Button } from "../../../ui/components/Button";
 import { EmptyState } from "../../../ui/components/EmptyState";
@@ -22,7 +23,12 @@ interface GuildInfo {
 
 function readGuilds(): GuildInfo[] {
   try {
-    const map = GuildStore.getGuilds?.() ?? {};
+    // Resolve by the store's registered name first. A bare shape probe
+    // (getGuild + getGuilds) can land on an empty lookalike module, which is
+    // how the list came back at zero; the named lookup pins the real store.
+    // Fall back to the shape-matched handle if the name lookup misses.
+    const store = findStore("GuildStore") ?? GuildStore;
+    const map = store?.getGuilds?.() ?? {};
     return Object.values(map)
       .map((g: any) => ({ id: String(g?.id ?? ""), name: String(g?.name ?? g?.id ?? "未知服务器") }))
       .filter((g) => g.id)

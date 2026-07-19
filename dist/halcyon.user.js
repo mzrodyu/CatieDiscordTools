@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.6
+// @version      0.1.7
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -280,6 +280,9 @@ var Halcyon = (() => {
   }
   function findByProps(...props) {
     return find((exp) => props.every((p) => exp[p] !== void 0));
+  }
+  function findStore(name) {
+    return find((exp) => exp?.getName?.() === name || exp?.constructor?.displayName === name);
   }
   function waitFor(filter, callback) {
     const existing = find(filter);
@@ -571,7 +574,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 21:22:02" : "dev";
+      const build = true ? "2026-07-19 22:33:11" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -1895,6 +1898,16 @@ ${slices.join("\n  ...  \n")}`);
   color: var(--hc-label-secondary);
 }
 
+.hc-msg__guild {
+  color: var(--hc-label-secondary);
+  font-weight: 600;
+}
+
+.hc-msg__sep {
+  color: var(--hc-label-tertiary);
+  margin: 0 4px;
+}
+
 .hc-msg__time {
   margin-left: auto;
   font-size: var(--hc-text-caption1);
@@ -1948,6 +1961,16 @@ ${slices.join("\n  ...  \n")}`);
   background: var(--hc-fill-secondary);
 }
 
+/* Inline custom emoji, sized to the surrounding text like Discord's own. */
+.hc-emoji {
+  display: inline-block;
+  width: 1.375em;
+  height: 1.375em;
+  margin: 0 1px;
+  object-fit: contain;
+  vertical-align: bottom;
+}
+
 .hc-msg__versions {
   display: flex;
   flex-direction: column;
@@ -1985,38 +2008,42 @@ ${slices.join("\n  ...  \n")}`);
 /*
  * Applied to Discord's own message row when a deleted message is kept in place.
  * These live outside the .halcyon scope on purpose \u2014 they decorate Discord
- * elements \u2014 so literal values, no tokens. One base class plus a per-style
- * modifier chosen in the plugin's settings.
+ * elements \u2014 so literal values, no tokens.
+ *
+ * The row itself only carries the stable .hc-deleted hook; the chosen style is
+ * a class on <html> (hc-mlog-<style>). Splitting them lets a style change take
+ * effect immediately \u2014 swap the root class and every kept message updates \u2014
+ * instead of the pick only landing on rows Discord repaints after the change.
  */
 
 /* Style: red tint (default) \u2014 flat red wash + left bar. */
-.hc-deleted--tint {
+.hc-mlog-tint .hc-deleted {
   background-color: rgba(255, 69, 58, 0.1);
   box-shadow: inset 2px 0 0 #ff453a;
 }
 
 /* Style: red text \u2014 content turns red, no background. */
-.hc-deleted--text [class*="messageContent"],
-.hc-deleted--text [class*="contents"] > div:not([class*="header"]) {
+.hc-mlog-text .hc-deleted [class*="messageContent"],
+.hc-mlog-text .hc-deleted [class*="contents"] > div:not([class*="header"]) {
   color: #f04747 !important;
 }
-.hc-deleted--text [class*="messageContent"] a {
+.hc-mlog-text .hc-deleted [class*="messageContent"] a {
   color: #ff6b6b !important;
 }
 
 /* Style: ghost \u2014 the whole row fades. */
-.hc-deleted--ghost {
+.hc-mlog-ghost .hc-deleted {
   opacity: 0.45;
   filter: saturate(0.6);
 }
 
 /* Style: strike \u2014 red strikethrough over the text. */
-.hc-deleted--strike [class*="messageContent"] {
+.hc-mlog-strike .hc-deleted [class*="messageContent"] {
   text-decoration: line-through;
   text-decoration-color: rgba(255, 69, 58, 0.7);
   text-decoration-thickness: 1.5px;
 }
-.hc-deleted--strike {
+.hc-mlog-strike .hc-deleted {
   box-shadow: inset 2px 0 0 rgba(255, 69, 58, 0.5);
 }
 
@@ -2092,15 +2119,42 @@ ${slices.join("\n  ...  \n")}`);
 /*
  * Old versions of an edited message, rendered above the current content by the
  * message-logger content patch. Like .hc-deleted this decorates Discord's own
- * DOM, so literal values, no tokens. Dimmed + struck through so the current
- * text stays visually primary.
+ * DOM, so literal values, no tokens. The base class only handles wrapping; a
+ * per-style modifier (chosen in settings) sets the look. MessageExtras re-reads
+ * the modifier on every render, so changing the style applies live.
  */
 .hc-edit-history__version {
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* The old-version line mirrors the deleted-message style (tint/text/ghost/
+ * strike) so both share one setting; strike stays its natural default look. */
+
+/* Style: red strikethrough \u2014 struck out in red, like removed text. */
+.hc-edit-history__version--strike {
   color: rgba(255, 69, 58, 0.75);
   text-decoration: line-through;
   text-decoration-color: rgba(255, 69, 58, 0.4);
-  word-break: break-word;
-  white-space: pre-wrap;
+}
+
+/* Style: red text \u2014 red, no strikethrough. */
+.hc-edit-history__version--text {
+  color: rgba(255, 69, 58, 0.85);
+}
+
+/* Style: ghost \u2014 faded out, keeps the normal text color. */
+.hc-edit-history__version--ghost {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+/* Style: tint \u2014 red wash + left bar, as a quote-like block on the line. */
+.hc-edit-history__version--tint {
+  background-color: rgba(255, 69, 58, 0.1);
+  box-shadow: inset 2px 0 0 #ff453a;
+  padding: 1px 6px 1px 8px;
+  border-radius: 3px;
 }
 `;
 
@@ -2897,7 +2951,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.6" : "dev";
+    const version = true ? "0.1.7" : "dev";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {
@@ -3445,13 +3499,13 @@ ${components_default}`;
     (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
   );
   var ChannelStore = lazy(
-    (m) => typeof m?.getChannel === "function" && typeof m?.hasChannel === "function"
+    (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
   );
   var SelectedChannelStore = lazy(
     (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
   );
   var GuildStore = lazy(
-    (m) => typeof m?.getGuild === "function" && typeof m?.getGuilds === "function"
+    (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
   );
   var GuildChannelStore = lazy(
     (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
@@ -3569,8 +3623,8 @@ ${components_default}`;
       group: "\u5916\u89C2",
       type: "select",
       default: "tint",
-      label: "\u88AB\u5220\u6D88\u606F\u6837\u5F0F",
-      description: "\u88AB\u5220\u6D88\u606F\u5728\u804A\u5929\u4E2D\u7684\u5448\u73B0\u65B9\u5F0F\u3002",
+      label: "\u5220\u9664 / \u7F16\u8F91\u6837\u5F0F",
+      description: "\u88AB\u5220\u6D88\u606F\u3001\u4EE5\u53CA\u7F16\u8F91\u6D88\u606F\u4E0A\u65B9\u65E7\u7248\u672C\u5185\u5BB9\u5728\u804A\u5929\u4E2D\u7684\u5448\u73B0\u65B9\u5F0F\u3002",
       options: [
         { value: "tint", label: "\u7EA2\u8272\u5E95\u7EB9 + \u5DE6\u4FA7\u7EA2\u6761" },
         { value: "text", label: "\u6B63\u6587\u53D8\u7EA2" },
@@ -3700,11 +3754,11 @@ ${components_default}`;
       this.scheduleSave();
       this.emit();
     }
-    recordEdit(id, channelId, author, previous) {
+    recordEdit(id, channelId, author, previous, guildId) {
       const now = Date.now();
       let entry = this.edited.find((e) => e.id === id);
       if (!entry) {
-        entry = { id, channelId, author, history: [{ content: previous, at: now }], updatedAt: now };
+        entry = { id, channelId, guildId, author, history: [{ content: previous, at: now }], updatedAt: now };
         this.edited.unshift(entry);
       } else {
         const last = entry.history[entry.history.length - 1];
@@ -3782,6 +3836,41 @@ ${components_default}`;
     }
   };
   var messageLog = new MessageLogStore();
+
+  // src/plugins/message-logger/render-content.tsx
+  var EMOJI_TOKEN = /<(a)?:([A-Za-z0-9_]+):(\d+)>/g;
+  function renderContent(content) {
+    const parts = [];
+    let cursor = 0;
+    let key = 0;
+    EMOJI_TOKEN.lastIndex = 0;
+    for (let m = EMOJI_TOKEN.exec(content); m; m = EMOJI_TOKEN.exec(content)) {
+      if (m.index > cursor) {
+        parts.push(/* @__PURE__ */ React.createElement("span", { key: key++ }, content.slice(cursor, m.index)));
+      }
+      const [, animated, name, id] = m;
+      parts.push(
+        /* @__PURE__ */ React.createElement(
+          "img",
+          {
+            key: key++,
+            className: "hc-emoji",
+            src: `https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "webp"}`,
+            alt: `:${name}:`,
+            title: `:${name}:`,
+            draggable: false,
+            loading: "lazy"
+          }
+        )
+      );
+      cursor = m.index + m[0].length;
+    }
+    if (parts.length === 0) return content;
+    if (cursor < content.length) {
+      parts.push(/* @__PURE__ */ React.createElement("span", { key: key++ }, content.slice(cursor)));
+    }
+    return parts;
+  }
 
   // src/plugins/message-logger/ui/LogPage.tsx
   var log9 = logger("message-logger");
@@ -3868,7 +3957,7 @@ ${components_default}`;
     ));
   }
   function DeletedRow({ entry }) {
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__where" }, channelLabel(entry.channelId)), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt))), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? entry.content : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt))), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? renderContent(entry.content) : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
       (a, i) => (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? /* @__PURE__ */ React.createElement(
         "img",
         {
@@ -3882,15 +3971,35 @@ ${components_default}`;
     )), !entry.attachmentsRich?.length && entry.attachments.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__meta" }, "\u9644\u4EF6 ", entry.attachments.length, " \u4E2A"));
   }
   function EditedRow({ entry }) {
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__where" }, channelLabel(entry.channelId)), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt))), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version.content || "\uFF08\u7A7A\uFF09")))));
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt))), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version.content ? renderContent(version.content) : "\uFF08\u7A7A\uFF09")))));
   }
-  function channelLabel(channelId) {
+  function resolveLocation(channelId, guildId) {
+    let channelName;
+    let gid = guildId;
+    let isDM = false;
     try {
-      const channel = ChannelStore.getChannel(channelId);
-      if (channel?.name) return `#${channel.name}`;
+      const channel2 = ChannelStore.getChannel?.(channelId);
+      if (channel2) {
+        if (channel2.name) channelName = String(channel2.name);
+        gid = gid ?? channel2.guild_id ?? channel2.guildId ?? void 0;
+        isDM = channel2.type === 1 || channel2.type === 3;
+      }
     } catch {
     }
-    return `#${channelId}`;
+    let guildName;
+    try {
+      if (gid) {
+        const guild = GuildStore.getGuild?.(gid);
+        if (guild?.name) guildName = String(guild.name);
+      }
+    } catch {
+    }
+    const channel = channelName ? `#${channelName}` : isDM ? "\u79C1\u4FE1" : `#${channelId}`;
+    return { guild: guildName, channel };
+  }
+  function Location({ channelId, guildId }) {
+    const loc = resolveLocation(channelId, guildId);
+    return /* @__PURE__ */ React.createElement("span", { className: "hc-msg__where" }, loc.guild && /* @__PURE__ */ React.createElement("span", { className: "hc-msg__guild" }, loc.guild), loc.guild && /* @__PURE__ */ React.createElement("span", { className: "hc-msg__sep" }, "\u203A"), /* @__PURE__ */ React.createElement("span", null, loc.channel));
   }
   function formatTime2(time) {
     const date = new Date(time);
@@ -3917,6 +4026,7 @@ ${components_default}`;
   var log10 = logger("message-logger");
   var unpatchDispatch;
   var unsubscribeRetention;
+  var unsubscribeDeleteStyle;
   function toMillis(value) {
     if (typeof value === "number") return value;
     if (typeof value === "string") {
@@ -4078,7 +4188,14 @@ ${components_default}`;
     if (previous === payload.content) return;
     const author = existing?.author ?? snap?.author ?? payload.author ?? {};
     if (isIgnored(channelId, author)) return;
-    messageLog.recordEdit(String(id), String(channelId), toAuthor(author), previous);
+    const guildId = payload.guild_id ?? payload.guildId ?? existing?.guild_id ?? snap?.guildId;
+    messageLog.recordEdit(
+      String(id),
+      String(channelId),
+      toAuthor(author),
+      previous,
+      guildId != null ? String(guildId) : void 0
+    );
   }
   function entryToRaw(entry) {
     const attachments = (entry.attachmentsRich ?? []).map((a, i) => ({
@@ -4338,6 +4455,45 @@ ${components_default}`;
       icon
     ), /* @__PURE__ */ React.createElement("span", null, "\u6B64\u6D88\u606F\u5DF2\u5220\u9664", stamp ? `\uFF08${stamp}\uFF09` : ""));
   }
+  var MARKER_SETTING_KEYS = ["logEdits", "deleteStyle", "showDeletedMarker", "markerIcon", "markerLook", "markerTime"];
+  function useMlogSettings() {
+    const [, bump] = useState(0);
+    useEffect(() => {
+      const unsubs = MARKER_SETTING_KEYS.map((key) => settings.subscribe(key, () => bump((n) => n + 1)));
+      return () => unsubs.forEach((unsub) => unsub());
+    }, []);
+  }
+  function MessageExtras(props) {
+    useMlogSettings();
+    const s = settings.store;
+    const nodes = [];
+    if (s.logEdits && props.history && props.history.length > 0) {
+      nodes.push(
+        /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history", key: "hc-edit-history" }, props.history.map((version, index) => /* @__PURE__ */ React.createElement(
+          "div",
+          {
+            className: `hc-edit-history__version hc-edit-history__version--${s.deleteStyle || "tint"}`,
+            key: index
+          },
+          renderContent(version.content)
+        )))
+      );
+    }
+    if (s.showDeletedMarker && props.isDeleted) {
+      nodes.push(/* @__PURE__ */ React.createElement(DeletedMarker, { key: "hc-deleted-marker", deletedAt: props.deletedAt }));
+    }
+    return nodes.length ? /* @__PURE__ */ React.createElement(React.Fragment, null, nodes) : null;
+  }
+  var DELETE_STYLE_CLASSES = ["tint", "text", "ghost", "strike"];
+  function syncDeleteStyleClass() {
+    try {
+      const root = document.documentElement;
+      if (!root) return;
+      for (const s of DELETE_STYLE_CLASSES) root.classList.remove(`hc-mlog-${s}`);
+      root.classList.add(`hc-mlog-${settings.store.deleteStyle || "tint"}`);
+    } catch {
+    }
+  }
   function reportPatches() {
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "message-logger");
     if (!mine.length) return;
@@ -4424,6 +4580,8 @@ ${components_default}`;
       messageLog.load();
       messageLog.setRetention(settings.store.retention);
       unsubscribeRetention = settings.subscribe("retention", (next) => messageLog.setRetention(next));
+      syncDeleteStyleClass();
+      unsubscribeDeleteStyle = settings.subscribe("deleteStyle", syncDeleteStyleClass);
       unpatchDispatch = attachRecorderEverywhere();
       setTimeout(reportPatches, 4e3);
       setTimeout(() => {
@@ -4441,6 +4599,12 @@ ${components_default}`;
       unpatchDispatch = void 0;
       unsubscribeRetention?.();
       unsubscribeRetention = void 0;
+      unsubscribeDeleteStyle?.();
+      unsubscribeDeleteStyle = void 0;
+      try {
+        for (const s of DELETE_STYLE_CLASSES) document.documentElement?.classList.remove(`hc-mlog-${s}`);
+      } catch {
+      }
       messageLog.flush();
       log10.info("stopped");
     },
@@ -4496,7 +4660,7 @@ ${components_default}`;
         const channelId = m.channel_id ?? m.channelId;
         const isDeleted = m.deleted === true || channelId && m.id && messageLog.isDeleted(String(channelId), String(m.id));
         if (!isDeleted) return "";
-        return `hc-deleted hc-deleted--${settings.store.deleteStyle || "tint"}`;
+        return "hc-deleted";
       } catch {
         return "";
       }
@@ -4514,23 +4678,12 @@ ${components_default}`;
         const id = message?.id;
         const channelId = message?.channel_id ?? message?.channelId;
         if (!id || !channelId) return null;
-        const nodes = [];
-        if (settings.store.logEdits) {
-          const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
-          if (entry && entry.history.length > 0) {
-            nodes.push(
-              /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history", key: "hc-edit-history" }, entry.history.map((version, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history__version", key: index }, version.content)))
-            );
-          }
-        }
-        if (settings.store.showDeletedMarker) {
-          const record2 = messageLog.findDeleted(String(channelId), String(id));
-          const deletedNow = message?.deleted === true;
-          if (record2 || deletedNow) {
-            nodes.push(/* @__PURE__ */ React.createElement(DeletedMarker, { key: "hc-deleted-marker", deletedAt: record2?.deletedAt }));
-          }
-        }
-        return nodes.length ? /* @__PURE__ */ React.createElement(React.Fragment, null, nodes) : null;
+        const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
+        const record2 = messageLog.findDeleted(String(channelId), String(id));
+        const hasHistory = Boolean(entry && entry.history.length > 0);
+        const isDeleted = Boolean(record2) || message?.deleted === true;
+        if (!hasHistory && !isDeleted) return null;
+        return /* @__PURE__ */ React.createElement(MessageExtras, { history: entry?.history, deletedAt: record2?.deletedAt, isDeleted });
       } catch {
         return null;
       }
@@ -4734,7 +4887,8 @@ ${components_default}`;
   // src/plugins/guild-monitor/ui/MonitorPage.tsx
   function readGuilds() {
     try {
-      const map = GuildStore.getGuilds?.() ?? {};
+      const store = findStore("GuildStore") ?? GuildStore;
+      const map = store?.getGuilds?.() ?? {};
       return Object.values(map).map((g2) => ({ id: String(g2?.id ?? ""), name: String(g2?.name ?? g2?.id ?? "\u672A\u77E5\u670D\u52A1\u5668") })).filter((g2) => g2.id).sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
     } catch {
       return [];

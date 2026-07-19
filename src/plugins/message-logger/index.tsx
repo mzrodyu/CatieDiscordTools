@@ -21,16 +21,19 @@ import { definePlugin } from "../../core/plugin";
 import { patcher, type Unpatch, type PatchContext } from "../../core/patcher";
 import { getSourcePatchReport, findAll, isFluxDispatcher } from "../../core/modules/webpack";
 import { getDispatcher, MessageStore, UserStore } from "../../core/common/discord";
+import { useState, useEffect } from "../../core/common/react";
 import { logger } from "../../core/logger";
 import { ClockIcon } from "../../icons";
 import { settings } from "./settings";
 import { messageLog, type Author, type DeletedEntry, type RichAttachment } from "./store";
+import { renderContent } from "./render-content";
 import { LogPage } from "./ui/LogPage";
 
 const log = logger("message-logger");
 
 let unpatchDispatch: Unpatch | undefined;
 let unsubscribeRetention: (() => void) | undefined;
+let unsubscribeDeleteStyle: (() => void) | undefined;
 
 // --- reading Discord's message shapes ------------------------------------
 // Message records mix camelCase and snake_case across versions, and timestamps
@@ -273,7 +276,14 @@ function captureEdit(payload: any): void {
   const author = existing?.author ?? snap?.author ?? payload.author ?? {};
   if (isIgnored(channelId, author)) return;
 
-  messageLog.recordEdit(String(id), String(channelId), toAuthor(author), previous);
+  const guildId = payload.guild_id ?? payload.guildId ?? existing?.guild_id ?? snap?.guildId;
+  messageLog.recordEdit(
+    String(id),
+    String(channelId),
+    toAuthor(author),
+    previous,
+    guildId != null ? String(guildId) : undefined
+  );
 }
 
 // --- resurrecting deleted messages after a reload ---------------------------
@@ -661,6 +671,78 @@ function DeletedMarker(props: { deletedAt?: number }): React.ReactElement {
   );
 }
 
+// The settings that decide what the in-chat extras look like. A mounted
+// MessageExtras subscribes to these so flipping any of them in settings updates
+// the message on screen at once — Discord won't re-render the row for us.
+const MARKER_SETTING_KEYS = ["logEdits", "deleteStyle", "showDeletedMarker", "markerIcon", "markerLook", "markerTime"] as const;
+
+/** Re-render the calling component whenever any in-chat appearance setting changes. */
+function useMlogSettings(): void {
+  const [, bump] = useState(0);
+  useEffect(() => {
+    const unsubs = MARKER_SETTING_KEYS.map((key) => settings.subscribe(key, () => bump((n) => n + 1)));
+    return () => unsubs.forEach((unsub) => unsub());
+  }, []);
+}
+
+/**
+ * The per-message extras rendered inside Discord's message: the persisted edit
+ * history and the "此消息已删除" marker. It's a real component (not inline nodes)
+ * so it can subscribe to settings and re-render live — that's what lets the
+ * appearance options take effect without a reload. It stays mounted whenever a
+ * message *could* show either extra (has history, or is deleted) even if the
+ * matching toggle is currently off, so turning a toggle on updates it in place.
+ */
+function MessageExtras(props: {
+  history?: Array<{ content: string; at: number }>;
+  deletedAt?: number;
+  isDeleted: boolean;
+}): React.ReactElement | null {
+  useMlogSettings();
+  const s = settings.store;
+  const nodes: React.ReactNode[] = [];
+
+  if (s.logEdits && props.history && props.history.length > 0) {
+    nodes.push(
+      <div className="hc-edit-history" key="hc-edit-history">
+        {props.history.map((version, index) => (
+          <div
+            className={`hc-edit-history__version hc-edit-history__version--${s.deleteStyle || "tint"}`}
+            key={index}
+          >
+            {renderContent(version.content)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (s.showDeletedMarker && props.isDeleted) {
+    nodes.push(<DeletedMarker key="hc-deleted-marker" deletedAt={props.deletedAt} />);
+  }
+
+  return nodes.length ? <>{nodes}</> : null;
+}
+
+// --- deleted-message style, applied live ----------------------------------
+
+// The chosen deleted-message style is applied through a class on the document
+// root, not baked into each row's className. Discord won't re-render message
+// rows just because our setting changed, so a per-row variant would only show
+// on messages painted after the change — which reads as "the setting does
+// nothing". One root class, swapped live, restyles every kept message at once.
+const DELETE_STYLE_CLASSES = ["tint", "text", "ghost", "strike"];
+function syncDeleteStyleClass(): void {
+  try {
+    const root = document.documentElement;
+    if (!root) return;
+    for (const s of DELETE_STYLE_CLASSES) root.classList.remove(`hc-mlog-${s}`);
+    root.classList.add(`hc-mlog-${settings.store.deleteStyle || "tint"}`);
+  } catch {
+    // no DOM to decorate (shouldn't happen inside the client)
+  }
+}
+
 // --- boot-time diagnostic -------------------------------------------------
 
 function reportPatches(): void {
@@ -758,6 +840,11 @@ export default definePlugin({
 
     unsubscribeRetention = settings.subscribe("retention", (next) => messageLog.setRetention(next));
 
+    // Deleted-message style lives as a class on <html>, synced here, so picking
+    // a new style restyles kept messages at once (see syncDeleteStyleClass).
+    syncDeleteStyleClass();
+    unsubscribeDeleteStyle = settings.subscribe("deleteStyle", syncDeleteStyleClass);
+
     unpatchDispatch = attachRecorderEverywhere();
 
     // Give module loading a moment, then report whether the in-chat patches took.
@@ -784,6 +871,13 @@ export default definePlugin({
     unpatchDispatch = undefined;
     unsubscribeRetention?.();
     unsubscribeRetention = undefined;
+    unsubscribeDeleteStyle?.();
+    unsubscribeDeleteStyle = undefined;
+    try {
+      for (const s of DELETE_STYLE_CLASSES) document.documentElement?.classList.remove(`hc-mlog-${s}`);
+    } catch {
+      // no DOM; nothing to clean up
+    }
     messageLog.flush();
     log.info("stopped");
   },
@@ -852,7 +946,10 @@ export default definePlugin({
       const isDeleted =
         m.deleted === true || (channelId && m.id && messageLog.isDeleted(String(channelId), String(m.id)));
       if (!isDeleted) return "";
-      return `hc-deleted hc-deleted--${settings.store.deleteStyle || "tint"}`;
+      // Only the stable marker hook here; the active style variant is a class
+      // on <html> (syncDeleteStyleClass), so switching styles restyles kept
+      // rows live instead of waiting for Discord to repaint them.
+      return "hc-deleted";
     } catch {
       return "";
     }
@@ -872,32 +969,17 @@ export default definePlugin({
       const channelId = message?.channel_id ?? message?.channelId;
       if (!id || !channelId) return null;
 
-      const nodes: React.ReactNode[] = [];
+      const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
+      const record = messageLog.findDeleted(String(channelId), String(id));
+      const hasHistory = Boolean(entry && entry.history.length > 0);
+      const isDeleted = Boolean(record) || message?.deleted === true;
 
-      if (settings.store.logEdits) {
-        const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
-        if (entry && entry.history.length > 0) {
-          nodes.push(
-            <div className="hc-edit-history" key="hc-edit-history">
-              {entry.history.map((version, index) => (
-                <div className="hc-edit-history__version" key={index}>
-                  {version.content}
-                </div>
-              ))}
-            </div>
-          );
-        }
-      }
+      // Mount whenever either extra *could* appear — even if its toggle is off
+      // right now — so flipping logEdits / showDeletedMarker in settings takes
+      // effect on this message live (MessageExtras re-renders itself).
+      if (!hasHistory && !isDeleted) return null;
 
-      if (settings.store.showDeletedMarker) {
-        const record = messageLog.findDeleted(String(channelId), String(id));
-        const deletedNow = message?.deleted === true;
-        if (record || deletedNow) {
-          nodes.push(<DeletedMarker key="hc-deleted-marker" deletedAt={record?.deletedAt} />);
-        }
-      }
-
-      return nodes.length ? <>{nodes}</> : null;
+      return <MessageExtras history={entry?.history} deletedAt={record?.deletedAt} isDeleted={isDeleted} />;
     } catch {
       return null;
     }

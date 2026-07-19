@@ -38,8 +38,8 @@ export const settings = defineSettings({
     group: "外观",
     type: "select",
     default: "tint",
-    label: "被删消息样式",
-    description: "被删消息在聊天中的呈现方式。",
+    label: "删除 / 编辑样式",
+    description: "被删消息、以及编辑消息上方旧版本内容在聊天中的呈现方式。",
     options: [
       { value: "tint", label: "红色底纹 + 左侧红条" },
       { value: "text", label: "正文变红" },
