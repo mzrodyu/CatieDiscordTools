@@ -29,6 +29,7 @@ export function AboutView(): React.ReactElement {
         title="项目"
         note="修改 Discord 客户端违反其服务条款，由此产生的任何后果由使用者自行承担。本项目仅供技术研究与个人使用。"
       >
+        <AboutRow label="作者" value="caitemm (mzrodyu)" />
         <AboutRow label="许可协议" value="GPL-3.0-or-later" />
       </Section>
     </div>

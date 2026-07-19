@@ -3,7 +3,7 @@
 // @namespace    halcyon
 // @version      0.1.0
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
-// @author       Halcyon
+// @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
 // @run-at       document-start
 // @grant        none
@@ -567,7 +567,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 20:07:05" : "dev";
+      const build = true ? "2026-07-19 20:12:55" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -2644,6 +2644,7 @@ ${components_default}`;
         title: "\u9879\u76EE",
         note: "\u4FEE\u6539 Discord \u5BA2\u6237\u7AEF\u8FDD\u53CD\u5176\u670D\u52A1\u6761\u6B3E\uFF0C\u7531\u6B64\u4EA7\u751F\u7684\u4EFB\u4F55\u540E\u679C\u7531\u4F7F\u7528\u8005\u81EA\u884C\u627F\u62C5\u3002\u672C\u9879\u76EE\u4EC5\u4F9B\u6280\u672F\u7814\u7A76\u4E0E\u4E2A\u4EBA\u4F7F\u7528\u3002"
       },
+      /* @__PURE__ */ React.createElement(AboutRow, { label: "\u4F5C\u8005", value: "caitemm (mzrodyu)" }),
       /* @__PURE__ */ React.createElement(AboutRow, { label: "\u8BB8\u53EF\u534F\u8BAE", value: "GPL-3.0-or-later" })
     ));
   }
@@ -2933,7 +2934,7 @@ ${components_default}`;
     id: "halcyon-settings",
     name: "Halcyon \u8BBE\u7F6E",
     description: "Halcyon \u81EA\u8EAB\u7684\u8BBE\u7F6E\u754C\u9762\u5BBF\u4E3B\u3002",
-    authors: [{ name: "Halcyon" }],
+    authors: [{ name: "caitemm" }],
     category: "misc",
     required: true,
     hidden: true,
@@ -4062,7 +4063,7 @@ ${components_default}`;
     id: "message-logger",
     name: "\u6D88\u606F\u8BB0\u5F55\u5668",
     description: "\u4FDD\u7559\u88AB\u5220\u9664\u7684\u6D88\u606F\u4E0E\u7F16\u8F91\u5386\u53F2\uFF0C\u53EF\u6309\u7528\u6237\u6216\u9891\u9053\u5FFD\u7565\uFF0C\u652F\u6301\u5BFC\u51FA\u3002",
-    authors: [{ name: "halcyon" }],
+    authors: [{ name: "caitemm" }],
     category: "utility",
     settings,
     page: {
@@ -4313,7 +4314,7 @@ ${components_default}`;
     id: "show-username",
     name: "\u663E\u793A\u7528\u6237\u540D",
     description: "\u5728\u6635\u79F0\u65C1\u8FB9\u663E\u793A\u8D26\u53F7\u7528\u6237\u540D\uFF0C\u9632\u6B62\u6539\u540D\u5192\u5145\uFF0C\u652F\u6301\u591A\u79CD\u6837\u5F0F\u3002",
-    authors: [{ name: "halcyon" }],
+    authors: [{ name: "caitemm" }],
     category: "appearance",
     settings: settings2,
     patches: [

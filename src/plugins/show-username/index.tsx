@@ -113,7 +113,7 @@ export default definePlugin({
   id: "show-username",
   name: "显示用户名",
   description: "在昵称旁边显示账号用户名，防止改名冒充，支持多种样式。",
-  authors: [{ name: "halcyon" }],
+  authors: [{ name: "caitemm" }],
   category: "appearance",
 
   settings,

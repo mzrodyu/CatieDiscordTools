@@ -59,7 +59,7 @@ const userscriptBanner = `// ==UserScript==
 // @namespace    halcyon
 // @version      ${version}
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
-// @author       Halcyon
+// @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
 // @run-at       document-start
 // @grant        none

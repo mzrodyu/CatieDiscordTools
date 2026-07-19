@@ -673,7 +673,7 @@ export default definePlugin({
   id: "message-logger",
   name: "消息记录器",
   description: "保留被删除的消息与编辑历史，可按用户或频道忽略，支持导出。",
-  authors: [{ name: "halcyon" }],
+  authors: [{ name: "caitemm" }],
   category: "utility",
 
   settings,

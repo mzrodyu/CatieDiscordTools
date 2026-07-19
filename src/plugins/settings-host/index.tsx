@@ -369,7 +369,7 @@ export default definePlugin({
   id: "halcyon-settings",
   name: "Halcyon 设置",
   description: "Halcyon 自身的设置界面宿主。",
-  authors: [{ name: "Halcyon" }],
+  authors: [{ name: "caitemm" }],
   category: "misc",
   required: true,
   hidden: true,

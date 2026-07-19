@@ -113,6 +113,10 @@ pnpm dev
 
 修改 Discord 客户端违反 Discord 的服务条款。使用本项目造成的账号封禁、数据丢失等后果由使用者自行承担。本项目仅供技术研究与个人使用，不接受面向商业分发的 issue 与 PR。
 
+## 作者
+
+**caitemm**（GitHub: [mzrodyu](https://github.com/mzrodyu)）
+
 ## 许可
 
 [GPL-3.0-or-later](./LICENSE)。任何基于本项目的修改分发都必须以同样的协议开源。
