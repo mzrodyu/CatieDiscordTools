@@ -126,7 +126,21 @@ async function apiFetch(
 // --- Discord stores (for "当前" button & picker) ----------------------------
 
 export function currentUserId(): string | undefined {
-  try { return UserStore.getCurrentUser?.()?.id; } catch { return undefined; }
+  try {
+    const u = UserStore.getCurrentUser?.();
+    if (u?.id) return String(u.id);
+  } catch { /* skip */ }
+  return undefined;
+}
+
+/**
+ * Fallback: get user id by calling /users/@me with the token (same as the
+ * original 冲水 script). Used when the local UserStore doesn't resolve.
+ */
+export async function fetchUserId(token: string): Promise<string> {
+  const me = await apiFetch(token, "/users/@me");
+  if (!me?.id) throw new Error("无法通过 Token 获取账号信息，请检查 Token 是否有效。");
+  return String(me.id);
 }
 
 export function currentTarget(): CleanTarget | null {

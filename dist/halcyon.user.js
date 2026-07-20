@@ -694,7 +694,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-19 23:59:31" : "dev";
+      const build = true ? "2026-07-20 00:04:10" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -5479,10 +5479,16 @@ ${components_default}`;
   }
   function currentUserId2() {
     try {
-      return UserStore.getCurrentUser?.()?.id;
+      const u = UserStore.getCurrentUser?.();
+      if (u?.id) return String(u.id);
     } catch {
-      return void 0;
     }
+    return void 0;
+  }
+  async function fetchUserId(token) {
+    const me = await apiFetch(token, "/users/@me");
+    if (!me?.id) throw new Error("\u65E0\u6CD5\u901A\u8FC7 Token \u83B7\u53D6\u8D26\u53F7\u4FE1\u606F\uFF0C\u8BF7\u68C0\u67E5 Token \u662F\u5426\u6709\u6548\u3002");
+    return String(me.id);
   }
   function currentTarget() {
     try {
@@ -5773,7 +5779,7 @@ ${components_default}`;
         progress("\u5931\u8D25", e.message);
         return;
       }
-      const meId = currentUserId2();
+      const meId = currentUserId2() ?? await fetchUserId(tok);
       if (!meId) {
         progress("\u5931\u8D25", "\u62FF\u4E0D\u5230\u5F53\u524D\u8D26\u53F7\uFF0C\u8BF7\u786E\u8BA4\u5DF2\u767B\u5F55 Discord\u3002");
         return;
@@ -5852,7 +5858,7 @@ ${components_default}`;
         progress("\u5931\u8D25", e.message);
         return;
       }
-      const meId = currentUserId2();
+      const meId = currentUserId2() ?? await fetchUserId(tok);
       if (!meId) {
         progress("\u5931\u8D25", "\u62FF\u4E0D\u5230\u5F53\u524D\u8D26\u53F7\u3002");
         return;

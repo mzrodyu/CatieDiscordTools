@@ -24,6 +24,7 @@ import {
   count,
   extractToken,
   currentUserId,
+  fetchUserId,
   currentTarget,
   getGuilds,
   getChannels,
@@ -169,7 +170,7 @@ export function CleanerPage(): React.ReactElement {
   const onPreview = async () => {
     let tok: string;
     try { tok = requireToken(); } catch (e: any) { progress("失败", e.message); return; }
-    const meId = currentUserId();
+    const meId = currentUserId() ?? await fetchUserId(tok);
     if (!meId) { progress("失败", "拿不到当前账号，请确认已登录 Discord。"); return; }
     const opts = buildOptions();
     if (opts.serverWide && (!opts.guildId || opts.guildId === "@me")) {
@@ -232,7 +233,7 @@ export function CleanerPage(): React.ReactElement {
   const onCount = async () => {
     let tok: string;
     try { tok = requireToken(); } catch (e: any) { progress("失败", e.message); return; }
-    const meId = currentUserId();
+    const meId = currentUserId() ?? await fetchUserId(tok);
     if (!meId) { progress("失败", "拿不到当前账号。"); return; }
     const target: CleanTarget = { guildId: guildId.trim(), channelId: serverWide ? "" : channelId.trim(), serverWide };
     setStatCount(null);
