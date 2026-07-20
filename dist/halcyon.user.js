@@ -119,8 +119,34 @@ var Halcyon = (() => {
       {},
       (req) => {
         wpRequire = req;
+        try {
+          wrapPendingFactories(req);
+        } catch (err) {
+          log.error("failed to wrap pre-existing factories", err);
+        }
       }
     ]);
+  }
+  function wrapPendingFactories(req) {
+    const factories = req?.m;
+    if (!factories || typeof factories !== "object") return;
+    let wrapped = 0;
+    let alreadyRun = 0;
+    for (const id of Object.keys(factories)) {
+      const original = factories[id];
+      if (typeof original !== "function" || original.__halcyon__) continue;
+      if (req.c && req.c[id]) {
+        alreadyRun++;
+        continue;
+      }
+      factories[id] = wrapFactory(id, original);
+      wrapped++;
+    }
+    if (wrapped || alreadyRun) {
+      log.info(
+        `swept pre-existing factories: wrapped ${wrapped}, skipped ${alreadyRun} already-executed`
+      );
+    }
   }
   function awaitCoreReady() {
     return new Promise((resolveReady) => {
@@ -522,6 +548,31 @@ ${slices.join("\n  ...  \n")}`);
       log2.error(`could not persist settings for "${id}"`, err);
     }
   }
+  var hintStore;
+  try {
+    hintStore = globalThis.localStorage;
+  } catch {
+    hintStore = void 0;
+  }
+  var HINT_PREFIX = "halcyon:hint:";
+  function readSyncHint(id) {
+    try {
+      if (!hintStore) return void 0;
+      const raw = hintStore.getItem(HINT_PREFIX + id);
+      if (!raw) return void 0;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  function writeSyncHint(id, values) {
+    try {
+      if (!hintStore) return;
+      hintStore.setItem(HINT_PREFIX + id, JSON.stringify(values));
+    } catch {
+    }
+  }
 
   // src/core/runtime.ts
   var log3 = logger("runtime");
@@ -558,7 +609,9 @@ ${slices.join("\n  ...  \n")}`);
       if (this.prepared) return;
       this.prepared = true;
       setSelfResolver((id) => this.records.get(id)?.plugin);
-      this.enabledMap = loadNamespace(ENABLED_NS) ?? {};
+      const hint = readSyncHint(ENABLED_NS) ?? {};
+      const stored = loadNamespace(ENABLED_NS) ?? {};
+      this.enabledMap = { ...hint, ...stored };
       this.registerBootPatches();
       installChunkInterceptor();
     }
@@ -568,6 +621,7 @@ ${slices.join("\n  ...  \n")}`);
       this.booted = true;
       this.prepare();
       this.enabledMap = loadNamespace(ENABLED_NS) ?? {};
+      writeSyncHint(ENABLED_NS, this.enabledMap);
       for (const { plugin } of this.records.values()) {
         plugin.settings?.__bind(plugin.id);
       }
@@ -577,7 +631,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-20 12:37:06" : "dev";
+      const build = true ? "2026-07-20 19:54:51" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -753,6 +807,7 @@ ${slices.join("\n  ...  \n")}`);
     }
     persistEnabledState() {
       saveNamespace(ENABLED_NS, this.enabledMap);
+      writeSyncHint(ENABLED_NS, this.enabledMap);
     }
     emit() {
       for (const fn of this.listeners) {
@@ -784,1551 +839,7 @@ ${slices.join("\n  ...  \n")}`);
   var tokens_default = '/*\n * Design tokens.\n *\n * Every color, size, radius, and duration used anywhere in Halcyon resolves to\n * one of these variables. Components never hardcode raw values. The palette is\n * flat by design: solid fills only, no gradients.\n *\n * Values mirror docs/ui-design-guide.md. If the two ever disagree, the guide\n * is the source of truth and this file is the bug.\n */\n\n.halcyon {\n  /* Accent */\n  --hc-accent: #0a84ff;\n  --hc-accent-pressed: #0768cc;\n\n  /* Semantic */\n  --hc-red: #ff453a;\n  --hc-orange: #ff9f0a;\n  --hc-yellow: #ffd60a;\n  --hc-green: #30d158;\n  --hc-teal: #64d2ff;\n  --hc-indigo: #5e5ce6;\n  --hc-pink: #ff375f;\n\n  /* Neutral surfaces */\n  --hc-bg-primary: #000000;\n  --hc-bg-secondary: #1c1c1e;\n  --hc-bg-tertiary: #2c2c2e;\n  --hc-bg-elevated: #2c2c2e;\n\n  /* Fills */\n  --hc-fill-primary: rgba(120, 120, 128, 0.36);\n  --hc-fill-secondary: rgba(120, 120, 128, 0.24);\n\n  /* Separators */\n  --hc-separator: rgba(84, 84, 88, 0.65);\n  --hc-separator-opaque: #38383a;\n\n  /* Labels */\n  --hc-label-primary: #ffffff;\n  --hc-label-secondary: rgba(235, 235, 245, 0.6);\n  --hc-label-tertiary: rgba(235, 235, 245, 0.3);\n  --hc-label-quaternary: rgba(235, 235, 245, 0.16);\n\n  /* Spacing (8pt grid) */\n  --hc-space-1: 4px;\n  --hc-space-2: 8px;\n  --hc-space-3: 12px;\n  --hc-space-4: 16px;\n  --hc-space-5: 20px;\n  --hc-space-6: 24px;\n  --hc-space-8: 32px;\n  --hc-space-10: 40px;\n\n  /* Radii */\n  --hc-radius-xs: 4px;\n  --hc-radius-sm: 6px;\n  --hc-radius-md: 10px;\n  --hc-radius-lg: 12px;\n  --hc-radius-xl: 16px;\n  --hc-radius-2xl: 22px;\n  --hc-radius-pill: 999px;\n\n  /* Elevation */\n  --hc-elev-1: 0 1px 2px rgba(0, 0, 0, 0.24);\n  --hc-elev-2: 0 4px 12px rgba(0, 0, 0, 0.32);\n  --hc-elev-3: 0 12px 32px rgba(0, 0, 0, 0.44);\n\n  /* Type scale \u2014 sizes paired with absolute line heights */\n  --hc-text-title1: 28px;\n  --hc-lh-title1: 34px;\n  --hc-text-title2: 22px;\n  --hc-lh-title2: 28px;\n  --hc-text-title3: 20px;\n  --hc-lh-title3: 25px;\n  --hc-text-headline: 17px;\n  --hc-lh-headline: 22px;\n  --hc-text-body: 17px;\n  --hc-lh-body: 22px;\n  --hc-text-callout: 16px;\n  --hc-lh-callout: 21px;\n  --hc-text-subhead: 15px;\n  --hc-lh-subhead: 20px;\n  --hc-text-footnote: 13px;\n  --hc-lh-footnote: 18px;\n  --hc-text-caption1: 12px;\n  --hc-lh-caption1: 16px;\n  --hc-text-caption2: 11px;\n  --hc-lh-caption2: 13px;\n\n  /* Motion */\n  --hc-ease: cubic-bezier(0.32, 0.72, 0, 1);\n  --hc-duration-fast: 200ms;\n  --hc-duration-slow: 300ms;\n\n  /* Font stack */\n  --hc-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",\n    "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;\n  --hc-font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Code",\n    Menlo, Consolas, monospace;\n}\n';
 
   // src/ui/components.css
-  var components_default = `/*
- * Component styles.
- *
- * Class-based, scoped under \`.halcyon\`. All values reference tokens.css; there
- * are no raw colors or sizes here. Interaction states use flat fills and
- * opacity, never gradients.
- */
-
-.halcyon,
-.halcyon * {
-  box-sizing: border-box;
-}
-
-.halcyon {
-  font-family: var(--hc-font);
-  color: var(--hc-label-primary);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* --- Typographic helpers ------------------------------------------------- */
-
-.hc-title2 {
-  font-size: var(--hc-text-title2);
-  line-height: var(--hc-lh-title2);
-  font-weight: 700;
-}
-
-.hc-title3 {
-  font-size: var(--hc-text-title3);
-  line-height: var(--hc-lh-title3);
-  font-weight: 600;
-}
-
-.hc-headline {
-  font-size: var(--hc-text-headline);
-  line-height: var(--hc-lh-headline);
-  font-weight: 600;
-}
-
-.hc-body {
-  font-size: var(--hc-text-body);
-  line-height: var(--hc-lh-body);
-  font-weight: 400;
-}
-
-.hc-callout {
-  font-size: var(--hc-text-callout);
-  line-height: var(--hc-lh-callout);
-}
-
-.hc-footnote {
-  font-size: var(--hc-text-footnote);
-  line-height: var(--hc-lh-footnote);
-  color: var(--hc-label-secondary);
-}
-
-.hc-muted {
-  color: var(--hc-label-secondary);
-}
-
-/* --- Button -------------------------------------------------------------- */
-
-.hc-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--hc-space-2);
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: var(--hc-text-body);
-  line-height: var(--hc-lh-body);
-  font-weight: 600;
-  border-radius: var(--hc-radius-md);
-  padding: 0 var(--hc-space-4);
-  height: 40px;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease),
-    opacity var(--hc-duration-fast) var(--hc-ease),
-    transform var(--hc-duration-fast) var(--hc-ease);
-  user-select: none;
-  white-space: nowrap;
-}
-
-.hc-btn:active {
-  transform: scale(0.98);
-}
-
-.hc-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-  transform: none;
-}
-
-.hc-btn--sm {
-  height: 32px;
-  font-size: var(--hc-text-subhead);
-  padding: 0 var(--hc-space-3);
-}
-
-.hc-btn--lg {
-  height: 50px;
-  border-radius: var(--hc-radius-lg);
-}
-
-.hc-btn--primary {
-  background: var(--hc-accent);
-  color: #ffffff;
-}
-
-.hc-btn--primary:hover:not(:disabled) {
-  background: var(--hc-accent-pressed);
-}
-
-.hc-btn--secondary {
-  background: var(--hc-fill-primary);
-  color: var(--hc-label-primary);
-}
-
-.hc-btn--secondary:hover:not(:disabled) {
-  background: var(--hc-fill-secondary);
-}
-
-.hc-btn--plain {
-  background: transparent;
-  color: var(--hc-accent);
-  padding-left: var(--hc-space-2);
-  padding-right: var(--hc-space-2);
-}
-
-.hc-btn--plain:hover:not(:disabled) {
-  background: var(--hc-fill-secondary);
-}
-
-.hc-btn--destructive {
-  background: transparent;
-  color: var(--hc-red);
-}
-
-.hc-btn--destructive:hover:not(:disabled) {
-  background: rgba(255, 69, 58, 0.16);
-}
-
-/* --- Toggle -------------------------------------------------------------- */
-
-.hc-toggle {
-  position: relative;
-  flex: none;
-  width: 51px;
-  height: 31px;
-  border-radius: var(--hc-radius-pill);
-  background: var(--hc-fill-secondary);
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-toggle[data-on="true"] {
-  background: var(--hc-green);
-}
-
-.hc-toggle:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.hc-toggle__knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 27px;
-  height: 27px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: var(--hc-elev-1);
-  transition: transform var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-toggle[data-on="true"] .hc-toggle__knob {
-  transform: translateX(20px);
-}
-
-/* --- Section ------------------------------------------------------------- */
-
-.hc-section {
-  margin-top: var(--hc-space-6);
-}
-
-.hc-section:first-child {
-  margin-top: 0;
-}
-
-.hc-section__title {
-  font-size: var(--hc-text-subhead);
-  line-height: var(--hc-lh-subhead);
-  color: var(--hc-label-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0 var(--hc-space-4);
-  margin-bottom: var(--hc-space-2);
-}
-
-.hc-section__body {
-  background: var(--hc-bg-secondary);
-  border-radius: var(--hc-radius-lg);
-  overflow: hidden;
-}
-
-.hc-section__note {
-  font-size: var(--hc-text-footnote);
-  line-height: var(--hc-lh-footnote);
-  color: var(--hc-label-secondary);
-  padding: var(--hc-space-2) var(--hc-space-4) 0;
-}
-
-/* --- List row ------------------------------------------------------------ */
-
-.hc-row {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-3);
-  min-height: 44px;
-  padding: var(--hc-space-2) var(--hc-space-4);
-  position: relative;
-}
-
-.hc-row + .hc-row::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 56px;
-  right: 0;
-  height: 1px;
-  background: var(--hc-separator);
-  transform: scaleY(0.5);
-}
-
-.hc-row--button {
-  cursor: pointer;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-row--button:hover {
-  background: var(--hc-fill-secondary);
-}
-
-.hc-row--button:active {
-  background: var(--hc-fill-primary);
-}
-
-.hc-row__icon {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--hc-radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-}
-
-.hc-row__text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.hc-row__title {
-  font-size: var(--hc-text-body);
-  line-height: var(--hc-lh-body);
-  color: var(--hc-label-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hc-row__subtitle {
-  font-size: var(--hc-text-footnote);
-  line-height: var(--hc-lh-footnote);
-  color: var(--hc-label-secondary);
-}
-
-.hc-row__accessory {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  color: var(--hc-label-secondary);
-}
-
-.hc-row__chevron {
-  color: var(--hc-label-tertiary);
-}
-
-/* --- Text input ---------------------------------------------------------- */
-
-.hc-input {
-  display: block;
-  width: 100%;
-  height: 40px;
-  background: var(--hc-fill-primary);
-  border: 2px solid transparent;
-  border-radius: var(--hc-radius-md);
-  padding: 0 var(--hc-space-3);
-  color: var(--hc-label-primary);
-  font-family: inherit;
-  font-size: var(--hc-text-callout);
-  line-height: var(--hc-lh-callout);
-  outline: none;
-  transition: border-color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-input::placeholder {
-  color: var(--hc-label-tertiary);
-}
-
-.hc-input:focus {
-  border-color: var(--hc-accent);
-}
-
-/* --- Number stepper ------------------------------------------------------ */
-
-.hc-stepper {
-  display: inline-flex;
-  align-items: center;
-  background: var(--hc-fill-primary);
-  border-radius: var(--hc-radius-md);
-  overflow: hidden;
-}
-
-.hc-stepper__btn {
-  width: 36px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--hc-label-primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-stepper__btn:hover:not(:disabled) {
-  background: var(--hc-fill-secondary);
-}
-
-.hc-stepper__btn:disabled {
-  color: var(--hc-label-quaternary);
-  cursor: default;
-}
-
-.hc-stepper__value {
-  min-width: 44px;
-  text-align: center;
-  font-size: var(--hc-text-callout);
-  font-variant-numeric: tabular-nums;
-  color: var(--hc-label-primary);
-}
-
-/* --- Select -------------------------------------------------------------- */
-
-/* Self-drawn dropdown: pill button + floating iOS-style menu sheet. */
-.hc-select {
-  position: relative;
-  display: inline-block;
-}
-
-.hc-select__button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  height: 32px;
-  background: var(--hc-fill-primary);
-  border: none;
-  border-radius: var(--hc-radius-md);
-  color: var(--hc-label-primary);
-  font-family: inherit;
-  font-size: var(--hc-text-callout);
-  padding: 0 var(--hc-space-3);
-  cursor: pointer;
-  outline: none;
-  white-space: nowrap;
-}
-
-.hc-select__button:hover {
-  background: var(--hc-fill-secondary);
-}
-
-.hc-select__button:focus-visible {
-  box-shadow: 0 0 0 2px var(--hc-accent);
-}
-
-.hc-select__chevron {
-  color: var(--hc-label-tertiary);
-  transition: transform 0.15s ease;
-}
-
-.hc-select__chevron[data-open="true"] {
-  transform: rotate(180deg);
-}
-
-.hc-select__menu {
-  /* Positioned by its portal wrapper (fixed, anchored to the button). */
-  max-height: 280px;
-  overflow-y: auto;
-  padding: var(--hc-space-1);
-  background: var(--hc-bg-elevated, #2c2c2e);
-  border-radius: var(--hc-radius-lg, 12px);
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.08),
-    0 10px 32px rgba(0, 0, 0, 0.45);
-  animation: hc-select-pop 0.14s ease;
-}
-
-@keyframes hc-select-pop {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.hc-select__option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--hc-space-3);
-  width: 100%;
-  border: none;
-  background: none;
-  border-radius: var(--hc-radius-md);
-  color: var(--hc-label-primary);
-  font-family: inherit;
-  font-size: var(--hc-text-callout);
-  text-align: left;
-  padding: 7px var(--hc-space-3);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.hc-select__option[data-active="true"] {
-  background: var(--hc-fill-primary);
-}
-
-.hc-select__option[data-selected="true"] {
-  color: var(--hc-accent);
-}
-
-.hc-select__check {
-  flex: none;
-  color: var(--hc-accent);
-}
-
-/* --- String list --------------------------------------------------------- */
-
-.hc-strlist {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hc-space-2);
-  padding: var(--hc-space-2) var(--hc-space-4) var(--hc-space-3);
-}
-
-.hc-strlist__item {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-}
-
-.hc-strlist__add {
-  display: flex;
-  gap: var(--hc-space-2);
-}
-
-.hc-iconbtn {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--hc-radius-md);
-  border: none;
-  background: var(--hc-fill-primary);
-  color: var(--hc-label-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease),
-    color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-iconbtn:hover {
-  background: var(--hc-fill-secondary);
-}
-
-.hc-iconbtn--danger:hover {
-  color: var(--hc-red);
-}
-
-/* --- Badge --------------------------------------------------------------- */
-
-.hc-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 var(--hc-space-2);
-  border-radius: var(--hc-radius-pill);
-  font-size: var(--hc-text-caption1);
-  line-height: var(--hc-lh-caption1);
-  font-weight: 600;
-}
-
-.hc-badge[data-tone="neutral"] {
-  background: var(--hc-fill-secondary);
-  color: var(--hc-label-secondary);
-}
-
-.hc-badge[data-tone="accent"] {
-  background: rgba(10, 132, 255, 0.2);
-  color: var(--hc-accent);
-}
-
-.hc-badge[data-tone="green"] {
-  background: rgba(48, 209, 88, 0.2);
-  color: var(--hc-green);
-}
-
-.hc-badge[data-tone="red"] {
-  background: rgba(255, 69, 58, 0.2);
-  color: var(--hc-red);
-}
-
-.hc-badge[data-tone="orange"] {
-  background: rgba(255, 159, 10, 0.2);
-  color: var(--hc-orange);
-}
-
-/* --- Empty state --------------------------------------------------------- */
-
-.hc-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: var(--hc-space-10) var(--hc-space-6);
-  color: var(--hc-label-tertiary);
-}
-
-.hc-empty__title {
-  font-size: var(--hc-text-headline);
-  line-height: var(--hc-lh-headline);
-  font-weight: 600;
-  color: var(--hc-label-secondary);
-  margin-top: var(--hc-space-4);
-}
-
-.hc-empty__subtitle {
-  font-size: var(--hc-text-callout);
-  line-height: var(--hc-lh-callout);
-  color: var(--hc-label-tertiary);
-  margin-top: var(--hc-space-2);
-  max-width: 320px;
-}
-
-/* --- Overlay + panel (fallback entry point) ------------------------------ */
-
-.hc-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  animation: hc-fade var(--hc-duration-slow) var(--hc-ease);
-}
-
-.hc-panel {
-  width: min(900px, 92vw);
-  height: min(720px, 88vh);
-  background: var(--hc-bg-primary);
-  border-radius: var(--hc-radius-xl);
-  box-shadow: var(--hc-elev-3);
-  display: flex;
-  overflow: hidden;
-  animation: hc-rise var(--hc-duration-slow) var(--hc-ease);
-}
-
-.hc-panel__sidebar {
-  width: 220px;
-  flex: none;
-  background: var(--hc-bg-secondary);
-  border-right: 1px solid var(--hc-separator-opaque);
-  padding: var(--hc-space-4) var(--hc-space-2);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.hc-panel__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-4);
-  color: var(--hc-label-primary);
-}
-
-.hc-panel__brand-name {
-  font-size: var(--hc-text-headline);
-  font-weight: 700;
-}
-
-.hc-navitem {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  padding: var(--hc-space-2) var(--hc-space-3);
-  border-radius: var(--hc-radius-md);
-  color: var(--hc-label-secondary);
-  cursor: pointer;
-  font-size: var(--hc-text-callout);
-  border: none;
-  background: transparent;
-  text-align: left;
-  width: 100%;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease),
-    color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-navitem:hover {
-  background: var(--hc-fill-secondary);
-  color: var(--hc-label-primary);
-}
-
-.hc-navitem[data-active="true"] {
-  background: var(--hc-fill-primary);
-  color: var(--hc-label-primary);
-}
-
-.hc-panel__content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.hc-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-4);
-  border-bottom: 1px solid var(--hc-separator-opaque);
-}
-
-.hc-panel__scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-8);
-}
-
-.hc-embed {
-  /* When embedded in Discord's own settings pane rather than the overlay. */
-  padding: var(--hc-space-2) 0 var(--hc-space-8);
-}
-
-@keyframes hc-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes hc-rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* Respect the OS "reduce motion" preference. */
-@media (prefers-reduced-motion: reduce) {
-  .hc-overlay,
-  .hc-panel,
-  .hc-btn,
-  .hc-toggle__knob {
-    animation: none;
-    transition: none;
-  }
-}
-
-/* --- Setting cells (schema-driven form) ---------------------------------- */
-
-.hc-cell {
-  padding: var(--hc-space-2) var(--hc-space-4);
-  position: relative;
-}
-
-.hc-cell + .hc-cell::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: var(--hc-space-4);
-  right: 0;
-  height: 1px;
-  background: var(--hc-separator);
-  transform: scaleY(0.5);
-}
-
-.hc-cell--row {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-3);
-  min-height: 44px;
-}
-
-.hc-cell__main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.hc-cell__label {
-  font-size: var(--hc-text-body);
-  line-height: var(--hc-lh-body);
-  color: var(--hc-label-primary);
-}
-
-.hc-cell__desc {
-  font-size: var(--hc-text-footnote);
-  line-height: var(--hc-lh-footnote);
-  color: var(--hc-label-secondary);
-}
-
-.hc-cell__control {
-  flex: none;
-}
-
-.hc-cell__stacked {
-  padding-top: var(--hc-space-2);
-}
-
-/* --- Toolbar (search + actions) ------------------------------------------ */
-
-.hc-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-3);
-  margin-bottom: var(--hc-space-4);
-}
-
-.hc-search {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  height: 36px;
-  padding: 0 var(--hc-space-3);
-  background: var(--hc-fill-primary);
-  border-radius: var(--hc-radius-md);
-  color: var(--hc-label-tertiary);
-}
-
-.hc-search input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  color: var(--hc-label-primary);
-  font-family: inherit;
-  font-size: var(--hc-text-callout);
-}
-
-.hc-search input::placeholder {
-  color: var(--hc-label-tertiary);
-}
-
-/* --- Plugin detail header ------------------------------------------------ */
-
-.hc-back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--hc-space-1);
-  background: transparent;
-  border: none;
-  color: var(--hc-accent);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: var(--hc-text-callout);
-  padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) 0;
-  margin-bottom: var(--hc-space-4);
-}
-
-.hc-detail-head {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--hc-space-3);
-  margin-bottom: var(--hc-space-5);
-}
-
-.hc-detail-head__icon {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--hc-radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-}
-
-.hc-detail-head__text {
-  flex: 1;
-  min-width: 0;
-}
-
-.hc-detail-head__name {
-  font-size: var(--hc-text-title3);
-  line-height: var(--hc-lh-title3);
-  font-weight: 600;
-}
-
-.hc-detail-head__desc {
-  font-size: var(--hc-text-callout);
-  line-height: var(--hc-lh-callout);
-  color: var(--hc-label-secondary);
-  margin-top: 2px;
-}
-
-.hc-detail-head__meta {
-  font-size: var(--hc-text-footnote);
-  color: var(--hc-label-tertiary);
-  margin-top: var(--hc-space-2);
-}
-
-/* --- Log viewer ---------------------------------------------------------- */
-
-.hc-logs {
-  font-family: var(--hc-font-mono);
-  font-size: var(--hc-text-footnote);
-  line-height: 1.7;
-  background: var(--hc-bg-secondary);
-  border-radius: var(--hc-radius-lg);
-  padding: var(--hc-space-3);
-  overflow-x: auto;
-}
-
-.hc-logline {
-  display: flex;
-  gap: var(--hc-space-2);
-  white-space: pre;
-  padding: 1px 0;
-}
-
-.hc-logline__time {
-  color: var(--hc-label-tertiary);
-  flex: none;
-}
-
-.hc-logline__scope {
-  color: var(--hc-label-secondary);
-  flex: none;
-}
-
-.hc-logline__msg {
-  color: var(--hc-label-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.hc-logline[data-level="warn"] .hc-logline__msg {
-  color: var(--hc-orange);
-}
-
-.hc-logline[data-level="error"] .hc-logline__msg {
-  color: var(--hc-red);
-}
-
-.hc-logline[data-level="debug"] .hc-logline__msg {
-  color: var(--hc-label-secondary);
-}
-
-/* --- About --------------------------------------------------------------- */
-
-.hc-about__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.hc-about__value {
-  color: var(--hc-label-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- Generic vertical rhythm --------------------------------------------- */
-
-.hc-stack > * + * {
-  margin-top: var(--hc-space-4);
-}
-
-.hc-inline-note {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  color: var(--hc-orange);
-  font-size: var(--hc-text-footnote);
-}
-
-.hc-inline-note--danger {
-  color: var(--hc-red);
-}
-
-/* --- Detail head toggle stays top-aligned with the icon ------------------ */
-
-.hc-detail-head > span {
-  flex: none;
-  padding-top: var(--hc-space-1);
-}
-
-/* --- About hero ---------------------------------------------------------- */
-
-.hc-about-hero {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-3);
-  padding: var(--hc-space-2) 0 var(--hc-space-4);
-  color: var(--hc-label-primary);
-}
-
-.hc-about-hero__name {
-  font-size: var(--hc-text-title2);
-  line-height: var(--hc-lh-title2);
-  font-weight: 700;
-}
-
-.hc-about-hero__ver {
-  font-size: var(--hc-text-footnote);
-  line-height: var(--hc-lh-footnote);
-  color: var(--hc-label-secondary);
-}
-
-/* --- Tabs (used by plugin pages) ----------------------------------------- */
-
-.hc-tabs {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  margin-bottom: var(--hc-space-4);
-}
-
-.hc-tabs__spacer {
-  flex: 1;
-}
-
-.hc-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  height: 32px;
-  padding: 0 var(--hc-space-3);
-  border: none;
-  border-radius: var(--hc-radius-md);
-  background: transparent;
-  color: var(--hc-label-secondary);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: var(--hc-text-subhead);
-  font-weight: 600;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease),
-    color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-tab:hover {
-  color: var(--hc-label-primary);
-}
-
-.hc-tab[data-active="true"] {
-  background: var(--hc-fill-primary);
-  color: var(--hc-label-primary);
-}
-
-/* --- Save bar --------------------------------------------------------------- */
-
-.hc-savebar {
-  position: sticky;
-  bottom: var(--hc-space-3);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--hc-space-4);
-  margin-top: var(--hc-space-4);
-  padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-4);
-  background: var(--hc-bg-elevated, #2c2c2e);
-  border-radius: var(--hc-radius-lg);
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.08),
-    0 8px 24px rgba(0, 0, 0, 0.35);
-  animation: hc-select-pop 0.14s ease;
-}
-
-.hc-savebar__label {
-  font-size: var(--hc-text-subhead);
-  color: var(--hc-label-secondary);
-}
-
-.hc-savebar__actions {
-  display: flex;
-  gap: var(--hc-space-2);
-  flex: none;
-}
-
-/* --- Segmented control ------------------------------------------------------ */
-
-.hc-segment {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  margin-bottom: var(--hc-space-4);
-  background: var(--hc-fill-primary);
-  border-radius: var(--hc-radius-md);
-  width: fit-content;
-}
-
-.hc-segment__item {
-  border: none;
-  background: transparent;
-  color: var(--hc-label-secondary);
-  font-family: inherit;
-  font-size: var(--hc-text-subhead);
-  font-weight: 600;
-  height: 28px;
-  padding: 0 var(--hc-space-4);
-  border-radius: calc(var(--hc-radius-md) - 2px);
-  cursor: pointer;
-  transition: background-color var(--hc-duration-fast) var(--hc-ease),
-    color var(--hc-duration-fast) var(--hc-ease);
-}
-
-.hc-segment__item:hover {
-  color: var(--hc-label-primary);
-}
-
-.hc-segment__item[data-active="true"] {
-  background: var(--hc-bg-elevated, #2c2c2e);
-  color: var(--hc-label-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-/* --- Pager ----------------------------------------------------------------- */
-
-.hc-pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--hc-space-3);
-  margin-top: var(--hc-space-4);
-}
-
-.hc-pager__label {
-  font-size: var(--hc-text-footnote);
-  color: var(--hc-label-secondary);
-  font-variant-numeric: tabular-nums;
-  min-width: 96px;
-  text-align: center;
-}
-
-.hc-pager .hc-tab:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-/* --- Captured message entries -------------------------------------------- */
-
-.hc-msglist {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hc-space-2);
-}
-
-.hc-msg {
-  background: var(--hc-bg-secondary);
-  border-radius: var(--hc-radius-lg);
-  padding: var(--hc-space-3) var(--hc-space-4);
-  border-left: 2px solid var(--hc-red);
-}
-
-.hc-msg__head {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-2);
-  margin-bottom: var(--hc-space-1);
-}
-
-.hc-msg__author {
-  font-size: var(--hc-text-subhead);
-  font-weight: 600;
-  color: var(--hc-label-primary);
-}
-
-.hc-msg__where {
-  font-size: var(--hc-text-footnote);
-  color: var(--hc-label-secondary);
-}
-
-.hc-msg__guild {
-  color: var(--hc-label-secondary);
-  font-weight: 600;
-}
-
-.hc-msg__sep {
-  color: var(--hc-label-tertiary);
-  margin: 0 4px;
-}
-
-.hc-msg__time {
-  margin-left: auto;
-  font-size: var(--hc-text-caption1);
-  color: var(--hc-label-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-.hc-msg__body {
-  font-size: var(--hc-text-callout);
-  line-height: var(--hc-lh-callout);
-  color: var(--hc-label-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.hc-msg__empty {
-  color: var(--hc-label-tertiary);
-  font-style: italic;
-}
-
-.hc-msg__meta {
-  margin-top: var(--hc-space-1);
-  font-size: var(--hc-text-footnote);
-  color: var(--hc-label-secondary);
-}
-
-/* Attachment thumbnails. Constrained so wide/tall media never spills past the
- * message card \u2014 a single image caps at the content width, and the row wraps
- * when there are several. */
-.hc-msg__media {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--hc-space-2);
-  margin-top: var(--hc-space-2);
-  min-width: 0;
-}
-
-.hc-msg__media a {
-  color: var(--hc-accent);
-  font-size: var(--hc-text-footnote);
-  word-break: break-all;
-}
-
-.hc-msg__thumb {
-  max-width: 100%;
-  max-height: 240px;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: var(--hc-radius-md);
-  background: var(--hc-fill-secondary);
-}
-
-/* Inline custom emoji, sized to the surrounding text like Discord's own. */
-.hc-emoji {
-  display: inline-block;
-  width: 1.375em;
-  height: 1.375em;
-  margin: 0 1px;
-  object-fit: contain;
-  vertical-align: bottom;
-}
-
-.hc-msg__versions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hc-space-1);
-}
-
-.hc-msg__version {
-  display: flex;
-  gap: var(--hc-space-2);
-  font-size: var(--hc-text-callout);
-  line-height: var(--hc-lh-callout);
-}
-
-.hc-msg__vtag {
-  flex: none;
-  color: var(--hc-label-tertiary);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--hc-text-footnote);
-  padding-top: 2px;
-}
-
-.hc-msg__vbody {
-  color: var(--hc-label-primary);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* The \`edited\` tone reuses the orange rule via a modifier. */
-.hc-msg--edited {
-  border-left-color: var(--hc-orange);
-}
-
-/* --- Deleted message (in-chat) ------------------------------------------- */
-
-/*
- * Applied to Discord's own message row when a deleted message is kept in place.
- * These live outside the .halcyon scope on purpose \u2014 they decorate Discord
- * elements \u2014 so literal values, no tokens.
- *
- * The row itself only carries the stable .hc-deleted hook; the chosen style is
- * a class on <html> (hc-mlog-<style>). Splitting them lets a style change take
- * effect immediately \u2014 swap the root class and every kept message updates \u2014
- * instead of the pick only landing on rows Discord repaints after the change.
- */
-
-/* Style: red tint (default) \u2014 flat red wash + left bar. */
-.hc-mlog-tint .hc-deleted {
-  background-color: rgba(255, 69, 58, 0.1);
-  box-shadow: inset 2px 0 0 #ff453a;
-}
-
-/* Style: red text \u2014 content turns red, no background. */
-.hc-mlog-text .hc-deleted [class*="messageContent"],
-.hc-mlog-text .hc-deleted [class*="contents"] > div:not([class*="header"]) {
-  color: #f04747 !important;
-}
-.hc-mlog-text .hc-deleted [class*="messageContent"] a {
-  color: #ff6b6b !important;
-}
-
-/* Style: ghost \u2014 the whole row fades. */
-.hc-mlog-ghost .hc-deleted {
-  opacity: 0.45;
-  filter: saturate(0.6);
-}
-
-/* Style: strike \u2014 red strikethrough over the text. */
-.hc-mlog-strike .hc-deleted [class*="messageContent"] {
-  text-decoration: line-through;
-  text-decoration-color: rgba(255, 69, 58, 0.7);
-  text-decoration-thickness: 1.5px;
-}
-.hc-mlog-strike .hc-deleted {
-  box-shadow: inset 2px 0 0 rgba(255, 69, 58, 0.5);
-}
-
-/* "This message was deleted (\u2026)": marker row under the content. One base
- * class plus a look modifier chosen in settings. */
-.hc-deleted-marker {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-  font-size: 0.8125rem;
-  line-height: 1.2;
-  color: #f04747;
-  user-select: none;
-}
-.hc-deleted-marker__icon {
-  flex: none;
-}
-
-/* Look: badge \u2014 pill-shaped chip. */
-.hc-deleted-marker--badge {
-  display: inline-flex;
-  background: rgba(255, 69, 58, 0.12);
-  border-radius: 9999px;
-  padding: 2px 10px;
-  margin-top: 4px;
-}
-
-/* Look: quote \u2014 indented behind a red bar, like a blockquote. */
-.hc-deleted-marker--quote {
-  border-left: 3px solid rgba(255, 69, 58, 0.7);
-  padding-left: 8px;
-  margin-top: 4px;
-  color: rgba(240, 71, 71, 0.85);
-}
-
-/* Tone: edited \u2014 same marker layout, calmer amber so an edit doesn't read as a
- * deletion. Overrides the red the delete marker uses. */
-.hc-deleted-marker--edited {
-  color: #e0a53f;
-}
-.hc-deleted-marker--edited.hc-deleted-marker--badge {
-  background: rgba(224, 165, 63, 0.14);
-}
-.hc-deleted-marker--edited.hc-deleted-marker--quote {
-  border-left-color: rgba(224, 165, 63, 0.7);
-  color: rgba(224, 165, 63, 0.9);
-}
-
-/* --- Username next to nickname (show-username plugin) --------------------- */
-
-/*
- * Appended inside Discord's message header, so literal values, no tokens.
- * One base class plus a per-style modifier chosen in the plugin's settings.
- */
-.hc-username {
-  font-size: 0.75rem;
-  font-weight: 500;
-  vertical-align: baseline;
-}
-
-.hc-username--muted {
-  color: var(--text-muted, #949ba4);
-}
-
-.hc-username--pill {
-  color: var(--text-muted, #949ba4);
-  background: rgba(128, 132, 142, 0.16);
-  border-radius: 9999px;
-  padding: 0 6px;
-  line-height: 1.35;
-  display: inline-block;
-}
-
-.hc-username--at {
-  color: #949cf7;
-}
-
-.hc-username--paren {
-  color: var(--text-muted, #949ba4);
-  font-weight: 400;
-}
-
-/* --- Inline edit history (in-chat) ---------------------------------------- */
-
-/*
- * Old versions of an edited message, rendered above the current content by the
- * message-logger content patch. Like .hc-deleted this decorates Discord's own
- * DOM, so literal values, no tokens. The base class only handles wrapping; a
- * per-style modifier (chosen in settings) sets the look. MessageExtras re-reads
- * the modifier on every render, so changing the style applies live.
- */
-.hc-edit-history__version {
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-/* Per-version edit time, shown inline at the end of each old-version line.
- * Muted and compact; opacity keeps it tied to whatever the version style is,
- * and text-decoration:none stops the strike style from striking the time. */
-.hc-edit-history__time {
-  margin-left: 6px;
-  font-size: 0.72em;
-  opacity: 0.55;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  text-decoration: none;
-  vertical-align: baseline;
-}
-
-/* The old-version line mirrors the deleted-message style (tint/text/ghost/
- * strike) so both share one setting; strike stays its natural default look. */
-
-/* Style: red strikethrough \u2014 struck out in red, like removed text. */
-.hc-edit-history__version--strike {
-  color: rgba(255, 69, 58, 0.75);
-  text-decoration: line-through;
-  text-decoration-color: rgba(255, 69, 58, 0.4);
-}
-
-/* Style: red text \u2014 red, no strikethrough. */
-.hc-edit-history__version--text {
-  color: rgba(255, 69, 58, 0.85);
-}
-
-/* Style: ghost \u2014 faded out, keeps the normal text color. */
-.hc-edit-history__version--ghost {
-  opacity: 0.45;
-  filter: saturate(0.6);
-}
-
-/* Style: tint \u2014 red wash + left bar, as a quote-like block on the line. */
-.hc-edit-history__version--tint {
-  background-color: rgba(255, 69, 58, 0.1);
-  box-shadow: inset 2px 0 0 #ff453a;
-  padding: 1px 6px 1px 8px;
-  border-radius: 3px;
-}
-
-/* \u2500\u2500 message-cleaner page \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
- * The self-message cleaner's operate surface. Scope/confirm reuse .hc-section
- * and .hc-cell; these rules cover the action bar, the live status line, the
- * preview list, and the stat readout. Decorates Halcyon's own panel, so every
- * value is a token. */
-.hc-cleaner__actions {
-  display: flex;
-  gap: var(--hc-space-3);
-  margin: var(--hc-space-4) 0;
-}
-.hc-cleaner__actions .hc-btn {
-  flex: 1;
-}
-.hc-cleaner__status {
-  margin: var(--hc-space-3) 0;
-  padding: var(--hc-space-3) var(--hc-space-4);
-  background: var(--hc-fill-secondary);
-  border-radius: var(--hc-radius-md);
-}
-.hc-cleaner__status-state {
-  font-size: var(--hc-text-subhead);
-  font-weight: 600;
-  color: var(--hc-label-primary);
-}
-.hc-cleaner__status-detail {
-  margin-top: 2px;
-  font-size: var(--hc-text-footnote);
-  color: var(--hc-label-secondary);
-  word-break: break-word;
-}
-.hc-cleaner__list {
-  display: flex;
-  flex-direction: column;
-}
-.hc-cleaner__item {
-  display: flex;
-  gap: var(--hc-space-3);
-  padding: var(--hc-space-2) var(--hc-space-4);
-  font-size: var(--hc-text-footnote);
-  border-bottom: 1px solid var(--hc-separator);
-}
-.hc-cleaner__item:last-child {
-  border-bottom: none;
-}
-.hc-cleaner__item-time {
-  flex-shrink: 0;
-  color: var(--hc-accent);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.hc-cleaner__item-text {
-  color: var(--hc-label-primary);
-  word-break: break-word;
-}
-.hc-cleaner__more {
-  padding: var(--hc-space-2) var(--hc-space-4);
-  font-size: var(--hc-text-caption1);
-  color: var(--hc-label-tertiary);
-}
-.hc-cleaner__stat {
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  gap: var(--hc-space-2);
-}
-.hc-cleaner__stat-num {
-  font-size: var(--hc-text-title1);
-  font-weight: 700;
-  color: var(--hc-accent);
-  font-variant-numeric: tabular-nums;
-}
-.hc-cleaner__stat-unit {
-  font-size: var(--hc-text-footnote);
-  color: var(--hc-label-secondary);
-}
-
-/* \u2500\u2500 message-cleaner picker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.hc-cleaner__picker-head {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-3);
-  padding: var(--hc-space-3) var(--hc-space-4);
-  border-bottom: 1px solid var(--hc-separator);
-}
-.hc-cleaner__picker-title {
-  flex: 1;
-  text-align: center;
-  font-weight: 700;
-  font-size: var(--hc-text-subhead);
-  color: var(--hc-label-primary);
-}
-.hc-cleaner__picker-list {
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  max-height: 360px;
-  padding: var(--hc-space-2);
-}
-.hc-cleaner__picker-item {
-  display: flex;
-  align-items: center;
-  gap: var(--hc-space-3);
-  padding: var(--hc-space-2) var(--hc-space-3);
-  border-radius: var(--hc-radius-md);
-  cursor: pointer;
-  color: var(--hc-label-primary);
-  transition: background var(--hc-duration-fast) var(--hc-ease);
-}
-.hc-cleaner__picker-item:hover {
-  background: var(--hc-fill-secondary);
-}
-.hc-cleaner__picker-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--hc-fill-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-  font-size: var(--hc-text-subhead);
-  color: var(--hc-label-secondary);
-}
-.hc-cleaner__picker-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.hc-cleaner__picker-name {
-  font-size: var(--hc-text-subhead);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hc-cleaner__picker-empty {
-  padding: var(--hc-space-5);
-  text-align: center;
-  font-size: var(--hc-text-footnote);
-  color: var(--hc-label-tertiary);
-}
-`;
+  var components_default = '/*\n * Component styles.\n *\n * Class-based, scoped under `.halcyon`. All values reference tokens.css; there\n * are no raw colors or sizes here. Interaction states use flat fills and\n * opacity, never gradients.\n */\n\n.halcyon,\n.halcyon * {\n  box-sizing: border-box;\n}\n\n.halcyon {\n  font-family: var(--hc-font);\n  color: var(--hc-label-primary);\n  -webkit-font-smoothing: antialiased;\n}\n\n/* --- Typographic helpers ------------------------------------------------- */\n\n.hc-title2 {\n  font-size: var(--hc-text-title2);\n  line-height: var(--hc-lh-title2);\n  font-weight: 700;\n}\n\n.hc-title3 {\n  font-size: var(--hc-text-title3);\n  line-height: var(--hc-lh-title3);\n  font-weight: 600;\n}\n\n.hc-headline {\n  font-size: var(--hc-text-headline);\n  line-height: var(--hc-lh-headline);\n  font-weight: 600;\n}\n\n.hc-body {\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  font-weight: 400;\n}\n\n.hc-callout {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n}\n\n.hc-footnote {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-muted {\n  color: var(--hc-label-secondary);\n}\n\n/* --- Button -------------------------------------------------------------- */\n\n.hc-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: var(--hc-space-2);\n  border: none;\n  cursor: pointer;\n  font-family: inherit;\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  font-weight: 600;\n  border-radius: var(--hc-radius-md);\n  padding: 0 var(--hc-space-4);\n  height: 40px;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    opacity var(--hc-duration-fast) var(--hc-ease),\n    transform var(--hc-duration-fast) var(--hc-ease);\n  user-select: none;\n  white-space: nowrap;\n}\n\n.hc-btn:active {\n  transform: scale(0.98);\n}\n\n.hc-btn:disabled {\n  opacity: 0.4;\n  cursor: default;\n  transform: none;\n}\n\n.hc-btn--sm {\n  height: 32px;\n  font-size: var(--hc-text-subhead);\n  padding: 0 var(--hc-space-3);\n}\n\n.hc-btn--lg {\n  height: 50px;\n  border-radius: var(--hc-radius-lg);\n}\n\n.hc-btn--primary {\n  background: var(--hc-accent);\n  color: #ffffff;\n}\n\n.hc-btn--primary:hover:not(:disabled) {\n  background: var(--hc-accent-pressed);\n}\n\n.hc-btn--secondary {\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-primary);\n}\n\n.hc-btn--secondary:hover:not(:disabled) {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-btn--plain {\n  background: transparent;\n  color: var(--hc-accent);\n  padding-left: var(--hc-space-2);\n  padding-right: var(--hc-space-2);\n}\n\n.hc-btn--plain:hover:not(:disabled) {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-btn--destructive {\n  background: transparent;\n  color: var(--hc-red);\n}\n\n.hc-btn--destructive:hover:not(:disabled) {\n  background: rgba(255, 69, 58, 0.16);\n}\n\n/* --- Toggle -------------------------------------------------------------- */\n\n.hc-toggle {\n  position: relative;\n  flex: none;\n  width: 51px;\n  height: 31px;\n  border-radius: var(--hc-radius-pill);\n  background: var(--hc-fill-secondary);\n  border: none;\n  cursor: pointer;\n  padding: 0;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-toggle[data-on="true"] {\n  background: var(--hc-green);\n}\n\n.hc-toggle:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n.hc-toggle__knob {\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 27px;\n  height: 27px;\n  border-radius: 50%;\n  background: #ffffff;\n  box-shadow: var(--hc-elev-1);\n  transition: transform var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-toggle[data-on="true"] .hc-toggle__knob {\n  transform: translateX(20px);\n}\n\n/* --- Section ------------------------------------------------------------- */\n\n.hc-section {\n  margin-top: var(--hc-space-6);\n}\n\n.hc-section:first-child {\n  margin-top: 0;\n}\n\n.hc-section__title {\n  font-size: var(--hc-text-subhead);\n  line-height: var(--hc-lh-subhead);\n  color: var(--hc-label-secondary);\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n  padding: 0 var(--hc-space-4);\n  margin-bottom: var(--hc-space-2);\n}\n\n.hc-section__body {\n  background: var(--hc-bg-secondary);\n  border-radius: var(--hc-radius-lg);\n  overflow: hidden;\n}\n\n.hc-section__note {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n  padding: var(--hc-space-2) var(--hc-space-4) 0;\n}\n\n/* --- List row ------------------------------------------------------------ */\n\n.hc-row {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  min-height: 44px;\n  padding: var(--hc-space-2) var(--hc-space-4);\n  position: relative;\n}\n\n.hc-row + .hc-row::before {\n  content: "";\n  position: absolute;\n  top: 0;\n  left: 56px;\n  right: 0;\n  height: 1px;\n  background: var(--hc-separator);\n  transform: scaleY(0.5);\n}\n\n.hc-row--button {\n  cursor: pointer;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-row--button:hover {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-row--button:active {\n  background: var(--hc-fill-primary);\n}\n\n.hc-row__icon {\n  flex: none;\n  width: 28px;\n  height: 28px;\n  border-radius: var(--hc-radius-sm);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  color: #ffffff;\n}\n\n.hc-row__text {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n\n.hc-row__title {\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  color: var(--hc-label-primary);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.hc-row__subtitle {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-row__accessory {\n  flex: none;\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  color: var(--hc-label-secondary);\n}\n\n.hc-row__chevron {\n  color: var(--hc-label-tertiary);\n}\n\n/* --- Text input ---------------------------------------------------------- */\n\n.hc-input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  background: var(--hc-fill-primary);\n  border: 2px solid transparent;\n  border-radius: var(--hc-radius-md);\n  padding: 0 var(--hc-space-3);\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  outline: none;\n  transition: border-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-input::placeholder {\n  color: var(--hc-label-tertiary);\n}\n\n.hc-input:focus {\n  border-color: var(--hc-accent);\n}\n\n/* --- Number stepper ------------------------------------------------------ */\n\n.hc-stepper {\n  display: inline-flex;\n  align-items: center;\n  background: var(--hc-fill-primary);\n  border-radius: var(--hc-radius-md);\n  overflow: hidden;\n}\n\n.hc-stepper__btn {\n  width: 36px;\n  height: 32px;\n  border: none;\n  background: transparent;\n  color: var(--hc-label-primary);\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-stepper__btn:hover:not(:disabled) {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-stepper__btn:disabled {\n  color: var(--hc-label-quaternary);\n  cursor: default;\n}\n\n.hc-stepper__value {\n  min-width: 44px;\n  text-align: center;\n  font-size: var(--hc-text-callout);\n  font-variant-numeric: tabular-nums;\n  color: var(--hc-label-primary);\n}\n\n/* --- Select -------------------------------------------------------------- */\n\n/* Self-drawn dropdown: pill button + floating iOS-style menu sheet. */\n.hc-select {\n  position: relative;\n  display: inline-block;\n}\n\n.hc-select__button {\n  display: inline-flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  height: 32px;\n  background: var(--hc-fill-primary);\n  border: none;\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  padding: 0 var(--hc-space-3);\n  cursor: pointer;\n  outline: none;\n  white-space: nowrap;\n}\n\n.hc-select__button:hover {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-select__button:focus-visible {\n  box-shadow: 0 0 0 2px var(--hc-accent);\n}\n\n.hc-select__chevron {\n  color: var(--hc-label-tertiary);\n  transition: transform 0.15s ease;\n}\n\n.hc-select__chevron[data-open="true"] {\n  transform: rotate(180deg);\n}\n\n.hc-select__menu {\n  /* Positioned by its portal wrapper (fixed, anchored to the button). */\n  max-height: 280px;\n  overflow-y: auto;\n  padding: var(--hc-space-1);\n  background: var(--hc-bg-elevated, #2c2c2e);\n  border-radius: var(--hc-radius-lg, 12px);\n  box-shadow:\n    0 0 0 0.5px rgba(255, 255, 255, 0.08),\n    0 10px 32px rgba(0, 0, 0, 0.45);\n  animation: hc-select-pop 0.14s ease;\n}\n\n@keyframes hc-select-pop {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n  to {\n    opacity: 1;\n    transform: none;\n  }\n}\n\n.hc-select__option {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: var(--hc-space-3);\n  width: 100%;\n  border: none;\n  background: none;\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  text-align: left;\n  padding: 7px var(--hc-space-3);\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n.hc-select__option[data-active="true"] {\n  background: var(--hc-fill-primary);\n}\n\n.hc-select__option[data-selected="true"] {\n  color: var(--hc-accent);\n}\n\n.hc-select__check {\n  flex: none;\n  color: var(--hc-accent);\n}\n\n/* --- String list --------------------------------------------------------- */\n\n.hc-strlist {\n  display: flex;\n  flex-direction: column;\n  gap: var(--hc-space-2);\n  padding: var(--hc-space-2) var(--hc-space-4) var(--hc-space-3);\n}\n\n.hc-strlist__item {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n}\n\n.hc-strlist__add {\n  display: flex;\n  gap: var(--hc-space-2);\n}\n\n.hc-iconbtn {\n  flex: none;\n  width: 32px;\n  height: 32px;\n  border-radius: var(--hc-radius-md);\n  border: none;\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-secondary);\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-iconbtn:hover {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-iconbtn--danger:hover {\n  color: var(--hc-red);\n}\n\n/* --- Badge --------------------------------------------------------------- */\n\n.hc-badge {\n  display: inline-flex;\n  align-items: center;\n  height: 20px;\n  padding: 0 var(--hc-space-2);\n  border-radius: var(--hc-radius-pill);\n  font-size: var(--hc-text-caption1);\n  line-height: var(--hc-lh-caption1);\n  font-weight: 600;\n}\n\n.hc-badge[data-tone="neutral"] {\n  background: var(--hc-fill-secondary);\n  color: var(--hc-label-secondary);\n}\n\n.hc-badge[data-tone="accent"] {\n  background: rgba(10, 132, 255, 0.2);\n  color: var(--hc-accent);\n}\n\n.hc-badge[data-tone="green"] {\n  background: rgba(48, 209, 88, 0.2);\n  color: var(--hc-green);\n}\n\n.hc-badge[data-tone="red"] {\n  background: rgba(255, 69, 58, 0.2);\n  color: var(--hc-red);\n}\n\n.hc-badge[data-tone="orange"] {\n  background: rgba(255, 159, 10, 0.2);\n  color: var(--hc-orange);\n}\n\n/* --- Empty state --------------------------------------------------------- */\n\n.hc-empty {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  text-align: center;\n  padding: var(--hc-space-10) var(--hc-space-6);\n  color: var(--hc-label-tertiary);\n}\n\n.hc-empty__title {\n  font-size: var(--hc-text-headline);\n  line-height: var(--hc-lh-headline);\n  font-weight: 600;\n  color: var(--hc-label-secondary);\n  margin-top: var(--hc-space-4);\n}\n\n.hc-empty__subtitle {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  color: var(--hc-label-tertiary);\n  margin-top: var(--hc-space-2);\n  max-width: 320px;\n}\n\n/* --- Overlay + panel (fallback entry point) ------------------------------ */\n\n.hc-overlay {\n  position: fixed;\n  inset: 0;\n  z-index: 10000;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: rgba(0, 0, 0, 0.6);\n  animation: hc-fade var(--hc-duration-slow) var(--hc-ease);\n}\n\n.hc-panel {\n  width: min(900px, 92vw);\n  height: min(720px, 88vh);\n  background: var(--hc-bg-primary);\n  border-radius: var(--hc-radius-xl);\n  box-shadow: var(--hc-elev-3);\n  display: flex;\n  overflow: hidden;\n  animation: hc-rise var(--hc-duration-slow) var(--hc-ease);\n}\n\n.hc-panel__sidebar {\n  width: 220px;\n  flex: none;\n  background: var(--hc-bg-secondary);\n  border-right: 1px solid var(--hc-separator-opaque);\n  padding: var(--hc-space-4) var(--hc-space-2);\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n\n.hc-panel__brand {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-4);\n  color: var(--hc-label-primary);\n}\n\n.hc-panel__brand-name {\n  font-size: var(--hc-text-headline);\n  font-weight: 700;\n}\n\n.hc-navitem {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  padding: var(--hc-space-2) var(--hc-space-3);\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-secondary);\n  cursor: pointer;\n  font-size: var(--hc-text-callout);\n  border: none;\n  background: transparent;\n  text-align: left;\n  width: 100%;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-navitem:hover {\n  background: var(--hc-fill-secondary);\n  color: var(--hc-label-primary);\n}\n\n.hc-navitem[data-active="true"] {\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-primary);\n}\n\n.hc-panel__content {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n}\n\n.hc-panel__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-4);\n  border-bottom: 1px solid var(--hc-separator-opaque);\n}\n\n.hc-panel__scroll {\n  flex: 1;\n  overflow-y: auto;\n  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-8);\n}\n\n.hc-embed {\n  /* When embedded in Discord\'s own settings pane rather than the overlay. */\n  padding: var(--hc-space-2) 0 var(--hc-space-8);\n}\n\n@keyframes hc-fade {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n\n@keyframes hc-rise {\n  from {\n    opacity: 0;\n    transform: translateY(8px) scale(0.99);\n  }\n  to {\n    opacity: 1;\n    transform: none;\n  }\n}\n\n/* Respect the OS "reduce motion" preference. */\n@media (prefers-reduced-motion: reduce) {\n  .hc-overlay,\n  .hc-panel,\n  .hc-btn,\n  .hc-toggle__knob {\n    animation: none;\n    transition: none;\n  }\n}\n\n/* --- Setting cells (schema-driven form) ---------------------------------- */\n\n.hc-cell {\n  padding: var(--hc-space-2) var(--hc-space-4);\n  position: relative;\n}\n\n.hc-cell + .hc-cell::before {\n  content: "";\n  position: absolute;\n  top: 0;\n  left: var(--hc-space-4);\n  right: 0;\n  height: 1px;\n  background: var(--hc-separator);\n  transform: scaleY(0.5);\n}\n\n.hc-cell--row {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  min-height: 44px;\n}\n\n.hc-cell__main {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n\n.hc-cell__label {\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  color: var(--hc-label-primary);\n}\n\n.hc-cell__desc {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-cell__control {\n  flex: none;\n}\n\n.hc-cell__stacked {\n  padding-top: var(--hc-space-2);\n}\n\n/* --- Toolbar (search + actions) ------------------------------------------ */\n\n.hc-toolbar {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  margin-bottom: var(--hc-space-4);\n}\n\n.hc-search {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  height: 36px;\n  padding: 0 var(--hc-space-3);\n  background: var(--hc-fill-primary);\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-tertiary);\n}\n\n.hc-search input {\n  flex: 1;\n  border: none;\n  background: transparent;\n  outline: none;\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n}\n\n.hc-search input::placeholder {\n  color: var(--hc-label-tertiary);\n}\n\n/* --- Plugin detail header ------------------------------------------------ */\n\n.hc-back {\n  display: inline-flex;\n  align-items: center;\n  gap: var(--hc-space-1);\n  background: transparent;\n  border: none;\n  color: var(--hc-accent);\n  cursor: pointer;\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) 0;\n  margin-bottom: var(--hc-space-4);\n}\n\n.hc-detail-head {\n  display: flex;\n  align-items: flex-start;\n  gap: var(--hc-space-3);\n  margin-bottom: var(--hc-space-5);\n}\n\n.hc-detail-head__icon {\n  flex: none;\n  width: 44px;\n  height: 44px;\n  border-radius: var(--hc-radius-lg);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  color: #ffffff;\n}\n\n.hc-detail-head__text {\n  flex: 1;\n  min-width: 0;\n}\n\n.hc-detail-head__name {\n  font-size: var(--hc-text-title3);\n  line-height: var(--hc-lh-title3);\n  font-weight: 600;\n}\n\n.hc-detail-head__desc {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  color: var(--hc-label-secondary);\n  margin-top: 2px;\n}\n\n.hc-detail-head__meta {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-tertiary);\n  margin-top: var(--hc-space-2);\n}\n\n/* --- Log viewer ---------------------------------------------------------- */\n\n.hc-logs {\n  font-family: var(--hc-font-mono);\n  font-size: var(--hc-text-footnote);\n  line-height: 1.7;\n  background: var(--hc-bg-secondary);\n  border-radius: var(--hc-radius-lg);\n  padding: var(--hc-space-3);\n  overflow-x: auto;\n}\n\n.hc-logline {\n  display: flex;\n  gap: var(--hc-space-2);\n  white-space: pre;\n  padding: 1px 0;\n}\n\n.hc-logline__time {\n  color: var(--hc-label-tertiary);\n  flex: none;\n}\n\n.hc-logline__scope {\n  color: var(--hc-label-secondary);\n  flex: none;\n}\n\n.hc-logline__msg {\n  color: var(--hc-label-primary);\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n\n.hc-logline[data-level="warn"] .hc-logline__msg {\n  color: var(--hc-orange);\n}\n\n.hc-logline[data-level="error"] .hc-logline__msg {\n  color: var(--hc-red);\n}\n\n.hc-logline[data-level="debug"] .hc-logline__msg {\n  color: var(--hc-label-secondary);\n}\n\n/* --- About --------------------------------------------------------------- */\n\n.hc-about__row {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n}\n\n.hc-about__value {\n  color: var(--hc-label-secondary);\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- Generic vertical rhythm --------------------------------------------- */\n\n.hc-stack > * + * {\n  margin-top: var(--hc-space-4);\n}\n\n.hc-inline-note {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  color: var(--hc-orange);\n  font-size: var(--hc-text-footnote);\n}\n\n.hc-inline-note--danger {\n  color: var(--hc-red);\n}\n\n/* --- Detail head toggle stays top-aligned with the icon ------------------ */\n\n.hc-detail-head > span {\n  flex: none;\n  padding-top: var(--hc-space-1);\n}\n\n/* --- About hero ---------------------------------------------------------- */\n\n.hc-about-hero {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-2) 0 var(--hc-space-4);\n  color: var(--hc-label-primary);\n}\n\n.hc-about-hero__name {\n  font-size: var(--hc-text-title2);\n  line-height: var(--hc-lh-title2);\n  font-weight: 700;\n}\n\n.hc-about-hero__ver {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n/* --- Tabs (used by plugin pages) ----------------------------------------- */\n\n.hc-tabs {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  margin-bottom: var(--hc-space-4);\n}\n\n.hc-tabs__spacer {\n  flex: 1;\n}\n\n.hc-tab {\n  display: inline-flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  height: 32px;\n  padding: 0 var(--hc-space-3);\n  border: none;\n  border-radius: var(--hc-radius-md);\n  background: transparent;\n  color: var(--hc-label-secondary);\n  cursor: pointer;\n  font-family: inherit;\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-tab:hover {\n  color: var(--hc-label-primary);\n}\n\n.hc-tab[data-active="true"] {\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-primary);\n}\n\n/* --- Save bar --------------------------------------------------------------- */\n\n.hc-savebar {\n  position: sticky;\n  bottom: var(--hc-space-3);\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: var(--hc-space-4);\n  margin-top: var(--hc-space-4);\n  padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-4);\n  background: var(--hc-bg-elevated, #2c2c2e);\n  border-radius: var(--hc-radius-lg);\n  box-shadow:\n    0 0 0 0.5px rgba(255, 255, 255, 0.08),\n    0 8px 24px rgba(0, 0, 0, 0.35);\n  animation: hc-select-pop 0.14s ease;\n}\n\n.hc-savebar__label {\n  font-size: var(--hc-text-subhead);\n  color: var(--hc-label-secondary);\n}\n\n.hc-savebar__actions {\n  display: flex;\n  gap: var(--hc-space-2);\n  flex: none;\n}\n\n/* --- Segmented control ------------------------------------------------------ */\n\n.hc-segment {\n  display: flex;\n  gap: 2px;\n  padding: 2px;\n  margin-bottom: var(--hc-space-4);\n  background: var(--hc-fill-primary);\n  border-radius: var(--hc-radius-md);\n  width: fit-content;\n}\n\n.hc-segment__item {\n  border: none;\n  background: transparent;\n  color: var(--hc-label-secondary);\n  font-family: inherit;\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  height: 28px;\n  padding: 0 var(--hc-space-4);\n  border-radius: calc(var(--hc-radius-md) - 2px);\n  cursor: pointer;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-segment__item:hover {\n  color: var(--hc-label-primary);\n}\n\n.hc-segment__item[data-active="true"] {\n  background: var(--hc-bg-elevated, #2c2c2e);\n  color: var(--hc-label-primary);\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);\n}\n\n/* --- Pager ----------------------------------------------------------------- */\n\n.hc-pager {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: var(--hc-space-3);\n  margin-top: var(--hc-space-4);\n}\n\n.hc-pager__label {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  font-variant-numeric: tabular-nums;\n  min-width: 96px;\n  text-align: center;\n}\n\n.hc-pager .hc-tab:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n/* --- Captured message entries -------------------------------------------- */\n\n.hc-msglist {\n  display: flex;\n  flex-direction: column;\n  gap: var(--hc-space-2);\n}\n\n.hc-msg {\n  background: var(--hc-bg-secondary);\n  border-radius: var(--hc-radius-lg);\n  padding: var(--hc-space-3) var(--hc-space-4);\n  border-left: 2px solid var(--hc-red);\n}\n\n.hc-msg__head {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  margin-bottom: var(--hc-space-1);\n}\n\n.hc-msg__author {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  color: var(--hc-label-primary);\n}\n\n.hc-msg__where {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-msg__guild {\n  color: var(--hc-label-secondary);\n  font-weight: 600;\n}\n\n.hc-msg__sep {\n  color: var(--hc-label-tertiary);\n  margin: 0 4px;\n}\n\n.hc-msg__time {\n  margin-left: auto;\n  font-size: var(--hc-text-caption1);\n  color: var(--hc-label-tertiary);\n  font-variant-numeric: tabular-nums;\n}\n\n.hc-msg__body {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  color: var(--hc-label-primary);\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n\n.hc-msg__empty {\n  color: var(--hc-label-tertiary);\n  font-style: italic;\n}\n\n.hc-msg__meta {\n  margin-top: var(--hc-space-1);\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n}\n\n/* Attachment thumbnails. Constrained so wide/tall media never spills past the\n * message card \u2014 a single image caps at the content width, and the row wraps\n * when there are several. */\n.hc-msg__media {\n  display: flex;\n  flex-wrap: wrap;\n  gap: var(--hc-space-2);\n  margin-top: var(--hc-space-2);\n  min-width: 0;\n}\n\n.hc-msg__media a {\n  color: var(--hc-accent);\n  font-size: var(--hc-text-footnote);\n  word-break: break-all;\n}\n\n.hc-msg__thumb {\n  max-width: 100%;\n  max-height: 240px;\n  width: auto;\n  height: auto;\n  object-fit: contain;\n  border-radius: var(--hc-radius-md);\n  background: var(--hc-fill-secondary);\n}\n\n/* Inline custom emoji, sized to the surrounding text like Discord\'s own. */\n.hc-emoji {\n  display: inline-block;\n  width: 1.375em;\n  height: 1.375em;\n  margin: 0 1px;\n  object-fit: contain;\n  vertical-align: bottom;\n}\n\n.hc-msg__versions {\n  display: flex;\n  flex-direction: column;\n  gap: var(--hc-space-1);\n}\n\n.hc-msg__version {\n  display: flex;\n  gap: var(--hc-space-2);\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n}\n\n.hc-msg__vtag {\n  flex: none;\n  color: var(--hc-label-tertiary);\n  font-variant-numeric: tabular-nums;\n  font-size: var(--hc-text-footnote);\n  padding-top: 2px;\n}\n\n.hc-msg__vbody {\n  color: var(--hc-label-primary);\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n\n/* The `edited` tone reuses the orange rule via a modifier. */\n.hc-msg--edited {\n  border-left-color: var(--hc-orange);\n}\n\n/* --- message-logger status banner ---------------------------------------- *\n * A compact warning on the log page, shown only when at least one of the\n * plugin\'s source patches failed to match the running Discord build. Inside\n * the .halcyon overlay/embed, so tokens are used throughout. Amber tone: the\n * feature isn\'t broken \u2014 records still land in the list below \u2014 but the\n * in-chat red row is off, and this is the only place a non-console user will\n * see that. */\n.hc-mlog-warn {\n  border: 1px solid rgba(224, 165, 63, 0.35);\n  background: rgba(224, 165, 63, 0.08);\n  border-radius: var(--hc-radius-md);\n  padding: var(--hc-space-3) var(--hc-space-4);\n  margin: var(--hc-space-3) 0;\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n}\n.hc-mlog-warn__title {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  color: #e0a53f;\n}\n.hc-mlog-warn__detail {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  line-height: var(--hc-lh-footnote);\n}\n.hc-mlog-warn__list {\n  margin: 2px 0 0;\n  padding-left: 18px;\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- Deleted message (in-chat) ------------------------------------------- */\n\n/*\n * Applied to Discord\'s own message row when a deleted message is kept in place.\n * These live outside the .halcyon scope on purpose \u2014 they decorate Discord\n * elements \u2014 so literal values, no tokens.\n *\n * The row itself only carries the stable .hc-deleted hook; the chosen style is\n * a class on <html> (hc-mlog-<style>). Splitting them lets a style change take\n * effect immediately \u2014 swap the root class and every kept message updates \u2014\n * instead of the pick only landing on rows Discord repaints after the change.\n */\n\n/* Style: red tint (default) \u2014 flat red wash + left bar. */\n.hc-mlog-tint .hc-deleted {\n  background-color: rgba(255, 69, 58, 0.1);\n  box-shadow: inset 2px 0 0 #ff453a;\n}\n\n/* Style: red text \u2014 content turns red, no background. */\n.hc-mlog-text .hc-deleted [class*="messageContent"],\n.hc-mlog-text .hc-deleted [class*="contents"] > div:not([class*="header"]) {\n  color: #f04747 !important;\n}\n.hc-mlog-text .hc-deleted [class*="messageContent"] a {\n  color: #ff6b6b !important;\n}\n\n/* Style: ghost \u2014 the whole row fades. */\n.hc-mlog-ghost .hc-deleted {\n  opacity: 0.45;\n  filter: saturate(0.6);\n}\n\n/* Style: strike \u2014 red strikethrough over the text. */\n.hc-mlog-strike .hc-deleted [class*="messageContent"] {\n  text-decoration: line-through;\n  text-decoration-color: rgba(255, 69, 58, 0.7);\n  text-decoration-thickness: 1.5px;\n}\n.hc-mlog-strike .hc-deleted {\n  box-shadow: inset 2px 0 0 rgba(255, 69, 58, 0.5);\n}\n\n/* "This message was deleted (\u2026)": marker row under the content. One base\n * class plus a look modifier chosen in settings. */\n.hc-deleted-marker {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  margin-top: 2px;\n  font-size: 0.8125rem;\n  line-height: 1.2;\n  color: #f04747;\n  user-select: none;\n}\n.hc-deleted-marker__icon {\n  flex: none;\n}\n\n/* Look: badge \u2014 pill-shaped chip on its OWN line. It used `display: inline-flex`,\n * which let the pill run inline with the message text so the two never wrapped\n * ("\u4E0D\u4F1A\u6362\u884C"). Inheriting the base `display: flex` makes it block-level (its own\n * line); `width: fit-content` keeps the pill only as wide as its label, and\n * `max-width: 100%` stops a long label from overflowing the row. */\n.hc-deleted-marker--badge {\n  width: fit-content;\n  max-width: 100%;\n  background: rgba(255, 69, 58, 0.12);\n  border-radius: 9999px;\n  padding: 2px 10px;\n  margin-top: 4px;\n}\n\n/* Look: quote \u2014 indented behind a red bar, like a blockquote. */\n.hc-deleted-marker--quote {\n  border-left: 3px solid rgba(255, 69, 58, 0.7);\n  padding-left: 8px;\n  margin-top: 4px;\n  color: rgba(240, 71, 71, 0.85);\n}\n\n/* Tone: edited \u2014 same marker layout, calmer amber so an edit doesn\'t read as a\n * deletion. Overrides the red the delete marker uses. */\n.hc-deleted-marker--edited {\n  color: #e0a53f;\n}\n.hc-deleted-marker--edited.hc-deleted-marker--badge {\n  background: rgba(224, 165, 63, 0.14);\n}\n.hc-deleted-marker--edited.hc-deleted-marker--quote {\n  border-left-color: rgba(224, 165, 63, 0.7);\n  color: rgba(224, 165, 63, 0.9);\n}\n\n/* --- Username next to nickname (show-username plugin) --------------------- */\n\n/*\n * Appended inside Discord\'s message header, so literal values, no tokens.\n * One base class plus a per-style modifier chosen in the plugin\'s settings.\n */\n.hc-username {\n  font-size: 0.75rem;\n  font-weight: 500;\n  vertical-align: baseline;\n}\n\n.hc-username--muted {\n  color: var(--text-muted, #949ba4);\n}\n\n.hc-username--pill {\n  color: var(--text-muted, #949ba4);\n  background: rgba(128, 132, 142, 0.16);\n  border-radius: 9999px;\n  padding: 0 6px;\n  line-height: 1.35;\n  display: inline-block;\n}\n\n.hc-username--at {\n  color: #949cf7;\n}\n\n.hc-username--paren {\n  color: var(--text-muted, #949ba4);\n  font-weight: 400;\n}\n\n/* --- Inline edit history (in-chat) ---------------------------------------- */\n\n/*\n * Old versions of an edited message, rendered above the current content by the\n * message-logger content patch. Like .hc-deleted this decorates Discord\'s own\n * DOM, so literal values, no tokens. The base class only handles wrapping; a\n * per-style modifier (chosen in settings) sets the look. MessageExtras re-reads\n * the modifier on every render, so changing the style applies live.\n */\n.hc-edit-history__version {\n  word-break: break-word;\n  white-space: pre-wrap;\n}\n\n/* Per-version edit time, shown inline at the end of each old-version line.\n * Muted and compact; opacity keeps it tied to whatever the version style is,\n * and text-decoration:none stops the strike style from striking the time. */\n.hc-edit-history__time {\n  margin-left: 6px;\n  font-size: 0.72em;\n  opacity: 0.55;\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n  text-decoration: none;\n  vertical-align: baseline;\n}\n\n/* The old-version line mirrors the deleted-message style (tint/text/ghost/\n * strike) so both share one setting; strike stays its natural default look. */\n\n/* Style: red strikethrough \u2014 struck out in red, like removed text. */\n.hc-edit-history__version--strike {\n  color: rgba(255, 69, 58, 0.75);\n  text-decoration: line-through;\n  text-decoration-color: rgba(255, 69, 58, 0.4);\n}\n\n/* Style: red text \u2014 red, no strikethrough. */\n.hc-edit-history__version--text {\n  color: rgba(255, 69, 58, 0.85);\n}\n\n/* Style: ghost \u2014 faded out, keeps the normal text color. */\n.hc-edit-history__version--ghost {\n  opacity: 0.45;\n  filter: saturate(0.6);\n}\n\n/* Style: tint \u2014 red wash + left bar, as a quote-like block on the line. */\n.hc-edit-history__version--tint {\n  background-color: rgba(255, 69, 58, 0.1);\n  box-shadow: inset 2px 0 0 #ff453a;\n  padding: 1px 6px 1px 8px;\n  border-radius: 3px;\n}\n\n/* \u2500\u2500 message-cleaner page \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n * The self-message cleaner\'s operate surface. Scope/confirm reuse .hc-section\n * and .hc-cell; these rules cover the action bar, the live status line, the\n * preview list, and the stat readout. Decorates Halcyon\'s own panel, so every\n * value is a token. */\n.hc-cleaner__actions {\n  display: flex;\n  gap: var(--hc-space-3);\n  margin: var(--hc-space-4) 0;\n}\n.hc-cleaner__actions .hc-btn {\n  flex: 1;\n}\n.hc-cleaner__status {\n  margin: var(--hc-space-3) 0;\n  padding: var(--hc-space-3) var(--hc-space-4);\n  background: var(--hc-fill-secondary);\n  border-radius: var(--hc-radius-md);\n}\n.hc-cleaner__status-state {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  color: var(--hc-label-primary);\n}\n.hc-cleaner__status-detail {\n  margin-top: 2px;\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  word-break: break-word;\n}\n.hc-cleaner__list {\n  display: flex;\n  flex-direction: column;\n}\n.hc-cleaner__item {\n  display: flex;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-2) var(--hc-space-4);\n  font-size: var(--hc-text-footnote);\n  border-bottom: 1px solid var(--hc-separator);\n}\n.hc-cleaner__item:last-child {\n  border-bottom: none;\n}\n.hc-cleaner__item-time {\n  flex-shrink: 0;\n  color: var(--hc-accent);\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n}\n.hc-cleaner__item-text {\n  color: var(--hc-label-primary);\n  word-break: break-word;\n}\n.hc-cleaner__more {\n  padding: var(--hc-space-2) var(--hc-space-4);\n  font-size: var(--hc-text-caption1);\n  color: var(--hc-label-tertiary);\n}\n.hc-cleaner__stat {\n  display: flex;\n  justify-content: center;\n  align-items: baseline;\n  gap: var(--hc-space-2);\n}\n.hc-cleaner__stat-num {\n  font-size: var(--hc-text-title1);\n  font-weight: 700;\n  color: var(--hc-accent);\n  font-variant-numeric: tabular-nums;\n}\n.hc-cleaner__stat-unit {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n}\n\n/* \u2500\u2500 message-cleaner picker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.hc-cleaner__picker-head {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-3) var(--hc-space-4);\n  border-bottom: 1px solid var(--hc-separator);\n}\n.hc-cleaner__picker-title {\n  flex: 1;\n  text-align: center;\n  font-weight: 700;\n  font-size: var(--hc-text-subhead);\n  color: var(--hc-label-primary);\n}\n.hc-cleaner__picker-list {\n  display: flex;\n  flex-direction: column;\n  overflow-y: auto;\n  max-height: 360px;\n  padding: var(--hc-space-2);\n}\n.hc-cleaner__picker-item {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-2) var(--hc-space-3);\n  border-radius: var(--hc-radius-md);\n  cursor: pointer;\n  color: var(--hc-label-primary);\n  transition: background var(--hc-duration-fast) var(--hc-ease);\n}\n.hc-cleaner__picker-item:hover {\n  background: var(--hc-fill-secondary);\n}\n.hc-cleaner__picker-icon {\n  width: 36px;\n  height: 36px;\n  border-radius: 50%;\n  background: var(--hc-fill-primary);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  overflow: hidden;\n  flex-shrink: 0;\n  font-size: var(--hc-text-subhead);\n  color: var(--hc-label-secondary);\n}\n.hc-cleaner__picker-icon img {\n  width: 100%;\n  height: 100%;\n  object-fit: cover;\n}\n.hc-cleaner__picker-name {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.hc-cleaner__picker-empty {\n  padding: var(--hc-space-5);\n  text-align: center;\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-tertiary);\n}\n';
 
   // src/ui/inject-styles.ts
   var STYLE_ID = "halcyon-styles";
@@ -4066,6 +2577,24 @@ ${components_default}`;
     return snapshot;
   }
   var PAGE_SIZE2 = 25;
+  function InChatStatus() {
+    const [snapshot, setSnapshot] = useState(
+      () => getSourcePatchReport().filter((p) => p.pluginId === "message-logger")
+    );
+    useEffect(() => {
+      const tick = () => setSnapshot(getSourcePatchReport().filter((p) => p.pluginId === "message-logger"));
+      tick();
+      const t = setInterval(tick, 3e3);
+      return () => clearInterval(t);
+    }, []);
+    if (snapshot.length === 0) return null;
+    const failed = snapshot.filter((p) => !p.applied);
+    if (failed.length === 0) return null;
+    const critical = failed.find((p) => p.label === "keep deleted message in store");
+    const title = critical ? "\u804A\u5929\u4E2D\u7684\u7EA2\u8272\u5360\u4F4D\u672A\u751F\u6548" : "\u90E8\u5206\u804A\u5929\u5185\u8865\u4E01\u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C";
+    const detail = critical ? "\u88AB\u5220\u9664\u7684\u6D88\u606F\u4ECD\u7136\u8BB0\u5F55\u5728\u4E0B\u65B9\u5217\u8868\uFF0C\u4F46\u5728\u804A\u5929\u91CC\u4F1A\u76F4\u63A5\u6D88\u5931\u3002\u6838\u5FC3\u8865\u4E01 keep-deleted \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\u3002" : "\u8BB0\u5F55\u529F\u80FD\u6B63\u5E38\uFF0C\u4F46\u804A\u5929\u4E2D\u7684\u7F16\u8F91\u5386\u53F2 / \u5220\u9664\u6807\u8BB0\u53EF\u80FD\u65E0\u6CD5\u663E\u793A\u3002";
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn" }, /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn__title" }, title), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn__detail" }, detail), /* @__PURE__ */ React.createElement("ul", { className: "hc-mlog-warn__list" }, failed.map((p) => /* @__PURE__ */ React.createElement("li", { key: p.label }, "\u201C", p.label, "\u201D"))), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn__detail" }, "\u8BF7\u628A\u6B64\u5904\u4EE5\u53CA\u65E5\u5FD7\u9875\u91CC \u201CHalcyon modules\u201D \u76F8\u5173\u7684\u8F93\u51FA\u53D1\u7ED9\u5F00\u53D1\u8005\u5B9A\u4F4D\u3002"));
+  }
   function LogPage() {
     const { deleted, edited } = useLog();
     const [tab, setTab] = useState("deleted");
@@ -4075,7 +2604,7 @@ ${components_default}`;
     const page = Math.min(pages[tab], pageCount - 1);
     const visible = entries.slice(page * PAGE_SIZE2, (page + 1) * PAGE_SIZE2);
     const goTo = (next) => setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
-    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-tabs" }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(InChatStatus, null), /* @__PURE__ */ React.createElement("div", { className: "hc-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -4268,12 +2797,24 @@ ${components_default}`;
       return void 0;
     }
   }
+  var selfIgnoreLogged = false;
   function isIgnored(channelId, author) {
     const s = settings.store;
     if (channelId && s.ignoredChannels.includes(channelId)) return true;
-    if (author?.id && s.ignoredUsers.includes(author.id)) return true;
+    const authorId = author?.id != null ? String(author.id) : "";
+    if (authorId && s.ignoredUsers.includes(authorId)) return true;
     if (s.ignoreBots && author?.bot) return true;
-    if (s.ignoreSelf && author?.id && author.id === currentUserId()) return true;
+    if (s.ignoreSelf) {
+      const me = currentUserId();
+      if (!selfIgnoreLogged) {
+        selfIgnoreLogged = true;
+        const hit = Boolean(authorId && me && authorId === String(me));
+        log10.info(
+          `\u5C4F\u853D\u81EA\u5DF1 \u81EA\u68C0 \u2014 \u5F00\u5173=on\uFF0C\u6D88\u606F\u4F5C\u8005id=${authorId || "(\u7A7A)"}\uFF0C\u5F53\u524D\u7528\u6237id=${me ?? "(\u53D6\u4E0D\u5230)"}\uFF0C\u5224\u5B9A=${hit ? "\u547D\u4E2D\u2192\u4F1A\u5C4F\u853D" : "\u672A\u547D\u4E2D\u2192\u4E0D\u5C4F\u853D"}`
+        );
+      }
+      if (authorId && me && authorId === String(me)) return true;
+    }
     return false;
   }
   var shadow = /* @__PURE__ */ new Map();
@@ -4309,6 +2850,161 @@ ${components_default}`;
     } catch {
       return void 0;
     }
+  }
+  var tintObserver;
+  var tintInterval;
+  var sweepScheduled = false;
+  function sweepDeletedRows() {
+    try {
+      if (typeof document === "undefined") return;
+      const root = document.documentElement;
+      const want = `hc-mlog-${settings.store.deleteStyle || "tint"}`;
+      if (root && !root.classList.contains(want)) {
+        for (const s of DELETE_STYLE_CLASSES) root.classList.remove(`hc-mlog-${s}`);
+        root.classList.add(want);
+      }
+      const rows = document.querySelectorAll('li[id^="chat-messages-"]');
+      rows.forEach((el) => {
+        if (!el.classList.contains("hc-deleted") && rowIsDeleted(el)) el.classList.add("hc-deleted");
+      });
+    } catch {
+    }
+  }
+  function scheduleSweep() {
+    if (sweepScheduled) return;
+    sweepScheduled = true;
+    setTimeout(() => {
+      sweepScheduled = false;
+      sweepDeletedRows();
+    }, 60);
+  }
+  function rowIsDeleted(el) {
+    const parts = el.id.split("-");
+    const messageId = parts[parts.length - 1];
+    const channelId = parts.length >= 4 ? parts[parts.length - 2] : void 0;
+    return channelId ? messageLog.isDeleted(channelId, messageId) : messageLog.getDeleted().some((d) => d.id === messageId);
+  }
+  function startDomTinter() {
+    if (typeof MutationObserver === "undefined" || typeof document === "undefined") return;
+    tintObserver = new MutationObserver((mutations) => {
+      for (const mu of mutations) {
+        const t = mu.target;
+        if (mu.type === "attributes" && t instanceof Element && t.id && t.id.startsWith("chat-messages-") && !t.classList.contains("hc-deleted") && rowIsDeleted(t)) {
+          t.classList.add("hc-deleted");
+        }
+      }
+      scheduleSweep();
+    });
+    const attach2 = () => {
+      const target = document.documentElement ?? document.body;
+      if (!target) return false;
+      sweepDeletedRows();
+      tintObserver?.observe(target, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class"]
+      });
+      return true;
+    };
+    if (!attach2()) {
+      let tries = 0;
+      const timer2 = setInterval(() => {
+        if (attach2() || ++tries > 100) clearInterval(timer2);
+      }, 100);
+    }
+    if (tintInterval) clearInterval(tintInterval);
+    tintInterval = setInterval(sweepDeletedRows, 300);
+  }
+  function stopDomTinter() {
+    tintObserver?.disconnect();
+    tintObserver = void 0;
+    if (tintInterval) {
+      clearInterval(tintInterval);
+      tintInterval = void 0;
+    }
+  }
+  function tintRowInDom(channelId, messageId) {
+    try {
+      const el = document.getElementById(`chat-messages-${channelId}-${messageId}`) || document.getElementById(`chat-messages-${messageId}`);
+      if (el) el.classList.add("hc-deleted");
+    } catch {
+    }
+    scheduleSweep();
+  }
+  var rerendered = /* @__PURE__ */ new Set();
+  function forceRowRerender(channelId, messageId) {
+    try {
+      const dispatcher = getDispatcher();
+      if (!dispatcher || typeof dispatcher.dispatch !== "function") return;
+      const msg = readMessage(channelId, messageId);
+      if (!msg) return;
+      const a = msg.author ?? {};
+      const iso = (v) => {
+        if (v == null) return null;
+        if (typeof v?.toISOString === "function") return v.toISOString();
+        if (typeof v === "string") return v;
+        return new Date(toMillis(v)).toISOString();
+      };
+      const entry = messageLog.findDeleted(channelId, messageId);
+      let embeds = embedsOf(msg);
+      if ((!embeds || embeds.length === 0) && entry?.embeds?.length) embeds = entry.embeds;
+      let stickerItems = stickersOf(msg);
+      if (stickerItems.length === 0 && entry?.stickers?.length) stickerItems = entry.stickers;
+      let rich = richAttachmentsOf(msg);
+      if (rich.length === 0 && entry?.attachmentsRich?.length) rich = entry.attachmentsRich;
+      const content = typeof msg.content === "string" && msg.content !== "" ? msg.content : entry?.content ?? "";
+      const raw = {
+        id: String(messageId),
+        channel_id: String(channelId),
+        guild_id: msg.guild_id ?? msg.guildId ?? entry?.guildId ?? null,
+        type: typeof msg.type === "number" ? msg.type : 0,
+        content,
+        author: {
+          id: String(a.id ?? entry?.author.id ?? "0"),
+          username: a.username ?? a.global_name ?? a.globalName ?? entry?.author.name ?? "user",
+          global_name: a.globalName ?? a.global_name ?? a.username ?? entry?.author.name ?? null,
+          discriminator: String(a.discriminator ?? "0"),
+          avatar: a.avatar ?? null,
+          bot: Boolean(a.bot ?? entry?.author.bot),
+          public_flags: a.publicFlags ?? a.public_flags ?? 0
+        },
+        timestamp: iso(msg.timestamp) ?? (/* @__PURE__ */ new Date()).toISOString(),
+        edited_timestamp: iso(msg.editedTimestamp ?? msg.edited_timestamp),
+        tts: Boolean(msg.tts),
+        mention_everyone: Boolean(msg.mentionEveryone ?? msg.mention_everyone),
+        mentions: [],
+        mention_roles: [],
+        attachments: rich.map((x, i) => ({
+          id: x.id ?? `${messageId}${i}`,
+          filename: x.filename ?? "file",
+          url: x.url ?? x.proxy_url,
+          proxy_url: x.proxy_url ?? x.url,
+          content_type: x.content_type,
+          width: x.width,
+          height: x.height,
+          size: x.size ?? 0
+        })),
+        embeds,
+        sticker_items: stickerItems,
+        pinned: Boolean(msg.pinned),
+        flags: typeof msg.flags === "number" ? msg.flags : 0,
+        // Carried so the rebuilt record keeps the flag where our patch preserves it.
+        deleted: true
+      };
+      dispatcher.dispatch({ type: "MESSAGE_UPDATE", message: raw });
+    } catch (err) {
+      log10.debug("force row re-render failed (non-fatal)", err);
+    }
+  }
+  function scheduleRerender(channelId, messageId) {
+    const key = `${channelId}:${messageId}`;
+    if (rerendered.has(key)) return;
+    rerendered.add(key);
+    setTimeout(() => {
+      forceRowRerender(channelId, messageId);
+      setTimeout(() => rerendered.delete(key), 1500);
+    }, 0);
   }
   function captureDelete(channelId, id) {
     if (!channelId || !id) return;
@@ -4347,6 +3043,31 @@ ${components_default}`;
         message.deleted = true;
       } catch {
       }
+    }
+    if (settings.store.keepDeletedInChat) {
+      tintRowInDom(String(channelId), String(id));
+      scheduleRerender(String(channelId), String(id));
+    }
+    if (settings.store.keepDeletedInChat && !liveKeepChecked) {
+      liveKeepChecked = true;
+      const cid = String(channelId);
+      const mid = String(id);
+      setTimeout(() => {
+        const still = readMessage(cid, mid);
+        const domEl = typeof document !== "undefined" ? document.getElementById(`chat-messages-${cid}-${mid}`) || document.getElementById(`chat-messages-${mid}`) : null;
+        const tinted = !!domEl && domEl.classList.contains("hc-deleted");
+        if (still && still.deleted === true) {
+          log10.info(
+            `live keep-deleted \u81EA\u68C0 OK \u2014 \u88AB\u5220\u6D88\u606F\u4ECD\u7559\u5728 store \u4E14\u5DF2\u6807\u8BB0 deleted\uFF1BDOM \u884C${domEl ? tinted ? "\u5DF2\u76F4\u63A5\u67D3\u7EA2\uFF08\u5B9E\u65F6\u7EA2\u6761\u751F\u6548\uFF09" : "\u627E\u5230\u4F46\u672A\u67D3\u7EA2\uFF0C\u8BF7\u53CD\u9988" : "\u672A\u627E\u5230\uFF08\u53EF\u80FD\u5DF2\u6EDA\u51FA\u89C6\u56FE\uFF09"}`
+          );
+        } else if (still) {
+          log10.warn("live keep-deleted \u81EA\u68C0 PARTIAL \u2014 \u6D88\u606F\u4FDD\u7559\u4F46\u672A\u6807\u8BB0 deleted\uFF0C\u6539\u7528 DOM \u76F4\u63A5\u67D3\u7EA2\u515C\u5E95");
+        } else {
+          log10.error(
+            "live keep-deleted \u81EA\u68C0 FAILED \u2014 MessageStore \u5DF2\u4E22\u5F03\u88AB\u5220\u6D88\u606F\uFF0C\u8BF4\u660E \u201Ckeep deleted message in store\u201D \u8865\u4E01\u672A\u547D\u4E2D\u5F53\u524D\u6784\u5EFA\uFF1B\u88AB\u5220\u6D88\u606F\u53EA\u4F1A\u5728\u91CD\u65B0\u52A0\u8F7D\u9891\u9053\u540E\u7531 revive \u91CD\u65B0\u51FA\u73B0\uFF08\u6B63\u662F\u4F60\u8BF4\u7684\u201C\u5237\u65B0\u624D\u6709\u3001\u5B9E\u65F6\u6CA1\u6709\u201D\uFF09\u3002"
+          );
+        }
+      }, 0);
     }
   }
   function captureEdit(payload) {
@@ -4484,6 +3205,7 @@ ${components_default}`;
   }
   var firstCaptureLogged = false;
   var actionsSeen = 0;
+  var liveKeepChecked = false;
   function onAction(action) {
     const type = action?.type;
     if (typeof type !== "string") return;
@@ -4684,13 +3406,38 @@ ${components_default}`;
   function reportPatches() {
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "message-logger");
     if (!mine.length) return;
+    for (const p of mine) {
+      if (p.applied) {
+        log10.info(`patch OK   \xB7 ${p.label} (${p.hits} hit${p.hits === 1 ? "" : "s"})`);
+      } else {
+        log10.warn(`patch MISS \xB7 ${p.label} \u2014 \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA`);
+      }
+    }
     const missed = mine.filter((p) => !p.applied);
     if (missed.length === 0) {
-      log10.info("in-chat patches applied");
+      log10.info("in-chat patches applied \u2014 \u5168\u90E8\u547D\u4E2D");
     } else {
       log10.warn(
-        "some in-chat patches did not match this Discord build; deleted messages are still captured on the plugin page, but will not be kept inline. Unmatched: " + missed.map((p) => `"${p.label}"`).join(", ")
+        "\u90E8\u5206 in-chat patch \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA\uFF1A" + missed.map((p) => `"${p.label}"`).join("\u3001") + "\u3002\u5220\u9664\u6D88\u606F\u4ECD\u4F1A\u8BB0\u5F55\u5728\u63D2\u4EF6\u9875\uFF0C\u4F46\u53EF\u80FD\u65E0\u6CD5\u5728\u804A\u5929\u5185\u4FDD\u7559 / \u53D8\u7EA2\u3002"
       );
+    }
+    const storeMissed = mine.some((p) => p.label === "keep deleted message in store" && !p.applied);
+    const recordMissed = mine.some((p) => p.label === "declare deleted field on message record" && !p.applied);
+    if (storeMissed || recordMissed) {
+      try {
+        const forms = ["MESSAGE_DELETE:function", "MESSAGE_DELETE(", "MESSAGE_DELETE_BULK"];
+        const dumps = forms.map((needle) => {
+          const out = dumpFactorySource(needle, 220);
+          return out.startsWith("<no loaded factory") || out.startsWith("<webpack") ? "" : `\u3010${needle}\u3011${out}`;
+        }).filter(Boolean);
+        const combined = dumps.join("  ||  ").replace(/\s+/g, " ");
+        const slice = combined.length > 3800 ? combined.slice(0, 3800) + " \u2026(\u622A\u65AD)" : combined;
+        log10.warn(
+          "MESSAGE_DELETE \u5904\u7406\u5668\u771F\u5B9E\u6E90\u7801\u5207\u7247\uFF08\u8865\u4E01\u672A\u547D\u4E2D\uFF0C\u7528\u4E8E\u4FEE\u6B63\uFF0C\u8BF7\u6574\u6BB5\u53D1\u7ED9\u5F00\u53D1\u8005\uFF09\uFF1A" + (slice || "\u672A\u5728\u5DF2\u52A0\u8F7D\u6A21\u5757\u4E2D\u627E\u5230 MESSAGE_DELETE \u5904\u7406\u5668\uFF1B\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u9891\u9053\u540E\u518D\u67E5\u770B\u65E5\u5FD7\u3002")
+        );
+      } catch (err) {
+        log10.error("could not dump MESSAGE_DELETE handler shape", err);
+      }
     }
   }
   var message_logger_default = definePlugin({
@@ -4708,33 +3455,49 @@ ${components_default}`;
     patches: [
       {
         // The message store drops records when it handles MESSAGE_DELETE /
-        // MESSAGE_DELETE_BULK. Instead of letting it, rebuild the channel cache
-        // ourselves — kept messages are re-committed with `deleted: true` (which
-        // triggers the re-render the tint patches key off), everything else is
-        // removed exactly as the original would. The module is located by its
-        // registered store name (a quoted string that survives minification —
-        // handler keys don't, which is why the previous find never matched).
+        // MESSAGE_DELETE_BULK. Instead of letting it, we rebuild the channel
+        // cache ourselves: kept messages are re-committed flagged `deleted:true`,
+        // everything else is removed exactly as the original would. Without this
+        // the row simply vanishes the instant a message is deleted and only
+        // reappears (red) on reload via the revive path — precisely the
+        // "刷新才有、实时没有" symptom.
         label: "keep deleted message in store",
+        // Ported VERBATIM from Vencord's MessageLogger "MessageStore" patch.
+        // The module is selected by the store's registered name — the quoted
+        // string "MessageStore" the minifier keeps — and the handler is patched
+        // by a ZERO-WIDTH insertion right after `MESSAGE_DELETE:function(e){`:
+        // the original body stays byte-for-byte intact and merely becomes
+        // unreachable after our early `return`. Vencord tracks the current
+        // Discord build, so this is the shape that actually ships; the earlier
+        // hand-rolled regexes guessed at method-shorthand / multi-dot shapes this
+        // client no longer uses, which is exactly why they missed 4×. Vencord's
+        // `\i` token is expanded here to its definition [A-Za-z_$][\w$]*.
         find: '"MessageStore"',
         replacement: [
           {
-            match: /(?<=MESSAGE_DELETE:function\(([\w$]+)\)\{)(?=let.{0,100}?([\w$]+(?:\.[\w$]+)+)\.getOrCreate)/,
-            replace: "let hcC=$2.getOrCreate($1.channelId);hcC=$self.handleDelete(hcC,$1,!1);$2.commit(hcC);return;"
+            // Single delete. $1 = raw action param, $2 = store ref (e.g. `d.A`).
+            match: /(?<=MESSAGE_DELETE:function\(([A-Za-z_$][\w$]*)\)\{)(?=let.{0,100}?([A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]*)\.getOrCreate)/,
+            replace: "let cache=$2.getOrCreate($1.channelId);cache=$self.handleDelete(cache,$1,!1);$2.commit(cache);return;"
           },
           {
-            match: /(?<=MESSAGE_DELETE_BULK:function\(([\w$]+)\)\{)(?=let.{0,100}?([\w$]+(?:\.[\w$]+)+)\.getOrCreate)/,
-            replace: "let hcC=$2.getOrCreate($1.channelId);hcC=$self.handleDelete(hcC,$1,!0);$2.commit(hcC);return;"
+            // Bulk delete.
+            match: /(?<=MESSAGE_DELETE_BULK:function\(([A-Za-z_$][\w$]*)\)\{)(?=let.{0,100}?([A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]*)\.getOrCreate)/,
+            replace: "let cache=$2.getOrCreate($1.channelId);cache=$self.handleDelete(cache,$1,!0);$2.commit(cache);return;"
           }
         ]
       },
       {
         // Base message row: append our class to the "li" so kept messages tint
         // red. The find string is a dev assertion that survives minification.
+        // The prefix character before `("li",{` can be `)` (a `(0, X.createElement)`
+        // style call preserved by some minifiers) OR a plain identifier
+        // (`_jsx("li",` in a jsx-runtime build), so match either — the old
+        // pattern only accepted `)` and no-op'd on jsx-runtime builds.
         label: "tint deleted message row (base)",
         find: "Message must not be a thread starter message",
         replacement: {
-          match: /\)\("li",\{(.+?),className:/,
-          replace: ')("li",{$1,className:($self.deletedClass(arguments[0])||"")+" "+'
+          match: /([)\w$\]])\("li",\{(.+?),className:/,
+          replace: '$1("li",{$2,className:($self.deletedClass(arguments[0])||"")+" "+'
         }
       },
       {
@@ -4761,6 +3524,68 @@ ${components_default}`;
           match: /\]:[\w$]+\.isUnsupported.{0,30}?,children:\[/,
           replace: "$&$self.renderEdits(arguments[0]),"
         }
+      },
+      {
+        // Force a live re-render when a message is flagged deleted.
+        //
+        // This is the fix for "红条只有刷新后才出现". The store patch above keeps a
+        // deleted message with `deleted: true` (confirmed live by the self-check
+        // log), but Discord wraps each message row in React.memo with a custom
+        // comparator that only re-renders when content / state / flags /
+        // editedTimestamp change — it never looks at `deleted`. So flipping the
+        // flag updates the store but the row is memoized stale and never repaints;
+        // the red styling only shows on reload, when the list mounts fresh.
+        //
+        // We extend that comparator to also compare `deleted`, so the instant we
+        // flag a message the row is considered changed and repaints red. The two
+        // message variables are captured straight from the tail of the comparator
+        // (`X.editedTimestamp?.toString()===Y.editedTimestamp?.toString()`) so we
+        // never hardcode minified names. Same module as the edit-history patch
+        // (".SEND_FAILED,").
+        label: "re-render on deleted flag",
+        find: ".SEND_FAILED,",
+        replacement: {
+          match: /((\w+)\.editedTimestamp\?\.toString\(\)===(\w+)\.editedTimestamp\?\.toString\(\))/,
+          replace: "$1&&$2.deleted===$3.deleted"
+        }
+      },
+      {
+        // THE fix for "红条只有刷新后才出现". Discord's Message is an Immutable
+        // Record with a FIXED field schema. `deleted` is not one of those fields,
+        // so `m.set("deleted",true)` stores a value that is readable (the live
+        // self-check sees deleted===true) but is invisible to the record's
+        // structural equality — and Discord's message list decides whether to
+        // repaint a row via that equality. Old record and new record compare
+        // "equal" on the schema fields, so the row is never repainted live; only
+        // a reload (fresh mount) shows the red styling.
+        //
+        // Declaring `deleted` (and editHistory / firstEditTimestamp) as real
+        // fields on the record class means `.set("deleted",true)` now yields a
+        // record that is genuinely not-equal to the original, so the list
+        // repaints the instant we flag it. Ported verbatim from Vencord's
+        // "Message domain model" patch, which is what makes deletes show live
+        // there. Runs in the record constructor, located by `}addReaction(`.
+        label: "declare deleted field on message record",
+        find: /\}addReaction\(|addReaction\([\w$]+\)\{/,
+        replacement: {
+          match: /this\.customRenderedContent=(\w+)\.customRenderedContent,/,
+          replace: "this.customRenderedContent=$1.customRenderedContent,this.deleted=$1.deleted||!1,this.editHistory=$1.editHistory||[],this.firstEditTimestamp=$1.firstEditTimestamp||this.editedTimestamp||this.timestamp,"
+        }
+      },
+      {
+        // Keep `deleted` / editHistory / firstEditTimestamp alive when Discord
+        // rebuilds a message record on MESSAGE_UPDATE (edits, reactions, embed
+        // unfurls). Without this, any post-delete update to the same message
+        // re-derives the record from the server payload and silently drops our
+        // flag, so a deleted message that then gets an embed/reaction update
+        // would lose its red row. Ported from Vencord's "updated message
+        // transformer" patch, located by ".PREMIUM_REFERRAL&&(".
+        label: "carry deleted flag through message updates",
+        find: /\.PREMIUM_REFERRAL\s*&&\s*\(/,
+        replacement: {
+          match: /(?<=null!=[\w$]+\.edited_timestamp\)return )[\w$]+\([\w$]+,\{reactions:([\w$]+)\.reactions[\s\S]{0,60}?\}\)/,
+          replace: "Object.assign($&,{deleted:$1.deleted,editHistory:$1.editHistory,firstEditTimestamp:$1.firstEditTimestamp})"
+        }
       }
     ],
     start() {
@@ -4770,6 +3595,7 @@ ${components_default}`;
       syncDeleteStyleClass();
       unsubscribeDeleteStyle = settings.subscribe("deleteStyle", syncDeleteStyleClass);
       unpatchDispatch = attachRecorderEverywhere();
+      startDomTinter();
       setTimeout(reportPatches, 4e3);
       setTimeout(() => {
         if (actionsSeen > 0) {
@@ -4788,6 +3614,7 @@ ${components_default}`;
       unsubscribeRetention = void 0;
       unsubscribeDeleteStyle?.();
       unsubscribeDeleteStyle = void 0;
+      stopDomTinter();
       try {
         for (const s of DELETE_STYLE_CLASSES) document.documentElement?.classList.remove(`hc-mlog-${s}`);
       } catch {
@@ -5808,7 +4635,7 @@ ${components_default}`;
       type: "boolean",
       default: true,
       label: "\u89E3\u9501\u76F4\u64AD\u753B\u8D28",
-      description: "\u5141\u8BB8\u4EE5 Nitro \u753B\u8D28\u8FDB\u884C\u5C4F\u5E55\u5171\u4EAB\u76F4\u64AD\u3002"
+      description: "\u5141\u8BB8\u4EE5 Nitro \u753B\u8D28\u8FDB\u884C\u5C4F\u5E55\u5171\u4EAB\u76F4\u64AD\uFF08\u9700\u91CD\u542F\u5BA2\u6237\u7AEF\u751F\u6548\uFF0C\u56E0\u4E3A\u8FD9\u662F\u6E90\u7801\u7EA7 patch\uFF09\u3002"
     }
   });
   var EmojiStore = lazy((m) => m?.getName?.() === "EmojiStore");
@@ -5822,6 +4649,8 @@ ${components_default}`;
   };
   var STICKER_LOTTIE = 3;
   var STICKER_GIF = 4;
+  var INTENT_CHAT = 3;
+  var INTENT_STICKER_EMOJI = 4;
   function currentPremiumType() {
     try {
       return UserStore.getCurrentUser?.()?.premiumType ?? 0;
@@ -5863,11 +4692,9 @@ ${components_default}`;
   }
   function emojiUrl(emoji) {
     const size = Number(settings5.store.emojiSize) || 48;
-    const ext = emoji?.animated ? "gif" : "png";
+    const ext = emoji?.animated ? "gif" : "webp";
     const url = new URL(`https://cdn.discordapp.com/emojis/${emoji.id}.${ext}`);
     url.searchParams.set("size", String(size));
-    if (emoji?.name) url.searchParams.set("name", String(emoji.name));
-    url.searchParams.set("quality", "lossless");
     return url.toString();
   }
   function stickerUrl(sticker) {
@@ -5939,6 +4766,7 @@ ${components_default}`;
       const channelId = args[0];
       const message = findMessageArg(args);
       if (!message) return;
+      if (message.__fakeNitroRewritten) return;
       if (typeof message.content !== "string") message.content = String(message.content ?? "");
       const options = findOptionsArg(args);
       const guildId = guildIdOfChannel(channelId);
@@ -5971,56 +4799,281 @@ ${components_default}`;
       log17.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
     }
   }
+  function reportPatches2() {
+    const mine = getSourcePatchReport().filter((p) => p.pluginId === "fake-nitro");
+    if (!mine.length) return;
+    const missed = mine.filter((p) => !p.applied);
+    if (missed.length === 0) {
+      log17.info("\u6240\u6709\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548");
+    } else {
+      log17.warn(
+        "\u90E8\u5206\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF1B\u9009\u62E9\u5668\u89E3\u9501\u6216\u53D1\u9001\u6539\u5199\u53EF\u80FD\u4E0D\u5B8C\u6574\u3002\u672A\u5339\u914D\uFF1A" + missed.map((p) => `\u201C${p.label}\u201D`).join("\u3001")
+      );
+    }
+  }
+  var IS_BYPASSEABLE_INTENTION = `[${INTENT_CHAT},${INTENT_STICKER_EMOJI}].includes(fakeNitroIntention)`;
   var fake_nitro_default = definePlugin({
     id: "fake-nitro",
     name: "\u5047 Nitro",
-    description: "\u65E0\u9700 Nitro \u4E5F\u80FD\u4F7F\u7528\u9700\u8981 Nitro \u7684\u81EA\u5B9A\u4E49\u8868\u60C5\u4E0E\u8D34\u7EB8\uFF1A\u89E3\u9501\u9009\u62E9\u5668\uFF0C\u5E76\u5728\u53D1\u9001\u65F6\u628A\u9501\u5B9A\u7684\u8868\u60C5 / \u8D34\u7EB8\u81EA\u52A8\u6539\u5199\u4E3A\u56FE\u7247\u94FE\u63A5\uFF0C\u5BF9\u65B9\u770B\u5230\u7684\u5C31\u662F\u5185\u8054\u56FE\u7247\u3002",
+    description: "\u65E0\u9700 Nitro \u4E5F\u80FD\u4F7F\u7528\u9700\u8981 Nitro \u7684\u81EA\u5B9A\u4E49\u8868\u60C5\u4E0E\u8D34\u7EB8\uFF1A\u89E3\u9501\u9009\u62E9\u5668\uFF0C\u5E76\u5728\u53D1\u9001\u65F6\u628A\u9501\u5B9A\u7684\u8868\u60C5 / \u8D34\u7EB8\u81EA\u52A8\u6539\u5199\u4E3A\u56FE\u7247\u94FE\u63A5\uFF0C\u5BF9\u65B9\u770B\u5230\u7684\u5C31\u662F\u5185\u8054\u56FE\u7247\u3002\u4FEE\u6539\u9700\u91CD\u542F\u5BA2\u6237\u7AEF\u624D\u80FD\u5B8C\u5168\u751F\u6548\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "chat",
     settings: settings5,
+    patches: [
+      // 0. THE send-time fix — pre-send rewrite, same seam as Vencord's
+      //    MessageEventsAPI (find: ".handleSendMessage,onResize:"), but the match
+      //    is re-anchored to THIS build's `handleSendMessage`, verified against
+      //    the dumped module source. Vencord's upstream regex expects
+      //    `parse(channel,...).getSendMessageOptions({...});` back-to-back; this
+      //    build instead reads:
+      //
+      //      let w=X.Y.parse(h,t);            // w = parsed draft (validNonShortcutEmojis)
+      //      w.tts=...; ...
+      //      let I={...Z.getSendMessageOptions({content:t,channelId:h.id,...}),
+      //             location:...};            // I = send options (stickerIds)
+      //      if(...) <send>
+      //
+      //    So we capture w (message), h (channel), I (options) and splice our
+      //    rewrite in right after `let I={...};` — before the send, and before
+      //    the client-side "该表情符号为动态表情" check that otherwise aborts an
+      //    animated / cross-server emoji locally. By then the `<a:name:id>` token
+      //    is already a CDN URL, so the check sees a plain link and lets it through.
+      //
+      //    Hooking MessageActions.sendMessage (the old approach) fired AFTER that
+      //    block already killed the send — which is why the emoji came back
+      //    "无法使用" no matter what.
+      {
+        label: "message pre-send rewrite",
+        find: /handleSendMessage[\s\S]{0,200}onResize|getSendMessageOptions[\s\S]{0,500}handleSendMessage/,
+        replacement: {
+          match: /let ([\w$]+)=[\w$]+\.[\w$]+\.parse\(([\w$]+),[\w$]+\);.+?let ([\w$]+)=\{\.\.\.[\w$]+\.[\w$]+\.getSendMessageOptions\(\{.+?\}\),location:[^}]*\};/,
+          replace: (m, msg, channel, options) => `${m}if($self.handlePreSend(${channel}.id,${msg},${options}))return{shouldClear:false,shouldRefocus:true};`
+        }
+      },
+      // 1. Premium predicate bypass. The `canUse…` helpers under PremiumUtils
+      //    gate every "is this a premium feature?" check in the client. Rewrite
+      //    each function body to just `return true;` so the picker, sticker
+      //    dropdowns, and stream-quality options all show as usable.
+      {
+        label: "premium predicates return true",
+        find: "canUseCustomStickersEverywhere:",
+        replacement: [
+          {
+            match: /(?<=canUseCustomStickersEverywhere:function\([\w$]+\)\{)/,
+            replace: "return true;"
+          },
+          {
+            match: /(?<=canUseHighVideoUploadQuality:function\([\w$]+\)\{)/,
+            replace: "return true;"
+          },
+          {
+            match: /(?<=canStreamQuality:function\([\w$]+,[\w$]+\)\{)/,
+            replace: "return true;"
+          },
+          {
+            match: /(?<=canUseClientThemes:function\([\w$]+\)\{)/,
+            replace: "return true;"
+          },
+          {
+            match: /(?<=canUsePremiumAppIcons:function\([\w$]+\)\{)/,
+            replace: "return true;"
+          }
+        ]
+      },
+      // 2. Voice-call emoji picker keeps its native (server-side) restriction:
+      //    fake-nitro shouldn't try to bypass emoji use in voice channels where
+      //    the intention isn't CHAT. Vencord swaps the CHAT constant for STATUS
+      //    at this exact call site so our picker patches leave voice alone.
+      {
+        label: "voice call emoji stays native",
+        find: '.getByName("fork_and_knife")',
+        replacement: {
+          match: /\.CHAT/,
+          replace: ".STATUS"
+        }
+      },
+      // 3. Emoji picker unlock. The module that produces the "why is this emoji
+      //    disabled?" enum has multiple gates: DISALLOW_EXTERNAL,
+      //    GUILD_SUBSCRIPTION_UNAVAILABLE, premium-locked, animated-locked.
+      //    Widen each so intentions CHAT (3) and GUILD_STICKER_RELATED_EMOJI (4)
+      //    pass, giving the picker "usable" for anything we're about to rewrite
+      //    into a URL anyway.
+      {
+        label: "emoji picker unlock",
+        find: ".GUILD_SUBSCRIPTION_UNAVAILABLE;",
+        replacement: [
+          // Introduce `fakeNitroIntention`, bound to Discord's own intention
+          // variable, so the widenings below can key off it.
+          //
+          // Vencord anchors this on the literal `intention:` token — but that
+          // token is ABSENT in the current build (verified against the dumped
+          // module source): the intention is a bare minified variable, e.g.
+          // `d`, compared as `d===X.EmojiIntention.STATUS`. Anchoring on the
+          // (present) `.USE_EXTERNAL_EMOJIS,x);` statement boundary and reading
+          // the intention variable out of the nearby
+          // `isExternalEmojiAllowedForIntention(d)` call is what actually lands.
+          //
+          // This one MUST match: patches #2–#5 below all reference
+          // `fakeNitroIntention`, so if this fails while they apply, the emoji
+          // function throws ReferenceError on every call and the picker greys
+          // out everything — which is exactly the "全是锁" symptom this fixes.
+          {
+            match: /(?<=\.USE_EXTERNAL_EMOJIS,[\w$]+\);)(?=.{0,300}?isExternalEmojiAllowedForIntention\)\(([\w$]+)\))/,
+            replace: "const fakeNitroIntention=$1;"
+          },
+          // DISALLOW_EXTERNAL: bypass for our intentions.
+          {
+            match: /&&![\w$]+&&![\w$]+(?=\)return [\w$]+\.[\w$]+\.DISALLOW_EXTERNAL;)/,
+            replace: `$&&&!${IS_BYPASSEABLE_INTENTION}`
+          },
+          // GUILD_SUBSCRIPTION_UNAVAILABLE: bypass for our intentions.
+          {
+            match: /![\w$]+\.available(?=\)return [\w$]+\.[\w$]+\.GUILD_SUBSCRIPTION_UNAVAILABLE;)/,
+            replace: `$&&&!${IS_BYPASSEABLE_INTENTION}`
+          },
+          // "You need premium for cross-server emoji": bypass for our intentions.
+          {
+            match: /!([\w$]+\.[\w$]+\.canUseEmojisEverywhere\([\w$]+\))/,
+            replace: `(!$1&&!${IS_BYPASSEABLE_INTENTION})`
+          },
+          // "You need premium for animated emoji": pretend we can, for our intentions.
+          {
+            match: /(?<=\|\|)[\w$]+\.[\w$]+\.canUseAnimatedEmojis\([\w$]+\)/,
+            replace: `($&||${IS_BYPASSEABLE_INTENTION})`
+          }
+        ]
+      },
+      // 4. Subscription-locked (role-benefit) emoji unlock. A guarded predicate
+      //    returns false when the current user lacks admin on the role-benefit
+      //    guild. Route calls that WE make (with a fakeNitroOriginal=true tail
+      //    arg) through the original, and let everyone else's calls (i.e. the
+      //    picker's own probe) short-circuit to "usable".
+      {
+        label: "subscription emoji unlock",
+        find: ".getUserIsAdmin(",
+        replacement: {
+          match: /(function [\w$]+\([\w$]+,[\w$]+)\)\{(.{0,250}\.getUserIsAdmin\(.+?return!1\})/,
+          replace: "$1,fakeNitroOriginal){if(!fakeNitroOriginal)return false;$2"
+        }
+      },
+      // 5. Sticker always "SENDABLE". Same trick: rewrite the availability
+      //    predicate at the sticker send-affordance site so the picker doesn't
+      //    grey out locked stickers before our runtime send hook can rewrite
+      //    them into image links.
+      {
+        label: "stickers always sendable",
+        find: '"SENDABLE"',
+        replacement: {
+          match: /[\w$]+\.available\?/,
+          replace: "true?"
+        }
+      },
+      // 6. Stream quality: drop the `guildPremiumTier: TIER_x,` requirements
+      //    from the stream FPS / resolution options so all quality tiers are
+      //    picker-visible regardless of the server's boost level.
+      //
+      //    NOTE: Vencord's find is the intl macro `#{intl::STREAM_FPS_OPTION}`,
+      //    which its build step rewrites into the real (hashed) runtime lookup.
+      //    This runtime has no such transform, so that literal never appears in
+      //    Discord's code. We fall back to the bare `STREAM_FPS_OPTION` token as
+      //    a best effort; if the build hashes it away this patch simply no-ops
+      //    (stream quality is a minor extra — it never blocks emoji/sticker use).
+      {
+        label: "stream quality tiers removed",
+        find: "STREAM_FPS_OPTION",
+        all: true,
+        replacement: {
+          match: /guildPremiumTier:[\w$]+\.[\w$]+\.TIER_\d,?/,
+          replace: ""
+        }
+      },
+      // 7. Custom desktop app icons — the picker checks `isPremium(currentUser)`.
+      //    Force true. Small quality-of-life patch that comes free with the
+      //    premium-bypass mood.
+      {
+        label: "custom app icons",
+        find: "getCurrentDesktopIcon(),",
+        replacement: {
+          match: /[\w$]+\.[\w$]+\.isPremium\([\w$]+\.[\w$]+\.getCurrentUser\(\)\)/,
+          replace: "true"
+        }
+      },
+      // 8. Custom client themes — a `isTier2Above` gate on the custom-theme
+      //    editor. Force true so the editor unlocks for the user.
+      {
+        label: "custom client themes",
+        find: '("custom_themes_editor_footer")',
+        all: true,
+        replacement: {
+          match: /\(0,[\w$]+\.[\w$]+\)\([\w$]+\.[\w$]+\.TIER_2\)(?=,|;)/,
+          replace: "true"
+        }
+      },
+      // 9. Soundboard sounds — `available` fields arrive as false for locked
+      //    sounds on non-Nitro accounts. Force them to true on the ingest
+      //    reducers so the picker treats them as usable.
+      {
+        label: "soundboard sounds available",
+        find: 'type:"GUILD_SOUNDBOARD_SOUND_CREATE"',
+        all: true,
+        replacement: {
+          match: /(?<=type:"(?:SOUNDBOARD_SOUNDS_RECEIVED|GUILD_SOUNDBOARD_SOUND_CREATE|GUILD_SOUNDBOARD_SOUND_UPDATE|GUILD_SOUNDBOARD_SOUNDS_UPDATE)".+?available:)[\w$]+\.available/,
+          replace: "true"
+        }
+      }
+    ],
     start() {
-      const PremiumUtils = findByProps("canUseCustomStickersEverywhere", "canStreamQuality");
-      if (PremiumUtils) {
-        PremiumUtils.canUseCustomStickersEverywhere = () => true;
-        PremiumUtils.canUseStickersEverywhere = () => true;
-        PremiumUtils.canStreamQuality = () => true;
-        PremiumUtils.canUseAnimatedEmojis = () => true;
-        PremiumUtils.canUseEmojisEverywhere = () => true;
-        PremiumUtils.canUseClientThemes = () => true;
-        PremiumUtils.canUsePremiumAppIcons = () => true;
-        log17.info("\u5DF2 patch PremiumUtils");
-      } else {
-        log17.warn("PremiumUtils \u672A\u627E\u5230");
-      }
-      const EmojiUtils = findByProps("getEmojiUnavailableReason");
-      if (EmojiUtils?.getEmojiUnavailableReason) {
-        const orig = EmojiUtils.getEmojiUnavailableReason;
-        EmojiUtils.getEmojiUnavailableReason = function(e) {
-          if (e?.intention === 3 || e?.intention === 4) return null;
-          return orig.call(this, e);
-        };
-        log17.info("\u5DF2 patch getEmojiUnavailableReason\uFF08\u8868\u60C5\u9009\u62E9\u5668\u89E3\u9501\uFF09");
-      } else {
-        log17.warn("getEmojiUnavailableReason \u672A\u627E\u5230");
-      }
       const messageActions = findByProps("sendMessage", "editMessage", "deleteMessage");
       if (messageActions) {
         if (typeof messageActions.sendMessage === "function") {
-          unpatchSend = patcher.before(messageActions, "sendMessage", onSendMessage);
+          try {
+            unpatchSend = patcher.before(messageActions, "sendMessage", onSendMessage);
+          } catch (err) {
+            log17.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
+          }
         }
         if (typeof messageActions.editMessage === "function") {
-          unpatchEdit = patcher.before(messageActions, "editMessage", onEditMessage);
+          try {
+            unpatchEdit = patcher.before(messageActions, "editMessage", onEditMessage);
+          } catch (err) {
+            log17.error("\u6302\u63A5 editMessage \u5931\u8D25", err);
+          }
         }
-        log17.info("\u5DF2\u6302\u63A5 MessageActions\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF09");
+        log17.info("MessageActions \u5DF2\u6302\u63A5\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF1B\u82E5 pre-send \u8865\u4E01\u5DF2\u751F\u6548\u5219\u6B64 hook \u4EC5\u4F5C fallback\uFF09");
       } else {
-        log17.warn("MessageActions \u672A\u627E\u5230");
+        log17.warn(
+          "\u672A\u627E\u5230 MessageActions \u2014\u2014 \u9009\u62E9\u5668\u89E3\u9501\u5DF2\u901A\u8FC7\u6E90\u7801 patch \u751F\u6548\uFF0C\u4F46\u53D1\u9001\u65F6\u7684 URL \u6539\u5199\u4E0D\u53EF\u7528\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\uFF1B\u82E5\u4ECD\u672A\u627E\u5230\uFF0C\u8BF4\u660E\u8BE5 Discord \u7248\u672C\u7684 MessageActions \u5F62\u72B6\u6709\u53D8\u3002"
+        );
       }
+      setTimeout(reportPatches2, 4e3);
     },
     stop() {
       unpatchSend?.();
       unpatchEdit?.();
       unpatchSend = void 0;
       unpatchEdit = void 0;
+    },
+    /**
+     * Called from the pre-send source patch (#0) with Discord's freshly parsed
+     * draft — at the exact point Vencord's MessageEventsAPI fires, after parse
+     * and before send. Rewrites locked sticker ids and emoji tokens in
+     * `messageObj` IN PLACE into CDN URLs. Returns false so the send is never
+     * cancelled: we've already mutated the draft, there's nothing to abort.
+     * Guarded end-to-end — a throw here must never break the send box.
+     */
+    handlePreSend(channelId, messageObj, options) {
+      try {
+        if (typeof messageObj?.content !== "string") {
+          messageObj.content = String(messageObj?.content ?? "");
+        }
+        const guildId = guildIdOfChannel(channelId);
+        if (options) rewriteStickers(channelId, messageObj, options, guildId);
+        rewriteEmojis(channelId, messageObj, guildId);
+        messageObj.__fakeNitroRewritten = true;
+      } catch (err) {
+        log17.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+      }
+      return false;
     }
   });
 

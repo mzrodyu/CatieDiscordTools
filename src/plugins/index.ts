@@ -10,5 +10,7 @@ import messageLogger from "./message-logger";
 import showUsername from "./show-username";
 import guildMonitor from "./guild-monitor";
 import messageCleaner from "./message-cleaner";
+import fakeNitro from "./fake-nitro";
+import consoleCleaner from "./console-cleaner";
 
-export const plugins: Plugin[] = [settingsHost, messageLogger, showUsername, guildMonitor, messageCleaner];
+export const plugins: Plugin[] = [settingsHost, messageLogger, showUsername, guildMonitor, messageCleaner, fakeNitro, consoleCleaner];

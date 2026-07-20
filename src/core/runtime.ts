@@ -14,7 +14,7 @@ import {
   registerSourcePatch,
   setSelfResolver
 } from "./modules/webpack";
-import { loadNamespace, saveNamespace } from "./settings/storage";
+import { loadNamespace, saveNamespace, readSyncHint, writeSyncHint } from "./settings/storage";
 import type { Plugin } from "./plugin";
 
 const log = logger("runtime");
@@ -87,7 +87,19 @@ class Runtime {
     // hydrated yet, which only leaves optional plugins looking disabled.
     // Required plugins (the settings host among them) resolve correctly
     // regardless, so their patches register here — before modules load.
-    this.enabledMap = (loadNamespace(ENABLED_NS) as Record<string, boolean>) ?? {};
+    // Enable-state decides which source patches register — and a source patch
+    // MUST be registered before Discord's Webpack executes its target factory,
+    // or it silently misses. In the browser extension the authoritative store
+    // (chrome.storage, reached over an async bridge) has NOT hydrated at this
+    // point, so loadNamespace() returns {} and only required plugins would get
+    // patched — every optional patch-bearing plugin (fake-nitro among them)
+    // would register too late and never apply. A synchronous localStorage hint,
+    // written on every change and on each boot, carries the last known
+    // enable-map across restarts so those plugins register in time here. The
+    // async store still overrides in boot() once it arrives.
+    const hint = (readSyncHint(ENABLED_NS) as Record<string, boolean>) ?? {};
+    const stored = (loadNamespace(ENABLED_NS) as Record<string, boolean>) ?? {};
+    this.enabledMap = { ...hint, ...stored };
     this.registerBootPatches();
 
     installChunkInterceptor();
@@ -107,6 +119,13 @@ class Runtime {
     // re-read enable-state and pick up patches for any plugin that turned out
     // to be enabled but wasn't known when prepare() ran.
     this.enabledMap = (loadNamespace(ENABLED_NS) as Record<string, boolean>) ?? {};
+
+    // The store is authoritative now; mirror it to the synchronous hint so the
+    // NEXT launch's prepare() can register patch-bearing plugins before Webpack
+    // even though the async store won't have hydrated by then. This is what
+    // makes source patches on optional plugins take effect on the extension
+    // (after one priming restart to write the hint the first time).
+    writeSyncHint(ENABLED_NS, this.enabledMap);
 
     // Same reason, for per-plugin settings. register() binds persistence
     // synchronously at construction — which in the extension runs before the
@@ -333,6 +352,9 @@ class Runtime {
 
   private persistEnabledState(): void {
     saveNamespace(ENABLED_NS, this.enabledMap);
+    // Keep the synchronous hint in lockstep so a toggle survives to the next
+    // prepare() (which runs before the async store hydrates).
+    writeSyncHint(ENABLED_NS, this.enabledMap);
   }
 
   private emit(): void {

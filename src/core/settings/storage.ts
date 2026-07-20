@@ -76,3 +76,61 @@ export function saveNamespace(id: string, values: Record<string, unknown>): void
     log.error(`could not persist settings for "${id}"`, err);
   }
 }
+
+// --- synchronous hint side-channel ------------------------------------------
+//
+// A tiny, always-localStorage store that sits BESIDE the selected backend.
+//
+// Why it must exist: source patches have to be registered before Discord's
+// Webpack executes the target module factories, and *which* patches to register
+// depends on the plugin enable-map. In the browser extension the authoritative
+// backend is an async chrome.storage mirror (see extension/install-storage-
+// bridge.ts) that is still empty at prepare() time — so the enable-map reads
+// blank and every optional patch-bearing plugin (fake-nitro among them) is
+// skipped, its patches only registering later in boot(), long after the
+// factories have already run unpatched. That is the whole "patch applied:false
+// on every entry" failure.
+//
+// The fix: stash a synchronous copy of small, boot-critical state (the
+// enable-map) straight in localStorage. The main-world payload runs at
+// document_start and can read it the instant it starts, before Webpack.
+//
+// Discord strips window.localStorage a little way into its own boot (an
+// anti-token-theft measure), so we capture a live handle at module load —
+// document_start, before that removal — and keep using it afterwards; the
+// underlying Storage object stays functional even once the window property is
+// gone. Everything here is best-effort: any failure degrades to "no hint",
+// which just means patches wait until boot() as they did before.
+
+let hintStore: Storage | undefined;
+try {
+  hintStore = globalThis.localStorage;
+} catch {
+  hintStore = undefined;
+}
+
+const HINT_PREFIX = "halcyon:hint:";
+
+/** Read a synchronous boot hint, or undefined when absent/unreadable. */
+export function readSyncHint(id: string): Record<string, unknown> | undefined {
+  try {
+    if (!hintStore) return undefined;
+    const raw = hintStore.getItem(HINT_PREFIX + id);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Persist a synchronous boot hint. Best-effort; never throws. */
+export function writeSyncHint(id: string, values: Record<string, unknown>): void {
+  try {
+    if (!hintStore) return;
+    hintStore.setItem(HINT_PREFIX + id, JSON.stringify(values));
+  } catch {
+    // best effort — a missing hint only costs a one-launch delay before
+    // patch-bearing optional plugins take effect.
+  }
+}

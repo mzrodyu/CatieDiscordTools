@@ -160,8 +160,56 @@ export function installChunkInterceptor(): void {
     {},
     (req: WebpackRequire) => {
       wpRequire = req;
+      // Catch modules whose chunk landed BEFORE our push hook went live. Their
+      // factories are already in `req.m`, but most have not executed yet;
+      // wrapping them in place means patches still apply when Discord first
+      // requires them. Without this, an early-loading module (the emoji-
+      // usability utilities among them) runs unpatched and its source patches
+      // silently miss — which is exactly why the picker stayed locked while the
+      // later-loading send module patched fine.
+      try {
+        wrapPendingFactories(req);
+      } catch (err) {
+        log.error("failed to wrap pre-existing factories", err);
+      }
     }
   ]);
+}
+
+/**
+ * Wrap every not-yet-executed factory already sitting in Webpack's require map.
+ *
+ * The push hook only sees chunks that arrive after we install; anything Webpack
+ * merged into `require.m` before that is invisible to it. On the browser
+ * extension our MAIN-world content script does not reliably beat Discord's
+ * bundle, so a batch of core modules can already be registered by the time we
+ * get `require`. Those whose factories have not run yet (absent from
+ * `require.c`) can still be wrapped in place, so a later require applies the
+ * patches. A module already in `require.c` has been required — it ran under its
+ * original factory and cannot be retro-patched — so it is skipped.
+ */
+function wrapPendingFactories(req: WebpackRequire): void {
+  const factories = req?.m;
+  if (!factories || typeof factories !== "object") return;
+
+  let wrapped = 0;
+  let alreadyRun = 0;
+  for (const id of Object.keys(factories)) {
+    const original = factories[id];
+    if (typeof original !== "function" || (original as any).__halcyon__) continue;
+    if (req.c && req.c[id]) {
+      alreadyRun++;
+      continue; // already required — too late to patch this one
+    }
+    factories[id] = wrapFactory(id, original);
+    wrapped++;
+  }
+
+  if (wrapped || alreadyRun) {
+    log.info(
+      `swept pre-existing factories: wrapped ${wrapped}, skipped ${alreadyRun} already-executed`
+    );
+  }
 }
 
 /**
@@ -217,10 +265,15 @@ function instrumentChunk(chunk: any[]): void {
 }
 
 function wrapFactory(id: string, original: ModuleFactory): ModuleFactory {
-  const applicable = sourcePatches.filter((p) => sourceMatches(p.find, original));
-  const effective = applicable.length ? applyPatches(id, original, applicable) : original;
+  // Lazily compute the patched factory on first execution, so patches registered
+  // after instrumentChunk (e.g., plugin patches from runtime.boot) are seen.
+  let effective: ModuleFactory | undefined;
 
   const wrapped: ModuleFactory = function (this: any, module, exports, require) {
+    if (!effective) {
+      const applicable = sourcePatches.filter((p) => sourceMatches(p.find, original));
+      effective = applicable.length ? applyPatches(id, original, applicable) : original;
+    }
     effective.call(this, module, exports, require);
     // After the factory runs, `module.exports` is settled. Let waiters inspect.
     try {
@@ -231,7 +284,7 @@ function wrapFactory(id: string, original: ModuleFactory): ModuleFactory {
   };
 
   // Preserve original source text so later patches (and findBySource) still work.
-  wrapped.toString = () => effective.toString();
+  wrapped.toString = () => original.toString();
   (wrapped as any).__halcyon__ = true;
   return wrapped;
 }

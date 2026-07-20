@@ -7,6 +7,7 @@
 import { useEffect, useState } from "../../../core/common/react";
 import { ChannelStore, GuildStore } from "../../../core/common/discord";
 import { logger } from "../../../core/logger";
+import { getSourcePatchReport } from "../../../core/modules/webpack";
 import { messageLog, type DeletedEntry, type EditedEntry } from "../store";
 import { renderContent } from "../render-content";
 import { Button } from "../../../ui/components/Button";
@@ -34,6 +35,56 @@ function useLog(): { deleted: readonly DeletedEntry[]; edited: readonly EditedEn
 
 const PAGE_SIZE = 25;
 
+/**
+ * Compact banner surfacing which of the plugin's in-chat patches did NOT
+ * apply against this Discord build. Failing patches are the reason a delete
+ * shows in the log page but the row still vanishes from chat — this makes
+ * that mismatch visible instead of leaving it buried in the logs.
+ *
+ * Silent when everything is fine. Re-reads every few seconds because patches
+ * only apply as their target modules load, and some modules load lazily on
+ * first use (opening a channel, hovering an edited row) rather than at boot.
+ */
+function InChatStatus(): React.ReactElement | null {
+  const [snapshot, setSnapshot] = useState(() =>
+    getSourcePatchReport().filter((p) => p.pluginId === "message-logger")
+  );
+  useEffect(() => {
+    const tick = () =>
+      setSnapshot(getSourcePatchReport().filter((p) => p.pluginId === "message-logger"));
+    tick();
+    const t = setInterval(tick, 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (snapshot.length === 0) return null;
+  const failed = snapshot.filter((p) => !p.applied);
+  if (failed.length === 0) return null;
+
+  const critical = failed.find((p) => p.label === "keep deleted message in store");
+  const title = critical
+    ? "聊天中的红色占位未生效"
+    : "部分聊天内补丁未匹配当前 Discord 版本";
+  const detail = critical
+    ? "被删除的消息仍然记录在下方列表，但在聊天里会直接消失。核心补丁 keep-deleted 未匹配当前 Discord 版本。"
+    : "记录功能正常，但聊天中的编辑历史 / 删除标记可能无法显示。";
+
+  return (
+    <div className="hc-mlog-warn">
+      <div className="hc-mlog-warn__title">{title}</div>
+      <div className="hc-mlog-warn__detail">{detail}</div>
+      <ul className="hc-mlog-warn__list">
+        {failed.map((p) => (
+          <li key={p.label}>“{p.label}”</li>
+        ))}
+      </ul>
+      <div className="hc-mlog-warn__detail">
+        请把此处以及日志页里 “Halcyon modules” 相关的输出发给开发者定位。
+      </div>
+    </div>
+  );
+}
+
 export function LogPage(): React.ReactElement {
   const { deleted, edited } = useLog();
   const [tab, setTab] = useState<Tab>("deleted");
@@ -51,6 +102,7 @@ export function LogPage(): React.ReactElement {
 
   return (
     <div>
+      <InChatStatus />
       <div className="hc-tabs">
         <button
           type="button"
