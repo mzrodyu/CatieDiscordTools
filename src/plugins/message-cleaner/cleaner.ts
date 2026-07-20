@@ -144,14 +144,12 @@ export async function fetchUserId(token: string): Promise<string> {
 }
 
 export function currentTarget(): CleanTarget | null {
+  // Parse directly from URL, same as the original 冲水 script — stores are
+  // unreliable because the intl proxy can shadow them on newer builds.
   try {
-    const raw = SelectedChannelStore.getChannelId?.();
-    if (!raw) return null;
-    const channelId = String(raw);
-    const channel = ChannelStore.getChannel?.(channelId);
-    const gid = channel?.guild_id ?? channel?.guildId;
-    const guildId = gid ? String(gid) : "@me";
-    return { guildId, channelId, serverWide: false };
+    const m = location.pathname.match(/\/channels\/(\d{15,25}|@me)\/(\d{15,25})/);
+    if (!m) return null;
+    return { guildId: m[1], channelId: m[2], serverWide: false };
   } catch { return null; }
 }
 
