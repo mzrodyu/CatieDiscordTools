@@ -12,28 +12,23 @@
 
 "use strict";
 var Halcyon = (() => {
-  var __defProp = Object.defineProperty;
-  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-  var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __esm = (fn, res) => function __init() {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  };
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
-  };
-  var __copyProps = (to, from, except, desc) => {
-    if (from && typeof from === "object" || typeof from === "function") {
-      for (let key of __getOwnPropNames(from))
-        if (!__hasOwnProp.call(to, key) && key !== except)
-          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-    }
-    return to;
-  };
-  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
   // src/core/logger/index.ts
+  var WEIGHT = {
+    debug: 10,
+    info: 20,
+    warn: 30,
+    error: 40
+  };
+  var BADGE = {
+    debug: "#8E8E93",
+    info: "#0A84FF",
+    warn: "#FF9F0A",
+    error: "#FF453A"
+  };
+  var RING_CAPACITY = 500;
+  var ring = [];
+  var subscribers = /* @__PURE__ */ new Set();
+  var threshold = false ? WEIGHT.debug : WEIGHT.info;
   function record(level, scope, parts) {
     const entry = { time: Date.now(), level, scope, parts };
     ring.push(entry);
@@ -65,31 +60,16 @@ var Halcyon = (() => {
     subscribers.add(fn);
     return () => subscribers.delete(fn);
   }
-  var WEIGHT, BADGE, RING_CAPACITY, ring, subscribers, threshold;
-  var init_logger = __esm({
-    "src/core/logger/index.ts"() {
-      "use strict";
-      init_react_shim();
-      WEIGHT = {
-        debug: 10,
-        info: 20,
-        warn: 30,
-        error: 40
-      };
-      BADGE = {
-        debug: "#8E8E93",
-        info: "#0A84FF",
-        warn: "#FF9F0A",
-        error: "#FF453A"
-      };
-      RING_CAPACITY = 500;
-      ring = [];
-      subscribers = /* @__PURE__ */ new Set();
-      threshold = false ? WEIGHT.debug : WEIGHT.info;
-    }
-  });
 
   // src/core/modules/webpack.ts
+  var log = logger("modules");
+  var CHUNK_KEY = "webpackChunkdiscord_app";
+  var wpRequire;
+  var ready = false;
+  var interceptorInstalled = false;
+  var waiters = /* @__PURE__ */ new Set();
+  var sourcePatches = [];
+  var selfResolver = () => void 0;
   function setSelfResolver(fn) {
     selfResolver = fn;
     globalThis.__halcyon_self__ = (id) => selfResolver(id);
@@ -172,9 +152,12 @@ var Halcyon = (() => {
     }
   }
   function wrapFactory(id, original) {
-    const applicable = sourcePatches.filter((p) => sourceMatches(p.find, original));
-    const effective = applicable.length ? applyPatches(id, original, applicable) : original;
+    let effective;
     const wrapped = function(module, exports, require2) {
+      if (!effective) {
+        const applicable = sourcePatches.filter((p) => sourceMatches(p.find, original));
+        effective = applicable.length ? applyPatches(id, original, applicable) : original;
+      }
       effective.call(this, module, exports, require2);
       try {
         dispatchToWaiters(module);
@@ -182,7 +165,7 @@ var Halcyon = (() => {
         log.error("module observer threw for", id, err);
       }
     };
-    wrapped.toString = () => effective.toString();
+    wrapped.toString = () => original.toString();
     wrapped.__halcyon__ = true;
     return wrapped;
   }
@@ -234,6 +217,7 @@ var Halcyon = (() => {
     const src = factory.toString();
     return typeof find2 === "string" ? src.includes(find2) : find2.test(src);
   }
+  var NESTED_SCAN_MAX_KEYS = 40;
   function matchExport(exp, filter, meta) {
     try {
       if (filter(exp, meta)) return exp;
@@ -435,22 +419,6 @@ ${slices.join("\n  ...  \n")}`);
       return JSON.stringify({ error: String(err), patches, dom }, null, 2);
     }
   }
-  var log, CHUNK_KEY, wpRequire, ready, interceptorInstalled, waiters, sourcePatches, selfResolver, NESTED_SCAN_MAX_KEYS;
-  var init_webpack = __esm({
-    "src/core/modules/webpack.ts"() {
-      "use strict";
-      init_react_shim();
-      init_logger();
-      log = logger("modules");
-      CHUNK_KEY = "webpackChunkdiscord_app";
-      ready = false;
-      interceptorInstalled = false;
-      waiters = /* @__PURE__ */ new Set();
-      sourcePatches = [];
-      selfResolver = () => void 0;
-      NESTED_SCAN_MAX_KEYS = 40;
-    }
-  });
 
   // src/core/common/react.ts
   function lazyProxy(resolve) {
@@ -477,96 +445,18 @@ ${slices.join("\n  ...  \n")}`);
   function byFunctionProps(...props) {
     return (exp) => props.every((p) => typeof exp[p] === "function") && typeof exp.__halcyon_probe__ === "undefined";
   }
-  var React, ReactDOM, useState, useEffect, useMemo, useRef;
-  var init_react = __esm({
-    "src/core/common/react.ts"() {
-      "use strict";
-      init_react_shim();
-      init_webpack();
-      React = lazyProxy(
-        () => find(byFunctionProps("createElement", "useState", "useEffect", "useMemo"))
-      );
-      ReactDOM = lazyProxy(
-        () => find(byFunctionProps("createPortal", "flushSync")) ?? find(byFunctionProps("createPortal"))
-      );
-      useState = (...a) => React.useState(...a);
-      useEffect = (...a) => React.useEffect(...a);
-      useMemo = (...a) => React.useMemo(...a);
-      useRef = (...a) => React.useRef(...a);
-    }
-  });
-
-  // src/runtime/react-shim.ts
-  var init_react_shim = __esm({
-    "src/runtime/react-shim.ts"() {
-      "use strict";
-      init_react();
-    }
-  });
-
-  // src/core/common/discord.ts
-  var discord_exports = {};
-  __export(discord_exports, {
-    ChannelStore: () => ChannelStore,
-    Dispatcher: () => Dispatcher,
-    GuildChannelStore: () => GuildChannelStore,
-    GuildStore: () => GuildStore,
-    GuildSubscriptions: () => GuildSubscriptions,
-    MessageActions: () => MessageActions,
-    MessageStore: () => MessageStore,
-    SelectedChannelStore: () => SelectedChannelStore,
-    UserStore: () => UserStore,
-    getDispatcher: () => getDispatcher,
-    moment: () => moment
-  });
-  function getDispatcher() {
-    try {
-      const viaStore = UserStore?._dispatcher;
-      if (isFluxDispatcher(viaStore)) return viaStore;
-    } catch {
-    }
-    return find(isFluxDispatcher);
-  }
-  var Dispatcher, MessageStore, MessageActions, UserStore, ChannelStore, SelectedChannelStore, GuildStore, GuildChannelStore, GuildSubscriptions, moment;
-  var init_discord = __esm({
-    "src/core/common/discord.ts"() {
-      "use strict";
-      init_react_shim();
-      init_webpack();
-      Dispatcher = lazy(isFluxDispatcher);
-      MessageStore = lazy(
-        (m) => typeof m?.getMessage === "function" && typeof m?.getMessages === "function"
-      );
-      MessageActions = lazy(
-        (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
-      );
-      UserStore = lazy(
-        (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
-      );
-      ChannelStore = lazy(
-        (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
-      );
-      SelectedChannelStore = lazy(
-        (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
-      );
-      GuildStore = lazy(
-        (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
-      );
-      GuildChannelStore = lazy(
-        (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
-      );
-      GuildSubscriptions = lazy(
-        (m) => typeof m?.subscribeToGuild === "function" || typeof m?.subscribeToChannel === "function"
-      );
-      moment = lazy((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");
-    }
-  });
-
-  // src/userscript/main.ts
-  init_react_shim();
+  var React = lazyProxy(
+    () => find(byFunctionProps("createElement", "useState", "useEffect", "useMemo"))
+  );
+  var ReactDOM = lazyProxy(
+    () => find(byFunctionProps("createPortal", "flushSync")) ?? find(byFunctionProps("createPortal"))
+  );
+  var useState = (...a) => React.useState(...a);
+  var useEffect = (...a) => React.useEffect(...a);
+  var useMemo = (...a) => React.useMemo(...a);
+  var useRef = (...a) => React.useRef(...a);
 
   // src/userscript/install-storage.ts
-  init_react_shim();
   var g = globalThis;
   try {
     const ls = g.localStorage;
@@ -581,14 +471,7 @@ ${slices.join("\n  ...  \n")}`);
   } catch {
   }
 
-  // src/core/runtime.ts
-  init_react_shim();
-  init_logger();
-  init_webpack();
-
   // src/core/settings/storage.ts
-  init_react_shim();
-  init_logger();
   var log2 = logger("settings");
   var PREFIX = "halcyon:";
   function selectBackend() {
@@ -694,7 +577,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-20 00:07:09" : "dev";
+      const build = true ? "2026-07-20 12:37:06" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -882,14 +765,7 @@ ${slices.join("\n  ...  \n")}`);
   };
   var runtime = new Runtime();
 
-  // src/plugins/index.ts
-  init_react_shim();
-
-  // src/plugins/settings-host/index.tsx
-  init_react_shim();
-
   // src/core/plugin.ts
-  init_react_shim();
   var BRAND = Symbol.for("halcyon.plugin");
   var ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   function definePlugin(definition) {
@@ -903,13 +779,6 @@ ${slices.join("\n  ...  \n")}`);
     }
     return Object.assign(definition, { [BRAND]: true });
   }
-
-  // src/plugins/settings-host/index.tsx
-  init_logger();
-  init_webpack();
-
-  // src/ui/inject-styles.ts
-  init_react_shim();
 
   // src/ui/tokens.css
   var tokens_default = '/*\n * Design tokens.\n *\n * Every color, size, radius, and duration used anywhere in Halcyon resolves to\n * one of these variables. Components never hardcode raw values. The palette is\n * flat by design: solid fills only, no gradients.\n *\n * Values mirror docs/ui-design-guide.md. If the two ever disagree, the guide\n * is the source of truth and this file is the bug.\n */\n\n.halcyon {\n  /* Accent */\n  --hc-accent: #0a84ff;\n  --hc-accent-pressed: #0768cc;\n\n  /* Semantic */\n  --hc-red: #ff453a;\n  --hc-orange: #ff9f0a;\n  --hc-yellow: #ffd60a;\n  --hc-green: #30d158;\n  --hc-teal: #64d2ff;\n  --hc-indigo: #5e5ce6;\n  --hc-pink: #ff375f;\n\n  /* Neutral surfaces */\n  --hc-bg-primary: #000000;\n  --hc-bg-secondary: #1c1c1e;\n  --hc-bg-tertiary: #2c2c2e;\n  --hc-bg-elevated: #2c2c2e;\n\n  /* Fills */\n  --hc-fill-primary: rgba(120, 120, 128, 0.36);\n  --hc-fill-secondary: rgba(120, 120, 128, 0.24);\n\n  /* Separators */\n  --hc-separator: rgba(84, 84, 88, 0.65);\n  --hc-separator-opaque: #38383a;\n\n  /* Labels */\n  --hc-label-primary: #ffffff;\n  --hc-label-secondary: rgba(235, 235, 245, 0.6);\n  --hc-label-tertiary: rgba(235, 235, 245, 0.3);\n  --hc-label-quaternary: rgba(235, 235, 245, 0.16);\n\n  /* Spacing (8pt grid) */\n  --hc-space-1: 4px;\n  --hc-space-2: 8px;\n  --hc-space-3: 12px;\n  --hc-space-4: 16px;\n  --hc-space-5: 20px;\n  --hc-space-6: 24px;\n  --hc-space-8: 32px;\n  --hc-space-10: 40px;\n\n  /* Radii */\n  --hc-radius-xs: 4px;\n  --hc-radius-sm: 6px;\n  --hc-radius-md: 10px;\n  --hc-radius-lg: 12px;\n  --hc-radius-xl: 16px;\n  --hc-radius-2xl: 22px;\n  --hc-radius-pill: 999px;\n\n  /* Elevation */\n  --hc-elev-1: 0 1px 2px rgba(0, 0, 0, 0.24);\n  --hc-elev-2: 0 4px 12px rgba(0, 0, 0, 0.32);\n  --hc-elev-3: 0 12px 32px rgba(0, 0, 0, 0.44);\n\n  /* Type scale \u2014 sizes paired with absolute line heights */\n  --hc-text-title1: 28px;\n  --hc-lh-title1: 34px;\n  --hc-text-title2: 22px;\n  --hc-lh-title2: 28px;\n  --hc-text-title3: 20px;\n  --hc-lh-title3: 25px;\n  --hc-text-headline: 17px;\n  --hc-lh-headline: 22px;\n  --hc-text-body: 17px;\n  --hc-lh-body: 22px;\n  --hc-text-callout: 16px;\n  --hc-lh-callout: 21px;\n  --hc-text-subhead: 15px;\n  --hc-lh-subhead: 20px;\n  --hc-text-footnote: 13px;\n  --hc-lh-footnote: 18px;\n  --hc-text-caption1: 12px;\n  --hc-lh-caption1: 16px;\n  --hc-text-caption2: 11px;\n  --hc-lh-caption2: 13px;\n\n  /* Motion */\n  --hc-ease: cubic-bezier(0.32, 0.72, 0, 1);\n  --hc-duration-fast: 200ms;\n  --hc-duration-slow: 300ms;\n\n  /* Font stack */\n  --hc-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",\n    "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;\n  --hc-font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Code",\n    Menlo, Consolas, monospace;\n}\n';
@@ -2477,17 +2346,7 @@ ${components_default}`;
     mounted = true;
   }
 
-  // src/ui/settings/overlay.tsx
-  init_react_shim();
-  init_react();
-  init_logger();
-
-  // src/ui/settings/SettingsRoot.tsx
-  init_react_shim();
-  init_react();
-
   // src/icons/index.tsx
-  init_react_shim();
   function Glyph({ size = 20, className, filled, children, ...rest }) {
     const label = rest["aria-label"];
     if (typeof size !== "number" || !Number.isFinite(size)) size = 20;
@@ -2583,12 +2442,7 @@ ${components_default}`;
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "2" }), /* @__PURE__ */ React.createElement("path", { d: "M8.5 8.5a5 5 0 000 7M15.5 8.5a5 5 0 010 7" }), /* @__PURE__ */ React.createElement("path", { d: "M6 6a9 9 0 000 12M18 6a9 9 0 010 12" }));
   }
 
-  // src/ui/settings/PluginsView.tsx
-  init_react_shim();
-  init_react();
-
   // src/ui/components/Toggle.tsx
-  init_react_shim();
   function Toggle({ checked, onChange, disabled, ...rest }) {
     return /* @__PURE__ */ React.createElement(
       "button",
@@ -2609,7 +2463,6 @@ ${components_default}`;
   }
 
   // src/ui/components/ListRow.tsx
-  init_react_shim();
   function ListRow({
     icon,
     iconBackground,
@@ -2649,23 +2502,16 @@ ${components_default}`;
   }
 
   // src/ui/components/Badge.tsx
-  init_react_shim();
   function Badge({ tone = "neutral", children }) {
     return /* @__PURE__ */ React.createElement("span", { className: "hc-badge", "data-tone": tone }, children);
   }
 
   // src/ui/components/EmptyState.tsx
-  init_react_shim();
   function EmptyState({ icon, title, subtitle, action }) {
     return /* @__PURE__ */ React.createElement("div", { className: "hc-empty" }, icon, /* @__PURE__ */ React.createElement("div", { className: "hc-empty__title" }, title), subtitle && /* @__PURE__ */ React.createElement("div", { className: "hc-empty__subtitle" }, subtitle), action && /* @__PURE__ */ React.createElement("div", { style: { marginTop: "var(--hc-space-5)" } }, action));
   }
 
-  // src/ui/settings/SettingsForm.tsx
-  init_react_shim();
-  init_react();
-
   // src/ui/components/NumberStepper.tsx
-  init_react_shim();
   function clamp(value, min, max) {
     if (min != null && value < min) return min;
     if (max != null && value > max) return max;
@@ -2698,7 +2544,6 @@ ${components_default}`;
   }
 
   // src/ui/components/TextInput.tsx
-  init_react_shim();
   function TextInput({ value, onChange, className, ...rest }) {
     return /* @__PURE__ */ React.createElement(
       "input",
@@ -2712,9 +2557,6 @@ ${components_default}`;
   }
 
   // src/ui/components/Select.tsx
-  init_react_shim();
-  init_react();
-  init_react();
   function Select({ value, options, onChange, ...rest }) {
     const [open, setOpen] = useState(false);
     const [active, setActive] = useState(-1);
@@ -2863,8 +2705,6 @@ ${components_default}`;
   }
 
   // src/ui/components/StringListEditor.tsx
-  init_react_shim();
-  init_react();
   function StringListEditor({ value, onChange, itemPlaceholder }) {
     const [draft, setDraft] = useState("");
     const commit = () => {
@@ -2915,7 +2755,6 @@ ${components_default}`;
   }
 
   // src/ui/components/Button.tsx
-  init_react_shim();
   function Button({
     variant = "secondary",
     size = "md",
@@ -2932,8 +2771,6 @@ ${components_default}`;
   }
 
   // src/ui/settings/hooks.ts
-  init_react_shim();
-  init_react();
   function useRuntimeList() {
     const [list, setList] = useState(() => runtime.list());
     useEffect(() => {
@@ -2943,17 +2780,17 @@ ${components_default}`;
     }, []);
     return list;
   }
-  function useSettingsSnapshot(settings5) {
+  function useSettingsSnapshot(settings7) {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubscribes = Object.keys(settings5.schema).map(
-        (key) => settings5.subscribe(key, () => bump((n) => n + 1))
+      const unsubscribes = Object.keys(settings7.schema).map(
+        (key) => settings7.subscribe(key, () => bump((n) => n + 1))
       );
       return () => {
         for (const off of unsubscribes) off();
       };
-    }, [settings5]);
-    return settings5.store;
+    }, [settings7]);
+    return settings7.store;
   }
 
   // src/ui/settings/SettingsForm.tsx
@@ -2969,16 +2806,16 @@ ${components_default}`;
       return false;
     }
   }
-  function SettingsForm({ settings: settings5 }) {
-    const store = useSettingsSnapshot(settings5);
+  function SettingsForm({ settings: settings7 }) {
+    const store = useSettingsSnapshot(settings7);
     const keys = useMemo(
-      () => Object.keys(settings5.schema).filter((key) => !settings5.schema[key].hidden),
-      [settings5]
+      () => Object.keys(settings7.schema).filter((key) => !settings7.schema[key].hidden),
+      [settings7]
     );
     const [draft, setDraft] = useState(() => seed(store, keys));
     useEffect(() => {
       setDraft(seed(store, keys));
-    }, [settings5]);
+    }, [settings7]);
     if (keys.length === 0) return null;
     const dirty = keys.filter((key) => !equal(draft[key], store[key]));
     const save = () => {
@@ -2987,7 +2824,7 @@ ${components_default}`;
     const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
-      const title = settings5.schema[key].group ?? "\u8BBE\u7F6E";
+      const title = settings7.schema[key].group ?? "\u8BBE\u7F6E";
       const last = sections[sections.length - 1];
       if (last && last.title === title) last.keys.push(key);
       else sections.push({ title, keys: [key] });
@@ -2996,7 +2833,7 @@ ${components_default}`;
       SettingField,
       {
         key,
-        def: settings5.schema[key],
+        def: settings7.schema[key],
         value: draft[key],
         onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
@@ -3069,7 +2906,6 @@ ${components_default}`;
   }
 
   // src/ui/settings/categories.ts
-  init_react_shim();
   var CATEGORIES = {
     utility: { label: "\u5B9E\u7528\u5DE5\u5177", color: "var(--hc-accent)", Icon: SlidersIcon },
     chat: { label: "\u804A\u5929", color: "var(--hc-green)", Icon: MessageIcon },
@@ -3209,9 +3045,6 @@ ${components_default}`;
   }
 
   // src/ui/settings/LogsView.tsx
-  init_react_shim();
-  init_react();
-  init_logger();
   var MAX_VISIBLE = 500;
   var PAGE_SIZE = 100;
   function LogsView() {
@@ -3281,11 +3114,7 @@ ${components_default}`;
     }
   }
 
-  // src/ui/settings/AboutView.tsx
-  init_react_shim();
-
   // src/ui/components/Section.tsx
-  init_react_shim();
   function Section({ title, note, children }) {
     return /* @__PURE__ */ React.createElement("div", { className: "hc-section" }, title && /* @__PURE__ */ React.createElement("div", { className: "hc-section__title" }, title), /* @__PURE__ */ React.createElement("div", { className: "hc-section__body" }, children), note && /* @__PURE__ */ React.createElement("div", { className: "hc-section__note" }, note));
   }
@@ -3709,12 +3538,7 @@ ${components_default}`;
     }
   });
 
-  // src/plugins/message-logger/index.tsx
-  init_react_shim();
-
   // src/core/patcher/index.ts
-  init_react_shim();
-  init_logger();
   var log6 = logger("patcher");
   var INSTALLED = Symbol("halcyon.patch");
   function ensureInstalled(target, method) {
@@ -3827,21 +3651,41 @@ ${components_default}`;
     }
   };
 
-  // src/plugins/message-logger/index.tsx
-  init_webpack();
-  init_discord();
-  init_react();
-  init_logger();
-
-  // src/plugins/message-logger/settings.ts
-  init_react_shim();
-
-  // src/core/settings/index.ts
-  init_react_shim();
-  init_logger();
-
-  // src/core/settings/types.ts
-  init_react_shim();
+  // src/core/common/discord.ts
+  var Dispatcher = lazy(isFluxDispatcher);
+  function getDispatcher() {
+    try {
+      const viaStore = UserStore?._dispatcher;
+      if (isFluxDispatcher(viaStore)) return viaStore;
+    } catch {
+    }
+    return find(isFluxDispatcher);
+  }
+  var MessageStore = lazy(
+    (m) => typeof m?.getMessage === "function" && typeof m?.getMessages === "function"
+  );
+  var MessageActions = lazy(
+    (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
+  );
+  var UserStore = lazy(
+    (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
+  );
+  var ChannelStore = lazy(
+    (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
+  );
+  var SelectedChannelStore = lazy(
+    (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
+  );
+  var GuildStore = lazy(
+    (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
+  );
+  var GuildChannelStore = lazy(
+    (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
+  );
+  var GuildSubscriptions = lazy(
+    (m) => typeof m?.subscribeToGuild === "function" || typeof m?.subscribeToChannel === "function"
+  );
+  var moment = lazy((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");
 
   // src/core/settings/index.ts
   var log7 = logger("settings");
@@ -4047,8 +3891,6 @@ ${components_default}`;
   });
 
   // src/plugins/message-logger/store.ts
-  init_react_shim();
-  init_logger();
   var log8 = logger("message-logger");
   var DATA_NS = "message-logger.log";
   var MessageLogStore = class {
@@ -4175,7 +4017,6 @@ ${components_default}`;
   var messageLog = new MessageLogStore();
 
   // src/plugins/message-logger/render-content.tsx
-  init_react_shim();
   var EMOJI_TOKEN = /<(a)?:([A-Za-z0-9_]+):(\d+)>/g;
   function renderContent(content) {
     const parts = [];
@@ -4211,10 +4052,6 @@ ${components_default}`;
   }
 
   // src/plugins/message-logger/ui/LogPage.tsx
-  init_react_shim();
-  init_react();
-  init_discord();
-  init_logger();
   var log9 = logger("message-logger");
   function useLog() {
     const [snapshot, setSnapshot] = useState(() => ({
@@ -5053,8 +4890,6 @@ ${components_default}`;
   });
 
   // src/plugins/show-username/index.tsx
-  init_react_shim();
-  init_logger();
   var log11 = logger("show-username");
   var settings2 = defineSettings({
     mode: {
@@ -5156,12 +4991,7 @@ ${components_default}`;
     }
   });
 
-  // src/plugins/guild-monitor/index.tsx
-  init_react_shim();
-  init_logger();
-
   // src/plugins/guild-monitor/settings.ts
-  init_react_shim();
   var settings3 = defineSettings({
     // Toggled from the plugin page (with the full risk note), not the generic
     // form, so it's hidden here — but persisted through the store like any value.
@@ -5183,9 +5013,6 @@ ${components_default}`;
   });
 
   // src/plugins/guild-monitor/subscribe.ts
-  init_react_shim();
-  init_discord();
-  init_logger();
   var log12 = logger("guild-monitor");
   var REFRESH_MS = 5 * 60 * 1e3;
   var timer;
@@ -5257,10 +5084,6 @@ ${components_default}`;
   }
 
   // src/plugins/guild-monitor/ui/MonitorPage.tsx
-  init_react_shim();
-  init_react();
-  init_discord();
-  init_webpack();
   function readGuilds() {
     try {
       const store = findStore("GuildStore") ?? GuildStore;
@@ -5350,12 +5173,7 @@ ${components_default}`;
     }
   });
 
-  // src/plugins/message-cleaner/index.tsx
-  init_react_shim();
-  init_logger();
-
   // src/plugins/message-cleaner/settings.ts
-  init_react_shim();
   var settings4 = defineSettings({
     order: {
       group: "\u9ED8\u8BA4\u53C2\u6570",
@@ -5397,15 +5215,7 @@ ${components_default}`;
     }
   });
 
-  // src/plugins/message-cleaner/ui/CleanerPage.tsx
-  init_react_shim();
-  init_react();
-  init_logger();
-
   // src/plugins/message-cleaner/cleaner.ts
-  init_react_shim();
-  init_discord();
-  init_logger();
   var log14 = logger("message-cleaner");
   var API_BASE = "https://discord.com/api/v10";
   var skipList = /* @__PURE__ */ new Set();
@@ -5477,14 +5287,6 @@ ${components_default}`;
     }
     return res.status === 204 ? null : res.json();
   }
-  function currentUserId2() {
-    try {
-      const u = UserStore.getCurrentUser?.();
-      if (u?.id) return String(u.id);
-    } catch {
-    }
-    return void 0;
-  }
   async function fetchUserId(token) {
     const me = await apiFetch(token, "/users/@me");
     if (!me?.id) throw new Error("\u65E0\u6CD5\u901A\u8FC7 Token \u83B7\u53D6\u8D26\u53F7\u4FE1\u606F\uFF0C\u8BF7\u68C0\u67E5 Token \u662F\u5426\u6709\u6548\u3002");
@@ -5499,50 +5301,23 @@ ${components_default}`;
       return null;
     }
   }
-  function getGuilds() {
-    try {
-      const raw = GuildStore.getGuilds?.();
-      if (!raw) return [];
-      return Object.values(raw).map((g2) => ({
-        id: g2.id,
-        name: g2.name ?? "\u672A\u77E5",
-        icon: g2.icon ?? null
-      }));
-    } catch {
-      return [];
-    }
+  async function fetchGuilds(token) {
+    const guilds = await apiFetch(token, "/users/@me/guilds");
+    if (!Array.isArray(guilds)) return [];
+    return guilds.map((g2) => ({ id: String(g2.id), name: g2.name ?? "\u672A\u77E5", icon: g2.icon ?? null }));
   }
-  function getChannels(guildId) {
-    try {
-      const all = [];
-      const raw = ChannelStore.getMutableGuildChannelsForGuild?.(guildId);
-      if (raw) {
-        for (const ch of Object.values(raw)) {
-          if (ch && ch.type !== 4) all.push({ id: ch.id, name: ch.name ?? "\u672A\u77E5", type: ch.type });
-        }
-      }
-      if (all.length === 0) {
-        try {
-          const { GuildChannelStore: GuildChannelStore2 } = (init_discord(), __toCommonJS(discord_exports));
-          const result = GuildChannelStore2?.getChannels?.(guildId);
-          if (result) {
-            for (const group of Object.values(result)) {
-              if (!Array.isArray(group)) continue;
-              for (const entry of group) {
-                const ch = entry?.channel ?? entry;
-                if (ch && ch.id && ch.type !== 4) {
-                  all.push({ id: ch.id, name: ch.name ?? "\u672A\u77E5", type: ch.type ?? 0 });
-                }
-              }
-            }
-          }
-        } catch {
-        }
-      }
-      return all;
-    } catch {
-      return [];
+  async function fetchChannels(token, guildId) {
+    if (guildId === "@me") {
+      const dms = await apiFetch(token, "/users/@me/channels");
+      if (!Array.isArray(dms)) return [];
+      return dms.map((c) => {
+        const name = c.name || (Array.isArray(c.recipients) ? c.recipients.map((r) => r.global_name || r.username).join("\u3001") : "") || "\u672A\u77E5\u79C1\u804A";
+        return { id: String(c.id), name, type: c.type ?? 1 };
+      });
     }
+    const channels = await apiFetch(token, `/guilds/${guildId}/channels`);
+    if (!Array.isArray(channels)) return [];
+    return channels.filter((c) => c.type !== 4).map((c) => ({ id: String(c.id), name: c.name ?? "\u672A\u77E5", type: c.type ?? 0 }));
   }
   async function collect(token, opts, meId, onProgress, ctrl) {
     const out = [];
@@ -5685,6 +5460,8 @@ ${components_default}`;
     const [pickerChannels, setPickerChannels] = useState([]);
     const [pickerLevel, setPickerLevel] = useState("guilds");
     const [pickerGuildName, setPickerGuildName] = useState("");
+    const [pickerLoading, setPickerLoading] = useState(false);
+    const [pickerError, setPickerError] = useState("");
     const ctrlRef = useRef({ stopped: false });
     const running = mode !== "idle";
     useEffect(() => {
@@ -5732,24 +5509,49 @@ ${components_default}`;
       setServerWide(false);
       progress("\u5DF2\u586B\u5165\u5F53\u524D\u9891\u9053", `\u670D\u52A1\u5668 ${target.guildId} \xB7 \u9891\u9053 ${target.channelId}`);
     };
-    const openPicker = () => {
-      const guilds = getGuilds();
-      setPickerGuilds([{ id: "@me", name: "\u79C1\u4FE1\u4E0E\u7FA4\u804A (DMs)", icon: null }, ...guilds]);
-      setPickerChannels([]);
-      setPickerLevel("guilds");
+    const openPicker = async () => {
+      let tok;
+      try {
+        tok = requireToken();
+      } catch (e) {
+        progress("\u9700\u8981 Token", e.message);
+        return;
+      }
       setPickerOpen(true);
+      setPickerLevel("guilds");
+      setPickerChannels([]);
+      setPickerError("");
+      setPickerLoading(true);
+      try {
+        const guilds = await fetchGuilds(tok);
+        setPickerGuilds([{ id: "@me", name: "\u79C1\u4FE1\u4E0E\u7FA4\u804A (DMs)", icon: null }, ...guilds]);
+      } catch (e) {
+        setPickerError(e.message ?? String(e));
+      } finally {
+        setPickerLoading(false);
+      }
     };
-    const pickGuild = (g2) => {
-      setGuildId(g2.id);
-      if (g2.id === "@me") {
-        setPickerOpen(false);
-        progress("\u5DF2\u9009\u62E9\u79C1\u4FE1", "\u8BF7\u624B\u52A8\u586B\u5199\u79C1\u4FE1\u9891\u9053 ID\u3002");
+    const pickGuild = async (g2) => {
+      let tok;
+      try {
+        tok = requireToken();
+      } catch (e) {
+        progress("\u9700\u8981 Token", e.message);
         return;
       }
       setPickerGuildName(g2.name);
-      const channels = getChannels(g2.id);
-      setPickerChannels([{ id: "", name: "\u2500\u2500 \u5168\u670D\u626B\u63CF\uFF08\u4E0D\u9650\u9891\u9053\uFF09\u2500\u2500", type: -1 }, ...channels]);
       setPickerLevel("channels");
+      setPickerError("");
+      setPickerLoading(true);
+      try {
+        const channels = await fetchChannels(tok, g2.id);
+        const withServerWide = g2.id === "@me" ? channels : [{ id: "", name: "\u2500\u2500 \u5168\u670D\u626B\u63CF\uFF08\u4E0D\u9650\u9891\u9053\uFF09\u2500\u2500", type: -1 }, ...channels];
+        setPickerChannels(withServerWide);
+      } catch (e) {
+        setPickerError(e.message ?? String(e));
+      } finally {
+        setPickerLoading(false);
+      }
     };
     const pickChannel = (ch) => {
       if (!ch.id) {
@@ -5775,9 +5577,11 @@ ${components_default}`;
         progress("\u5931\u8D25", e.message);
         return;
       }
-      const meId = currentUserId2() ?? await fetchUserId(tok);
-      if (!meId) {
-        progress("\u5931\u8D25", "\u62FF\u4E0D\u5230\u5F53\u524D\u8D26\u53F7\uFF0C\u8BF7\u786E\u8BA4\u5DF2\u767B\u5F55 Discord\u3002");
+      let meId;
+      try {
+        meId = await fetchUserId(tok);
+      } catch (e) {
+        progress("\u5931\u8D25", e.message);
         return;
       }
       const opts = buildOptions();
@@ -5854,9 +5658,11 @@ ${components_default}`;
         progress("\u5931\u8D25", e.message);
         return;
       }
-      const meId = currentUserId2() ?? await fetchUserId(tok);
-      if (!meId) {
-        progress("\u5931\u8D25", "\u62FF\u4E0D\u5230\u5F53\u524D\u8D26\u53F7\u3002");
+      let meId;
+      try {
+        meId = await fetchUserId(tok);
+      } catch (e) {
+        progress("\u5931\u8D25", e.message);
         return;
       }
       const target = { guildId: guildId.trim(), channelId: serverWide ? "" : channelId.trim(), serverWide };
@@ -5875,7 +5681,7 @@ ${components_default}`;
       }
     };
     if (pickerOpen) {
-      return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-head" }, pickerLevel === "channels" && /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => setPickerLevel("guilds") }, "\u2190 \u8FD4\u56DE"), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__picker-title" }, pickerLevel === "guilds" ? "\u9009\u62E9\u670D\u52A1\u5668" : pickerGuildName), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => setPickerOpen(false) }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-list" }, pickerLevel === "guilds" ? pickerGuilds.map((g2) => /* @__PURE__ */ React.createElement(
+      return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-head" }, pickerLevel === "channels" && /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => setPickerLevel("guilds") }, "\u2190 \u8FD4\u56DE"), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__picker-title" }, pickerLevel === "guilds" ? "\u9009\u62E9\u670D\u52A1\u5668" : pickerGuildName), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => setPickerOpen(false) }, "\u2715")), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-list" }, pickerLoading ? /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-empty" }, "\u6B63\u5728\u52A0\u8F7D\u2026") : pickerError ? /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-empty hc-cleaner__picker-empty--error" }, "\u52A0\u8F7D\u5931\u8D25\uFF1A", pickerError) : pickerLevel === "guilds" ? pickerGuilds.map((g2) => /* @__PURE__ */ React.createElement(
         "div",
         {
           key: g2.id,
@@ -5889,7 +5695,7 @@ ${components_default}`;
         },
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-icon" }, g2.icon ? /* @__PURE__ */ React.createElement("img", { src: `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.png?size=64`, alt: "" }) : g2.name.charAt(0)),
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, g2.name)
-      )) : pickerChannels.map((ch) => /* @__PURE__ */ React.createElement(
+      )) : pickerChannels.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-empty" }, "\u6B64\u670D\u52A1\u5668\u6682\u65E0\u9891\u9053\uFF0C\u53EF\u624B\u52A8\u586B\u5199\u9891\u9053 ID\u3002") : pickerChannels.map((ch) => /* @__PURE__ */ React.createElement(
         "div",
         {
           key: ch.id || "server-wide",
@@ -5903,7 +5709,7 @@ ${components_default}`;
         },
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-icon" }, ch.id ? "#" : "\u{1F310}"),
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, ch.name)
-      )), pickerLevel === "channels" && pickerChannels.length <= 1 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-empty" }, "\u6B64\u670D\u52A1\u5668\u6682\u65E0\u7F13\u5B58\u7684\u9891\u9053\uFF0C\u53EF\u624B\u52A8\u586B\u5199\u9891\u9053 ID\u3002")));
+      ))));
     }
     return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u5220\u9664\u4E0D\u53EF\u6062\u590D\uFF0C\u4E14\u53EA\u4F1A\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u8BF7\u52A1\u5FC5\u5148\u9884\u89C8\u786E\u8BA4\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
       Select,
@@ -5950,13 +5756,422 @@ ${components_default}`;
     }
   });
 
+  // src/plugins/fake-nitro/index.ts
+  var log17 = logger("fake-nitro");
+  var settings5 = defineSettings({
+    enableEmojiBypass: {
+      group: "\u8868\u60C5",
+      type: "boolean",
+      default: true,
+      label: "\u7ED5\u8FC7\u8868\u60C5\u9650\u5236",
+      description: "\u53D1\u9001\u4F60\u6CA1\u6709 Nitro \u6743\u9650\u7684\u81EA\u5B9A\u4E49\u8868\u60C5\uFF08\u8DE8\u670D / \u52A8\u6001\u8868\u60C5\uFF09\u65F6\uFF0C\u81EA\u52A8\u6539\u4E3A\u53D1\u9001\u8BE5\u8868\u60C5\u7684\u56FE\u7247\u94FE\u63A5\u3002"
+    },
+    emojiSize: {
+      group: "\u8868\u60C5",
+      type: "select",
+      default: "48",
+      label: "\u8868\u60C5\u56FE\u7247\u5C3A\u5BF8",
+      description: "\u5185\u8054\u8868\u60C5\u56FE\u7247\u7684\u8FB9\u957F\uFF08\u50CF\u7D20\uFF09\u3002\u8D8A\u5927\u8D8A\u6E05\u6670\u3001\u5360\u7528\u8D8A\u5927\u3002",
+      options: [
+        { value: "32", label: "32" },
+        { value: "48", label: "48\uFF08\u9ED8\u8BA4\uFF09" },
+        { value: "64", label: "64" },
+        { value: "128", label: "128" },
+        { value: "256", label: "256" },
+        { value: "512", label: "512" }
+      ]
+    },
+    enableStickerBypass: {
+      group: "\u8D34\u7EB8",
+      type: "boolean",
+      default: true,
+      label: "\u7ED5\u8FC7\u8D34\u7EB8\u9650\u5236",
+      description: "\u53D1\u9001\u9501\u5B9A\u7684\u8D34\u7EB8\u65F6\u6539\u4E3A\u53D1\u9001\u8D34\u7EB8\u56FE\u7247\u94FE\u63A5\u3002Lottie\uFF08\u77E2\u91CF\uFF09\u8D34\u7EB8\u65E0\u6CD5\u5185\u8054\uFF0C\u4F1A\u8DF3\u8FC7\u3002"
+    },
+    stickerSize: {
+      group: "\u8D34\u7EB8",
+      type: "select",
+      default: "160",
+      label: "\u8D34\u7EB8\u56FE\u7247\u5C3A\u5BF8",
+      description: "\u5185\u8054\u8D34\u7EB8\u56FE\u7247\u7684\u8FB9\u957F\uFF08\u50CF\u7D20\uFF09\u3002",
+      options: [
+        { value: "32", label: "32" },
+        { value: "64", label: "64" },
+        { value: "128", label: "128" },
+        { value: "160", label: "160\uFF08\u9ED8\u8BA4\uFF09" },
+        { value: "256", label: "256" },
+        { value: "512", label: "512" }
+      ]
+    },
+    enableStreamQualityBypass: {
+      group: "\u76F4\u64AD",
+      type: "boolean",
+      default: true,
+      label: "\u89E3\u9501\u76F4\u64AD\u753B\u8D28",
+      description: "\u5141\u8BB8\u4EE5 Nitro \u753B\u8D28\u8FDB\u884C\u5C4F\u5E55\u5171\u4EAB\u76F4\u64AD\u3002"
+    }
+  });
+  var EmojiStore = lazy((m) => m?.getName?.() === "EmojiStore");
+  var StickersStore = lazy((m) => m?.getName?.() === "StickersStore");
+  var GuildMemberStore = lazy((m) => m?.getName?.() === "GuildMemberStore");
+  var PermissionStore = lazy((m) => m?.getName?.() === "PermissionStore" && typeof m?.can === "function");
+  var PERM = {
+    USE_EXTERNAL_EMOJIS: 1n << 18n,
+    USE_EXTERNAL_STICKERS: 1n << 37n,
+    EMBED_LINKS: 1n << 14n
+  };
+  var STICKER_LOTTIE = 3;
+  var STICKER_GIF = 4;
+  function currentPremiumType() {
+    try {
+      return UserStore.getCurrentUser?.()?.premiumType ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+  var canUseEmotesNatively = () => currentPremiumType() > 0;
+  var canUseStickersNatively = () => currentPremiumType() > 1;
+  function hasPermission(channelId, bit) {
+    try {
+      const channel = ChannelStore.getChannel?.(channelId);
+      if (!channel || channel.isPrivate?.()) return true;
+      return PermissionStore.can?.(bit, channel) ?? true;
+    } catch {
+      return true;
+    }
+  }
+  function guildIdOfChannel(channelId) {
+    try {
+      const channel = ChannelStore.getChannel?.(channelId);
+      return channel?.guild_id ?? channel?.getGuildId?.() ?? void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  function canUseEmote(emoji, channelId, guildId) {
+    if (emoji?.type === 0) return true;
+    if (emoji?.available === false) return false;
+    let usableManaged = false;
+    if (emoji?.managed && emoji?.guildId) {
+      const myRoles = GuildMemberStore.getSelfMember?.(emoji.guildId)?.roles ?? [];
+      usableManaged = Array.isArray(emoji?.roles) && emoji.roles.some((r) => myRoles.includes(r));
+    }
+    if (canUseEmotesNatively() || usableManaged) {
+      return emoji.guildId === guildId || hasPermission(channelId, PERM.USE_EXTERNAL_EMOJIS);
+    }
+    return !emoji?.animated && emoji?.guildId === guildId;
+  }
+  function emojiUrl(emoji) {
+    const size = Number(settings5.store.emojiSize) || 48;
+    const ext = emoji?.animated ? "gif" : "png";
+    const url = new URL(`https://cdn.discordapp.com/emojis/${emoji.id}.${ext}`);
+    url.searchParams.set("size", String(size));
+    if (emoji?.name) url.searchParams.set("name", String(emoji.name));
+    url.searchParams.set("quality", "lossless");
+    return url.toString();
+  }
+  function stickerUrl(sticker) {
+    const size = Number(settings5.store.stickerSize) || 160;
+    const ext = sticker?.format_type === STICKER_GIF ? "gif" : "png";
+    const url = new URL(`https://media.discordapp.net/stickers/${sticker.id}.${ext}`);
+    url.searchParams.set("size", String(size));
+    if (sticker?.name) url.searchParams.set("name", String(sticker.name));
+    return url.toString();
+  }
+  function wordBoundary(str, offset) {
+    return !str[offset] || /\s/.test(str[offset]) ? "" : " ";
+  }
+  function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  function findMessageArg(args) {
+    const m = args[1];
+    if (m && typeof m === "object" && typeof m.content === "string") return m;
+    return args.find((a) => a && typeof a === "object" && typeof a.content === "string");
+  }
+  function findOptionsArg(args) {
+    for (let i = 2; i < args.length; i++) {
+      const a = args[i];
+      if (a && typeof a === "object" && "stickerIds" in a) return a;
+    }
+    return args[3] && typeof args[3] === "object" ? args[3] : void 0;
+  }
+  function rewriteStickers(channelId, message, options, guildId) {
+    if (!settings5.store.enableStickerBypass) return false;
+    const ids = options?.stickerIds;
+    if (!Array.isArray(ids) || ids.length === 0) return false;
+    const sticker = StickersStore.getStickerById?.(ids[0]);
+    if (!sticker) return false;
+    if ("pack_id" in sticker) return false;
+    const canUse = canUseStickersNatively() && hasPermission(channelId, PERM.USE_EXTERNAL_STICKERS);
+    if (sticker.available !== false && (canUse || sticker.guild_id === guildId)) return false;
+    if (sticker.format_type === STICKER_LOTTIE) {
+      log17.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
+      return false;
+    }
+    const url = stickerUrl(sticker);
+    message.content = `${message.content ?? ""}${wordBoundary(message.content ?? "", (message.content ?? "").length - 1)}${url}`;
+    ids.length = 0;
+    return true;
+  }
+  function rewriteEmojis(channelId, message, guildId) {
+    if (!settings5.store.enableEmojiBypass) return false;
+    const emojis = message?.validNonShortcutEmojis;
+    if (!Array.isArray(emojis) || emojis.length === 0) return false;
+    let changed = false;
+    for (const emoji of emojis) {
+      if (canUseEmote(emoji, channelId, guildId)) continue;
+      const token = `<${emoji.animated ? "a" : ""}:${emoji.originalName || emoji.name}:${emoji.id}>`;
+      const url = emojiUrl(emoji);
+      const re = new RegExp(escapeRegExp(token), "g");
+      message.content = String(message.content ?? "").replace(re, (match, offset, str) => {
+        changed = true;
+        return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + match.length)}`;
+      });
+    }
+    return changed;
+  }
+  var unpatchSend;
+  var unpatchEdit;
+  function onSendMessage(ctx) {
+    try {
+      const args = ctx.args;
+      const channelId = args[0];
+      const message = findMessageArg(args);
+      if (!message) return;
+      if (typeof message.content !== "string") message.content = String(message.content ?? "");
+      const options = findOptionsArg(args);
+      const guildId = guildIdOfChannel(channelId);
+      if (options) rewriteStickers(channelId, message, options, guildId);
+      rewriteEmojis(channelId, message, guildId);
+    } catch (err) {
+      log17.error("send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+    }
+  }
+  var EMOJI_TOKEN_RE = /(?<!\\)<a?:(?:\w+):(\d+)>/gi;
+  function onEditMessage(ctx) {
+    try {
+      if (!settings5.store.enableEmojiBypass) return;
+      const args = ctx.args;
+      const channelId = args[0];
+      const message = findMessageArg(args);
+      if (!message || typeof message.content !== "string") return;
+      const guildId = guildIdOfChannel(channelId);
+      message.content = message.content.replace(
+        EMOJI_TOKEN_RE,
+        (tokenStr, emojiId, offset, str) => {
+          const emoji = EmojiStore.getCustomEmojiById?.(emojiId);
+          if (emoji == null) return tokenStr;
+          if (canUseEmote(emoji, channelId, guildId)) return tokenStr;
+          const url = emojiUrl(emoji);
+          return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
+        }
+      );
+    } catch (err) {
+      log17.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
+    }
+  }
+  var fake_nitro_default = definePlugin({
+    id: "fake-nitro",
+    name: "\u5047 Nitro",
+    description: "\u65E0\u9700 Nitro \u4E5F\u80FD\u4F7F\u7528\u9700\u8981 Nitro \u7684\u81EA\u5B9A\u4E49\u8868\u60C5\u4E0E\u8D34\u7EB8\uFF1A\u89E3\u9501\u9009\u62E9\u5668\uFF0C\u5E76\u5728\u53D1\u9001\u65F6\u628A\u9501\u5B9A\u7684\u8868\u60C5 / \u8D34\u7EB8\u81EA\u52A8\u6539\u5199\u4E3A\u56FE\u7247\u94FE\u63A5\uFF0C\u5BF9\u65B9\u770B\u5230\u7684\u5C31\u662F\u5185\u8054\u56FE\u7247\u3002",
+    authors: [{ name: "Vencord" }, { name: "caitemm" }],
+    category: "chat",
+    settings: settings5,
+    start() {
+      const PremiumUtils = findByProps("canUseCustomStickersEverywhere", "canStreamQuality");
+      if (PremiumUtils) {
+        PremiumUtils.canUseCustomStickersEverywhere = () => true;
+        PremiumUtils.canUseStickersEverywhere = () => true;
+        PremiumUtils.canStreamQuality = () => true;
+        PremiumUtils.canUseAnimatedEmojis = () => true;
+        PremiumUtils.canUseEmojisEverywhere = () => true;
+        PremiumUtils.canUseClientThemes = () => true;
+        PremiumUtils.canUsePremiumAppIcons = () => true;
+        log17.info("\u5DF2 patch PremiumUtils");
+      } else {
+        log17.warn("PremiumUtils \u672A\u627E\u5230");
+      }
+      const EmojiUtils = findByProps("getEmojiUnavailableReason");
+      if (EmojiUtils?.getEmojiUnavailableReason) {
+        const orig = EmojiUtils.getEmojiUnavailableReason;
+        EmojiUtils.getEmojiUnavailableReason = function(e) {
+          if (e?.intention === 3 || e?.intention === 4) return null;
+          return orig.call(this, e);
+        };
+        log17.info("\u5DF2 patch getEmojiUnavailableReason\uFF08\u8868\u60C5\u9009\u62E9\u5668\u89E3\u9501\uFF09");
+      } else {
+        log17.warn("getEmojiUnavailableReason \u672A\u627E\u5230");
+      }
+      const messageActions = findByProps("sendMessage", "editMessage", "deleteMessage");
+      if (messageActions) {
+        if (typeof messageActions.sendMessage === "function") {
+          unpatchSend = patcher.before(messageActions, "sendMessage", onSendMessage);
+        }
+        if (typeof messageActions.editMessage === "function") {
+          unpatchEdit = patcher.before(messageActions, "editMessage", onEditMessage);
+        }
+        log17.info("\u5DF2\u6302\u63A5 MessageActions\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF09");
+      } else {
+        log17.warn("MessageActions \u672A\u627E\u5230");
+      }
+    },
+    stop() {
+      unpatchSend?.();
+      unpatchEdit?.();
+      unpatchSend = void 0;
+      unpatchEdit = void 0;
+    }
+  });
+
+  // src/plugins/console-cleaner/index.ts
+  var log18 = logger("console-cleaner");
+  var settings6 = defineSettings({
+    hideSelfXss: {
+      group: "\u5185\u7F6E\u89C4\u5219",
+      type: "boolean",
+      default: true,
+      label: "\u5C4F\u853D\u81EA\u6211 XSS \u8B66\u544A",
+      description: "Discord \u90A3\u6761\u6BCF\u79D2\u91CD\u5237\u7684\u7EA2\u8272\u201C\u7B49\u4E00\u4E0B\uFF01/ Stop!\u201D\u7C98\u8D34\u8B66\u544A\u3002"
+    },
+    hideLocaleSpam: {
+      group: "\u5185\u7F6E\u89C4\u5219",
+      type: "boolean",
+      default: true,
+      label: "\u5C4F\u853D\u672C\u5730\u5316\u7F3A\u5931\u5237\u5C4F",
+      description: "\u201C\u2026 does not have a value in the requested locale \u2026\u201D\uFF0C\u5BA2\u6237\u7AEF mod \u8BA2\u9605\u4E8B\u4EF6\u65F6\u4F1A\u75AF\u72C2\u5237\u3002"
+    },
+    hideRiveSpam: {
+      group: "\u5185\u7F6E\u89C4\u5219",
+      type: "boolean",
+      default: true,
+      label: "\u5C4F\u853D Rive \u52A8\u753B\u62A5\u9519",
+      description: "\u201CCould not find a View Model linked to Artboard \u2026\u201D\uFF0C\u9644\u5E26\u8D85\u957F wasm \u5806\u6808\u3002"
+    },
+    hidePreloadWarnings: {
+      group: "\u5185\u7F6E\u89C4\u5219",
+      type: "boolean",
+      default: true,
+      label: "\u5C4F\u853D\u8D44\u6E90\u9884\u52A0\u8F7D\u8B66\u544A",
+      description: "\u201Cresource was preloaded using link preload but not used \u2026\u201D\u3002\u89C1\u4E0B\u65B9\u8BF4\u660E\uFF1A\u90E8\u5206\u6B64\u7C7B\u8B66\u544A\u7531\u6D4F\u89C8\u5668\u76F4\u63A5\u4EA7\u751F\uFF0C\u65E0\u6CD5\u62E6\u622A\u3002"
+    },
+    customPatterns: {
+      group: "\u81EA\u5B9A\u4E49",
+      type: "string-list",
+      default: [],
+      label: "\u81EA\u5B9A\u4E49\u5C4F\u853D\u5173\u952E\u8BCD",
+      description: "\u4EFB\u4F55\u4E00\u6761 console \u6D88\u606F\u53EA\u8981\u5305\u542B\u8FD9\u91CC\u7684\u67D0\u4E2A\u5B50\u4E32\uFF0C\u5C31\u4F1A\u88AB\u4E22\u5F03\uFF08\u533A\u5206\u5927\u5C0F\u5199\uFF09\u3002",
+      itemPlaceholder: "\u8981\u5C4F\u853D\u7684\u6587\u5B57\u7247\u6BB5"
+    }
+  });
+  var SELF_XSS_NEEDLES = [
+    "\u7B49\u4E00\u4E0B",
+    "\u5728\u8FD9\u91CC\u7C98\u8D34",
+    "\u5982\u679C\u6709\u4EBA\u544A\u8BC9\u60A8",
+    "\u8BF7\u5173\u95ED\u6B64\u7A97\u53E3",
+    "Stop!",
+    "self-XSS",
+    "browser feature intended for developers",
+    "This is a browser feature",
+    "Nicht so schnell",
+    "Attends",
+    "Alto",
+    "\u3061\u3087\u3063\u3068\u5F85\u3063\u3066",
+    "\uC7A0\uAE50"
+  ];
+  var LOCALE_NEEDLES = ["does not have a value in the requested locale"];
+  var RIVE_NEEDLES = [
+    "Could not find a View Model linked to Artboard",
+    "BaseGlowRemapped"
+  ];
+  var PRELOAD_NEEDLES = [
+    "was preloaded using link preload",
+    "preloaded intentionally"
+  ];
+  var METHODS = ["log", "info", "warn", "error", "debug"];
+  function textOf(args) {
+    let out = "";
+    for (const a of args) {
+      if (typeof a === "string") out += a + " ";
+      else if (typeof a === "number" || typeof a === "boolean") out += String(a) + " ";
+    }
+    return out;
+  }
+  function anyNeedle(text, needles) {
+    for (const n of needles) if (n && text.includes(n)) return true;
+    return false;
+  }
+  function shouldSuppress(args) {
+    if (typeof args[0] === "string" && args[0].startsWith("%cHalcyon")) return false;
+    const text = textOf(args);
+    if (text === "") return false;
+    const s = settings6.store;
+    if (s.hideSelfXss && anyNeedle(text, SELF_XSS_NEEDLES)) return true;
+    if (s.hideLocaleSpam && anyNeedle(text, LOCALE_NEEDLES)) return true;
+    if (s.hideRiveSpam && anyNeedle(text, RIVE_NEEDLES)) return true;
+    if (s.hidePreloadWarnings && anyNeedle(text, PRELOAD_NEEDLES)) return true;
+    if (s.customPatterns.length && anyNeedle(text, s.customPatterns)) return true;
+    return false;
+  }
+  var unpatchers = [];
+  var suppressedCount = 0;
+  function makeHook() {
+    return (ctx) => {
+      try {
+        if (shouldSuppress(ctx.args)) {
+          suppressedCount++;
+          return void 0;
+        }
+      } catch {
+      }
+      return ctx.callOriginal();
+    };
+  }
+  var console_cleaner_default = definePlugin({
+    id: "console-cleaner",
+    name: "\u63A7\u5236\u53F0\u51C0\u5316",
+    description: "\u5C4F\u853D Discord \u5728\u5F00\u53D1\u8005\u63A7\u5236\u53F0\u91CC\u5237\u5C4F\u7684\u65E0\u7528\u4FE1\u606F\uFF08\u81EA\u6211 XSS \u8B66\u544A\u3001Rive \u52A8\u753B\u62A5\u9519\u3001\u672C\u5730\u5316\u7F3A\u5931\u3001\u8D44\u6E90\u9884\u52A0\u8F7D\u8B66\u544A\uFF09\uFF0C\u652F\u6301\u81EA\u5B9A\u4E49\u5173\u952E\u8BCD\u3002\u5173\u95ED\u63D2\u4EF6\u5373\u6062\u590D\u539F\u59CB console\u3002",
+    authors: [{ name: "caitemm" }, { name: "catie" }],
+    category: "utility",
+    settings: settings6,
+    start() {
+      const con = globalThis.console;
+      if (!con) {
+        log18.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        return;
+      }
+      suppressedCount = 0;
+      const hook = makeHook();
+      for (const method of METHODS) {
+        if (typeof con[method] === "function") {
+          try {
+            unpatchers.push(patcher.instead(con, method, hook));
+          } catch (err) {
+            log18.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+          }
+        }
+      }
+      log18.info(
+        `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
+      );
+    },
+    stop() {
+      for (const undo of unpatchers) {
+        try {
+          undo();
+        } catch {
+        }
+      }
+      unpatchers = [];
+      log18.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+    }
+  });
+
   // src/plugins/index.ts
-  var plugins = [settings_host_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default];
+  var plugins = [settings_host_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default, fake_nitro_default, console_cleaner_default];
 
   // src/userscript/main.ts
-  init_webpack();
-  init_logger();
-  var log17 = logger("userscript");
+  var log19 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -5971,6 +6186,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log17.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log17.error("userscript boot failed", err));
+    log19.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log19.error("userscript boot failed", err));
 })();

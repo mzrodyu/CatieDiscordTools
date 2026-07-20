@@ -23,11 +23,10 @@ import {
   remove,
   count,
   extractToken,
-  currentUserId,
   fetchUserId,
   currentTarget,
-  getGuilds,
-  getChannels,
+  fetchGuilds,
+  fetchChannels,
   type CollectedMessage,
   type CleanOptions,
   type CleanTarget,
@@ -67,12 +66,16 @@ export function CleanerPage(): React.ReactElement {
   const [state, setState] = useState("待机");
   const [detail, setDetail] = useState("先获取 Token，选好范围并预览，确认后再删除。");
   const [statCount, setStatCount] = useState<number | null>(null);
-  // Picker
+  // Picker — mirrors the original script's picker, which calls the REST API
+  // directly (/users/@me/guilds, /guilds/{id}/channels) rather than reading
+  // from Discord's internal stores (unreliable across client builds).
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerGuilds, setPickerGuilds] = useState<GuildInfo[]>([]);
   const [pickerChannels, setPickerChannels] = useState<ChannelInfo[]>([]);
   const [pickerLevel, setPickerLevel] = useState<"guilds" | "channels">("guilds");
   const [pickerGuildName, setPickerGuildName] = useState("");
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerError, setPickerError] = useState("");
 
   const ctrlRef = useRef<Controller>({ stopped: false });
   const running = mode !== "idle";
@@ -124,26 +127,51 @@ export function CleanerPage(): React.ReactElement {
   };
 
   // --- Picker ---
-  const openPicker = () => {
-    const guilds = getGuilds();
-    setPickerGuilds([{ id: "@me", name: "私信与群聊 (DMs)", icon: null }, ...guilds]);
-    setPickerChannels([]);
-    setPickerLevel("guilds");
+  const openPicker = async () => {
+    let tok: string;
+    try {
+      tok = requireToken();
+    } catch (e: any) {
+      progress("需要 Token", e.message);
+      return;
+    }
     setPickerOpen(true);
+    setPickerLevel("guilds");
+    setPickerChannels([]);
+    setPickerError("");
+    setPickerLoading(true);
+    try {
+      const guilds = await fetchGuilds(tok);
+      setPickerGuilds([{ id: "@me", name: "私信与群聊 (DMs)", icon: null }, ...guilds]);
+    } catch (e: any) {
+      setPickerError(e.message ?? String(e));
+    } finally {
+      setPickerLoading(false);
+    }
   };
 
-  const pickGuild = (g: GuildInfo) => {
-    setGuildId(g.id);
-    if (g.id === "@me") {
-      // DMs don't have a channel list from the guild store
-      setPickerOpen(false);
-      progress("已选择私信", "请手动填写私信频道 ID。");
+  const pickGuild = async (g: GuildInfo) => {
+    let tok: string;
+    try {
+      tok = requireToken();
+    } catch (e: any) {
+      progress("需要 Token", e.message);
       return;
     }
     setPickerGuildName(g.name);
-    const channels = getChannels(g.id);
-    setPickerChannels([{ id: "", name: "── 全服扫描（不限频道）──", type: -1 }, ...channels]);
     setPickerLevel("channels");
+    setPickerError("");
+    setPickerLoading(true);
+    try {
+      const channels = await fetchChannels(tok, g.id);
+      const withServerWide =
+        g.id === "@me" ? channels : [{ id: "", name: "── 全服扫描（不限频道）──", type: -1 }, ...channels];
+      setPickerChannels(withServerWide);
+    } catch (e: any) {
+      setPickerError(e.message ?? String(e));
+    } finally {
+      setPickerLoading(false);
+    }
   };
 
   const pickChannel = (ch: ChannelInfo) => {
@@ -170,8 +198,8 @@ export function CleanerPage(): React.ReactElement {
   const onPreview = async () => {
     let tok: string;
     try { tok = requireToken(); } catch (e: any) { progress("失败", e.message); return; }
-    const meId = currentUserId() ?? await fetchUserId(tok);
-    if (!meId) { progress("失败", "拿不到当前账号，请确认已登录 Discord。"); return; }
+    let meId: string;
+    try { meId = await fetchUserId(tok); } catch (e: any) { progress("失败", e.message); return; }
     const opts = buildOptions();
     if (opts.serverWide && (!opts.guildId || opts.guildId === "@me")) {
       progress("失败", "全服扫描需要填写服务器 ID。"); return;
@@ -233,8 +261,8 @@ export function CleanerPage(): React.ReactElement {
   const onCount = async () => {
     let tok: string;
     try { tok = requireToken(); } catch (e: any) { progress("失败", e.message); return; }
-    const meId = currentUserId() ?? await fetchUserId(tok);
-    if (!meId) { progress("失败", "拿不到当前账号。"); return; }
+    let meId: string;
+    try { meId = await fetchUserId(tok); } catch (e: any) { progress("失败", e.message); return; }
     const target: CleanTarget = { guildId: guildId.trim(), channelId: serverWide ? "" : channelId.trim(), serverWide };
     setStatCount(null);
     progress("统计中", "调用搜索接口…");
@@ -262,40 +290,44 @@ export function CleanerPage(): React.ReactElement {
           <Button size="sm" variant="plain" onClick={() => setPickerOpen(false)}>✕</Button>
         </div>
         <div className="hc-cleaner__picker-list">
-          {pickerLevel === "guilds"
-            ? pickerGuilds.map((g) => (
-                <div
-                  key={g.id}
-                  className="hc-cleaner__picker-item"
-                  onClick={() => pickGuild(g)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter") pickGuild(g); }}
-                >
-                  <div className="hc-cleaner__picker-icon">
-                    {g.icon
-                      ? <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=64`} alt="" />
-                      : g.name.charAt(0)}
-                  </div>
-                  <div className="hc-cleaner__picker-name">{g.name}</div>
+          {pickerLoading ? (
+            <div className="hc-cleaner__picker-empty">正在加载…</div>
+          ) : pickerError ? (
+            <div className="hc-cleaner__picker-empty hc-cleaner__picker-empty--error">加载失败：{pickerError}</div>
+          ) : pickerLevel === "guilds" ? (
+            pickerGuilds.map((g) => (
+              <div
+                key={g.id}
+                className="hc-cleaner__picker-item"
+                onClick={() => pickGuild(g)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter") pickGuild(g); }}
+              >
+                <div className="hc-cleaner__picker-icon">
+                  {g.icon
+                    ? <img src={`https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=64`} alt="" />
+                    : g.name.charAt(0)}
                 </div>
-              ))
-            : pickerChannels.map((ch) => (
-                <div
-                  key={ch.id || "server-wide"}
-                  className="hc-cleaner__picker-item"
-                  onClick={() => pickChannel(ch)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter") pickChannel(ch); }}
-                >
-                  <div className="hc-cleaner__picker-icon">{ch.id ? "#" : "🌐"}</div>
-                  <div className="hc-cleaner__picker-name">{ch.name}</div>
-                </div>
-              ))
-          }
-          {pickerLevel === "channels" && pickerChannels.length <= 1 && (
-            <div className="hc-cleaner__picker-empty">此服务器暂无缓存的频道，可手动填写频道 ID。</div>
+                <div className="hc-cleaner__picker-name">{g.name}</div>
+              </div>
+            ))
+          ) : pickerChannels.length === 0 ? (
+            <div className="hc-cleaner__picker-empty">此服务器暂无频道，可手动填写频道 ID。</div>
+          ) : (
+            pickerChannels.map((ch) => (
+              <div
+                key={ch.id || "server-wide"}
+                className="hc-cleaner__picker-item"
+                onClick={() => pickChannel(ch)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter") pickChannel(ch); }}
+              >
+                <div className="hc-cleaner__picker-icon">{ch.id ? "#" : "🌐"}</div>
+                <div className="hc-cleaner__picker-name">{ch.name}</div>
+              </div>
+            ))
           )}
         </div>
       </div>

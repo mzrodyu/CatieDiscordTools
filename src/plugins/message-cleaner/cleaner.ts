@@ -2,10 +2,13 @@
 //
 // Uses raw fetch + Authorization header (same approach as the original 冲水
 // userscript). Token is extracted from Discord's webpack modules or pasted by
-// the user. This is the only way that works reliably across userscript,
-// extension, and desktop injection contexts.
+// the user. Guild/channel listings for the picker also go through the REST
+// API (/users/@me/guilds, /guilds/:id/channels, /users/@me/channels) rather
+// than Discord's internal Flux stores — on some client builds those stores
+// resolve to the i18n message proxy instead of the real module (it happens to
+// satisfy the same shape check), which fails silently. The REST API has no
+// such ambiguity, and it's what the original 冲水 script always used.
 
-import { UserStore, SelectedChannelStore, ChannelStore, GuildStore } from "../../core/common/discord";
 import { logger } from "../../core/logger";
 
 const log = logger("message-cleaner");
@@ -123,19 +126,13 @@ async function apiFetch(
   return res.status === 204 ? null : res.json();
 }
 
-// --- Discord stores (for "当前" button & picker) ----------------------------
-
-export function currentUserId(): string | undefined {
-  try {
-    const u = UserStore.getCurrentUser?.();
-    if (u?.id) return String(u.id);
-  } catch { /* skip */ }
-  return undefined;
-}
+// --- Current user / current channel ----------------------------------------
 
 /**
- * Fallback: get user id by calling /users/@me with the token (same as the
- * original 冲水 script). Used when the local UserStore doesn't resolve.
+ * Get the signed-in account's id by calling /users/@me with the token — same
+ * as the original 冲水 script. There is no local-store fast path: on this
+ * client build UserStore's shape check can match the i18n message proxy
+ * instead of the real store, so a store read cannot be trusted here either.
  */
 export async function fetchUserId(token: string): Promise<string> {
   const me = await apiFetch(token, "/users/@me");
@@ -144,8 +141,9 @@ export async function fetchUserId(token: string): Promise<string> {
 }
 
 export function currentTarget(): CleanTarget | null {
-  // Parse directly from URL, same as the original 冲水 script — stores are
-  // unreliable because the intl proxy can shadow them on newer builds.
+  // Parse directly from the URL, same as the original 冲水 script's
+  // "fill-cur" button — stores are unreliable because the intl proxy can
+  // shadow them on some client builds.
   try {
     const m = location.pathname.match(/\/channels\/(\d{15,25}|@me)\/(\d{15,25})/);
     if (!m) return null;
@@ -153,48 +151,30 @@ export function currentTarget(): CleanTarget | null {
   } catch { return null; }
 }
 
-export function getGuilds(): GuildInfo[] {
-  try {
-    const raw = GuildStore.getGuilds?.();
-    if (!raw) return [];
-    return Object.values(raw).map((g: any) => ({
-      id: g.id,
-      name: g.name ?? "未知",
-      icon: g.icon ?? null
-    }));
-  } catch { return []; }
+// --- Picker (REST, same endpoints as the original 冲水 script) -------------
+
+export async function fetchGuilds(token: string): Promise<GuildInfo[]> {
+  const guilds = await apiFetch(token, "/users/@me/guilds");
+  if (!Array.isArray(guilds)) return [];
+  return guilds.map((g: any) => ({ id: String(g.id), name: g.name ?? "未知", icon: g.icon ?? null }));
 }
 
-export function getChannels(guildId: string): ChannelInfo[] {
-  try {
-    // Pull all channels for this guild from the store
-    const all: any[] = [];
-    const raw = ChannelStore.getMutableGuildChannelsForGuild?.(guildId);
-    if (raw) {
-      for (const ch of Object.values(raw) as any[]) {
-        if (ch && ch.type !== 4) all.push({ id: ch.id, name: ch.name ?? "未知", type: ch.type });
-      }
-    }
-    if (all.length === 0) {
-      // fallback: GuildChannelStore (already imported at top level)
-      try {
-        const { GuildChannelStore } = require("../../core/common/discord");
-        const result = GuildChannelStore?.getChannels?.(guildId);
-        if (result) {
-          for (const group of Object.values(result) as any[]) {
-            if (!Array.isArray(group)) continue;
-            for (const entry of group) {
-              const ch = entry?.channel ?? entry;
-              if (ch && ch.id && ch.type !== 4) {
-                all.push({ id: ch.id, name: ch.name ?? "未知", type: ch.type ?? 0 });
-              }
-            }
-          }
-        }
-      } catch { /* skip */ }
-    }
-    return all;
-  } catch { return []; }
+export async function fetchChannels(token: string, guildId: string): Promise<ChannelInfo[]> {
+  if (guildId === "@me") {
+    const dms = await apiFetch(token, "/users/@me/channels");
+    if (!Array.isArray(dms)) return [];
+    return dms.map((c: any) => {
+      const name = c.name || (Array.isArray(c.recipients)
+        ? c.recipients.map((r: any) => r.global_name || r.username).join("、")
+        : "") || "未知私聊";
+      return { id: String(c.id), name, type: c.type ?? 1 };
+    });
+  }
+  const channels = await apiFetch(token, `/guilds/${guildId}/channels`);
+  if (!Array.isArray(channels)) return [];
+  return channels
+    .filter((c: any) => c.type !== 4) // categories aren't selectable targets
+    .map((c: any) => ({ id: String(c.id), name: c.name ?? "未知", type: c.type ?? 0 }));
 }
 
 // --- Collect ---------------------------------------------------------------
