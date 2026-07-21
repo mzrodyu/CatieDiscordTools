@@ -55,6 +55,12 @@ const rendererCommon = {
 // The metadata block Tampermonkey/Violentmonkey parse. `@run-at document-start`
 // is load-bearing: the payload must take over Webpack before Discord's first
 // chunk, same constraint as the extension's content script.
+// @updateURL / @downloadURL point at the raw file on the repo's main branch, so
+// Tampermonkey/Violentmonkey poll it and auto-update whenever @version here is
+// higher than the installed one. (If the script is also published on GreasyFork,
+// GreasyFork injects its own update URLs and handles versioning there too — a
+// version bump is all that's needed either way.)
+const rawBase = "https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.user.js";
 const userscriptBanner = `// ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
@@ -65,6 +71,8 @@ const userscriptBanner = `// ==UserScript==
 // @run-at       document-start
 // @grant        none
 // @license      GPL-3.0-or-later
+// @updateURL    ${rawBase}
+// @downloadURL  ${rawBase}
 // ==/UserScript==
 `;
 

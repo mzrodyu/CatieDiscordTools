@@ -13,6 +13,12 @@
   var FROM_MAIN = "halcyon:ext:main";
   var FROM_BRIDGE = "halcyon:ext:bridge";
   var PREFIX = "halcyon:";
+  // The main world can ask us (the privileged isolated world) to fetch across
+  // origins, which Discord's page CSP forbids it from doing itself. Anything on
+  // the page could post the same message, so only ever fetch from Halcyon's own
+  // repo — never an arbitrary URL. This keeps the escape hatch from becoming an
+  // extension-privileged SSRF for hostile page scripts.
+  var ALLOWED_FETCH_PREFIX = "https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/";
 
   function sendHydrate() {
     try {
@@ -53,6 +59,22 @@
       } catch (err) {
         /* ignore */
       }
+    } else if (data.kind === "fetch" && typeof data.url === "string" && typeof data.id === "number") {
+      var id = data.id;
+      if (data.url.indexOf(ALLOWED_FETCH_PREFIX) !== 0) {
+        window.postMessage({ channel: FROM_BRIDGE, kind: "fetch-result", id: id, text: null }, "*");
+        return;
+      }
+      fetch(data.url, { cache: "no-store" })
+        .then(function (res) {
+          return res.ok ? res.text() : null;
+        })
+        .then(function (text) {
+          window.postMessage({ channel: FROM_BRIDGE, kind: "fetch-result", id: id, text: text }, "*");
+        })
+        .catch(function () {
+          window.postMessage({ channel: FROM_BRIDGE, kind: "fetch-result", id: id, text: null }, "*");
+        });
     }
   });
 

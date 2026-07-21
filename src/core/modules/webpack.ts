@@ -466,6 +466,27 @@ export function findByProps(...props: string[]): any {
   return find((exp) => props.every((p) => exp[p] !== undefined));
 }
 
+/**
+ * Find an exported *function* whose own source (`toString()`) contains all of
+ * the given substrings. Discord's imperative actions (uploading an emoji,
+ * sending a message, …) are minified functions with no stable name, so the only
+ * durable way to grab one is by a snippet of its body. Mirrors Vencord's
+ * `findByCode`. The nested-export scan means it also finds a matching function
+ * living under a minified key on a module namespace.
+ */
+export function findByCode(...needles: string[]): any {
+  return find((exp) => {
+    if (typeof exp !== "function") return false;
+    let src: string;
+    try {
+      src = Function.prototype.toString.call(exp);
+    } catch {
+      return false;
+    }
+    return needles.every((n) => src.includes(n));
+  });
+}
+
 /** Find a module whose factory source contains all of the given substrings. */
 export function findBySource(...needles: string[]): any {
   if (!wpRequire) return undefined;

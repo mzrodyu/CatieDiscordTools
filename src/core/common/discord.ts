@@ -85,3 +85,128 @@ export const GuildSubscriptions = lazy<any>(
 
 /** Relative / absolute timestamp formatting used across the client. */
 export const moment = lazy<any>((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");
+
+/**
+ * Client-side navigation (Discord's in-app SPA history). `transitionTo` pushes
+ * an internal route without a full reload — how the client itself jumps to a
+ * channel or a specific message. Matched by its full method set so a partial
+ * lookalike (something exposing only `transitionTo`) can't shadow it.
+ */
+export const NavigationRouter = lazy<any>(
+  (m) =>
+    typeof m?.transitionTo === "function" &&
+    typeof m?.replaceWith === "function" &&
+    typeof m?.transitionToGuild === "function"
+);
+
+/**
+ * Discord's app-layer stack. User settings, the emoji popout and similar
+ * full-screen surfaces are all pushed as "layers" over the app. `popLayer`
+ * dismisses the topmost one — how we close the native settings surface after a
+ * jump so the target channel is actually visible instead of sitting behind it.
+ * Matched by the pair so a partial lookalike can't shadow the real module.
+ */
+export const AppLayers = lazy<any>(
+  (m) => typeof m?.popLayer === "function" && typeof m?.pushLayer === "function"
+);
+
+/**
+ * Discord's HTTP client. Every REST call the web app makes (creating an emoji,
+ * uploading a sticker, …) goes through this. Matched by `getAPIBaseURL` plus a
+ * verb so a partial lookalike can't shadow it. The verbs accept a request
+ * descriptor `{ url, body, ... }` and return a promise of `{ body, status }`.
+ */
+export const RestAPI = lazy<any>(
+  (m) =>
+    // EXACTLY Vencord's discriminator: an *object* carrying `del` AND `put`.
+    // This is what reliably picks Discord's real authenticated API client.
+    // Every earlier attempt failed on the wrong signal: requiring
+    // `getAPIBaseURL` matched nothing (this build doesn't expose it where our
+    // scan looks), and requiring get/post/put/del-as-functions matched a
+    // generic no-op HTTP client that answered 200 with an empty body and
+    // created nothing (the silent sticker-upload failure).
+    typeof m === "object" &&
+    typeof m?.del === "function" &&
+    typeof m?.put === "function" &&
+    // Reject Discord's intl `t` proxy, which answers EVERY property access with
+    // a message value — so del/put "look like" functions and it wins the probe.
+    // A real module returns undefined for a name it doesn't export; the
+    // answer-everything proxy returns a (truthy) message, failing this guard.
+    typeof m?.__halcyon_probe__ === "undefined"
+);
+
+/**
+ * Permission checks against a channel or guild context. Resolved by store name
+ * (a `can`-shaped lookalike exists) so we get the real one. `can(bit, ctx)`
+ * answers whether the current user holds `bit` in `ctx`.
+ */
+export const PermissionStore = lazy<any>(
+  (m) => m?.getName?.() === "PermissionStore" && typeof m?.can === "function"
+);
+
+/**
+ * Emoji cache, keyed by guild. Used to read the guild-owned custom emojis when
+ * building the clone list. Resolved by name.
+ */
+export const EmojiStore = lazy<any>((m) => m?.getName?.() === "EmojiStore");
+
+/**
+ * Discord's endpoint/constant table. Matched precisely on the sticker-create
+ * endpoint we need (`Endpoints.GUILD_STICKER_PACKS`), so if it resolves we KNOW
+ * that builder exists and the URL is exactly the one the client itself posts to
+ * — hand-writing `/guilds/{id}/stickers` can miss a version prefix the client
+ * applies. Absent → callers fall back to the literal path.
+ */
+export const Constants = lazy<any>(
+  (m) => typeof m?.Endpoints?.GUILD_STICKER_PACKS === "function"
+);
+
+/**
+ * Sticker cache. `getStickerById(id)` returns a sticker record (name / tags /
+ * format_type) already known to the client — the cheap path emote-cloner uses
+ * for a sticker's metadata before falling back to a REST fetch. Resolved by
+ * name so a `getStickerById`-shaped lookalike can't shadow it.
+ */
+export const StickersStore = lazy<any>((m) => m?.getName?.() === "StickersStore");
+
+/**
+ * Transient corner notifications ("已复制", "复制失败", …). `showToast` displays
+ * one; `createToast(message, type)` builds it, with `Toasts.Type` naming the
+ * variants. Absent on some builds — callers must null-check.
+ */
+export const Toasts = lazy<any>(
+  (m) => typeof m?.showToast === "function" && typeof m?.createToast === "function"
+);
+
+/**
+ * Show a transient toast. A thin, null-safe wrapper over Discord's own Toasts
+ * so callers don't each re-implement the create+show dance or the degrade path.
+ * `type` is one of "success" | "failure" | "info"; falls back to a log line
+ * when the Toasts module isn't present on this build.
+ */
+export function showToast(message: string, type: "success" | "failure" | "info" = "info"): void {
+  try {
+    const T = Toasts as any;
+    const typeEnum = T?.Type ?? {};
+    const resolved =
+      type === "success"
+        ? typeEnum.SUCCESS ?? 1
+        : type === "failure"
+          ? typeEnum.FAILURE ?? 2
+          : typeEnum.MESSAGE ?? typeEnum.INFO ?? 0;
+    if (typeof T?.showToast === "function" && typeof T?.createToast === "function") {
+      T.showToast(T.createToast(message, resolved));
+    }
+  } catch {
+    // toast module not present or shape changed; a missing toast is non-fatal
+  }
+}
+
+// Discord's context-menu building blocks are deliberately NOT resolved here.
+// A shape-scan (or `find`) lands on one of several lookalike menu modules, and
+// Discord validates a menu's children by *reference* (`child.type === MenuItem`)
+// — a `MenuItem` from the wrong module (or one re-`bind`ed by a proxy) is a
+// different function object and crashes the menu with "Menu API only allows
+// Items …". The context-menu framework instead lifts the exact `MenuItem`
+// reference off a live menu's own rendered items; see
+// `getMenuItemComponent()` in core/common/context-menu.

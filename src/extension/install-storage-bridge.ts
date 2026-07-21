@@ -19,6 +19,11 @@ const mirror = new Map<string, string>();
 let settled = false;
 let markReady!: () => void;
 
+// Outstanding privileged fetches, keyed by id so concurrent calls to the
+// isolated bridge (which owns cross-origin fetch) never cross wires.
+let fetchSeq = 0;
+const pendingFetches = new Map<number, (text: string | null) => void>();
+
 /**
  * Resolves once persisted values have been mirrored, or a short grace period has
  * elapsed. The entry awaits this before registering plugins so the first read
@@ -52,6 +57,12 @@ window.addEventListener("message", (event) => {
       if (typeof value === "string") mirror.set(key, value);
     }
     settle();
+  } else if (data.kind === "fetch-result" && typeof data.id === "number") {
+    const resolve = pendingFetches.get(data.id);
+    if (resolve) {
+      pendingFetches.delete(data.id);
+      resolve(typeof data.text === "string" ? data.text : null);
+    }
   }
 });
 
@@ -69,6 +80,18 @@ const adapter = {
 
 const native: Record<string, unknown> = ((globalThis as any).HalcyonNative ??= {});
 native.storage = adapter;
+
+// Privileged text fetch. Resolves null on any failure (including timeout), so
+// callers degrade quietly rather than throwing.
+native.fetchText = (url: string): Promise<string | null> =>
+  new Promise((resolve) => {
+    const id = ++fetchSeq;
+    pendingFetches.set(id, resolve);
+    post("fetch", { id, url });
+    setTimeout(() => {
+      if (pendingFetches.delete(id)) resolve(null);
+    }, 8000);
+  });
 
 // Kick off hydration. Ask now, and once more shortly after in case the isolated
 // bridge had not attached its listener yet. Never hang: settle after a grace

@@ -3,6 +3,8 @@
 
 import { HalcyonMark } from "../../icons";
 import { Section } from "../components/Section";
+import { Button } from "../components/Button";
+import { checkForUpdate, getCachedUpdate, PROJECT_URL, type UpdateState } from "../../core/update";
 import { useRuntimeList } from "./hooks";
 
 export function AboutView(): React.ReactElement {
@@ -10,15 +12,47 @@ export function AboutView(): React.ReactElement {
   const enabled = plugins.filter((p) => p.enabled).length;
   const version = typeof HALCYON_VERSION !== "undefined" ? HALCYON_VERSION : "dev";
 
+  const [update, setUpdate] = React.useState<UpdateState | null>(getCachedUpdate);
+
+  React.useEffect(() => {
+    let alive = true;
+    void checkForUpdate().then((state) => {
+      if (alive) setUpdate(state);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <div className="hc-stack">
       <div className="hc-about-hero">
         <HalcyonMark size={32} />
         <div>
           <div className="hc-about-hero__name">Halcyon</div>
-          <div className="hc-about-hero__ver">版本 {version}</div>
+          <div className="hc-about-hero__ver">
+            版本 {version}
+            {update?.status === "outdated" && "，有新版本可用"}
+          </div>
         </div>
       </div>
+
+      {update?.status === "outdated" && (
+        <Section title="更新">
+          <div className="hc-cell hc-cell--row">
+            <div className="hc-cell__main">
+              <div className="hc-cell__label">发现新版本 {update.latest}</div>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => window.open(PROJECT_URL, "_blank", "noopener,noreferrer")}
+            >
+              前往下载
+            </Button>
+          </div>
+        </Section>
+      )}
 
       <Section title="概览">
         <AboutRow label="插件总数" value={String(plugins.length)} />

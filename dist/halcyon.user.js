@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.1.9
+// @version      0.2.0
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
 // @run-at       document-start
 // @grant        none
 // @license      GPL-3.0-or-later
+// @updateURL    https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.user.js
+// @downloadURL  https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.user.js
 // ==/UserScript==
 
 "use strict";
@@ -310,6 +312,18 @@ var Halcyon = (() => {
   function findByProps(...props) {
     return find((exp) => props.every((p) => exp[p] !== void 0));
   }
+  function findByCode(...needles) {
+    return find((exp) => {
+      if (typeof exp !== "function") return false;
+      let src;
+      try {
+        src = Function.prototype.toString.call(exp);
+      } catch {
+        return false;
+      }
+      return needles.every((n) => src.includes(n));
+    });
+  }
   function findStore(name) {
     return find((exp) => exp?.getName?.() === name || exp?.constructor?.displayName === name);
   }
@@ -448,8 +462,8 @@ ${slices.join("\n  ...  \n")}`);
 
   // src/core/common/react.ts
   function lazyProxy(resolve) {
-    let cached;
-    const get = () => cached ??= resolve();
+    let cached2;
+    const get = () => cached2 ??= resolve();
     return new Proxy(function() {
     }, {
       get: (_t, key) => get()?.[key],
@@ -477,6 +491,30 @@ ${slices.join("\n  ...  \n")}`);
   var ReactDOM = lazyProxy(
     () => find(byFunctionProps("createPortal", "flushSync")) ?? find(byFunctionProps("createPortal"))
   );
+  function getCreateRoot() {
+    const mod = find(byFunctionProps("createRoot", "hydrateRoot")) ?? find(byFunctionProps("createRoot"));
+    return mod?.createRoot?.bind(mod);
+  }
+  function mountDetached(element, container) {
+    const createRoot = getCreateRoot();
+    if (createRoot) {
+      const root = createRoot(container);
+      root.render(element);
+      return () => {
+        try {
+          root.unmount();
+        } catch {
+        }
+      };
+    }
+    ReactDOM.render(element, container);
+    return () => {
+      try {
+        ReactDOM.unmountComponentAtNode(container);
+      } catch {
+      }
+    };
+  }
   var useState = (...a) => React.useState(...a);
   var useEffect = (...a) => React.useEffect(...a);
   var useMemo = (...a) => React.useMemo(...a);
@@ -631,7 +669,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-20 19:54:51" : "dev";
+      const build = true ? "2026-07-21 20:04:23" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -839,7 +877,1787 @@ ${slices.join("\n  ...  \n")}`);
   var tokens_default = '/*\n * Design tokens.\n *\n * Every color, size, radius, and duration used anywhere in Halcyon resolves to\n * one of these variables. Components never hardcode raw values. The palette is\n * flat by design: solid fills only, no gradients.\n *\n * Values mirror docs/ui-design-guide.md. If the two ever disagree, the guide\n * is the source of truth and this file is the bug.\n */\n\n.halcyon {\n  /* Accent */\n  --hc-accent: #0a84ff;\n  --hc-accent-pressed: #0768cc;\n\n  /* Semantic */\n  --hc-red: #ff453a;\n  --hc-orange: #ff9f0a;\n  --hc-yellow: #ffd60a;\n  --hc-green: #30d158;\n  --hc-teal: #64d2ff;\n  --hc-indigo: #5e5ce6;\n  --hc-pink: #ff375f;\n\n  /* Neutral surfaces */\n  --hc-bg-primary: #000000;\n  --hc-bg-secondary: #1c1c1e;\n  --hc-bg-tertiary: #2c2c2e;\n  --hc-bg-elevated: #2c2c2e;\n\n  /* Fills */\n  --hc-fill-primary: rgba(120, 120, 128, 0.36);\n  --hc-fill-secondary: rgba(120, 120, 128, 0.24);\n\n  /* Separators */\n  --hc-separator: rgba(84, 84, 88, 0.65);\n  --hc-separator-opaque: #38383a;\n\n  /* Labels */\n  --hc-label-primary: #ffffff;\n  --hc-label-secondary: rgba(235, 235, 245, 0.6);\n  --hc-label-tertiary: rgba(235, 235, 245, 0.3);\n  --hc-label-quaternary: rgba(235, 235, 245, 0.16);\n\n  /* Spacing (8pt grid) */\n  --hc-space-1: 4px;\n  --hc-space-2: 8px;\n  --hc-space-3: 12px;\n  --hc-space-4: 16px;\n  --hc-space-5: 20px;\n  --hc-space-6: 24px;\n  --hc-space-8: 32px;\n  --hc-space-10: 40px;\n\n  /* Radii */\n  --hc-radius-xs: 4px;\n  --hc-radius-sm: 6px;\n  --hc-radius-md: 10px;\n  --hc-radius-lg: 12px;\n  --hc-radius-xl: 16px;\n  --hc-radius-2xl: 22px;\n  --hc-radius-pill: 999px;\n\n  /* Elevation */\n  --hc-elev-1: 0 1px 2px rgba(0, 0, 0, 0.24);\n  --hc-elev-2: 0 4px 12px rgba(0, 0, 0, 0.32);\n  --hc-elev-3: 0 12px 32px rgba(0, 0, 0, 0.44);\n\n  /* Type scale \u2014 sizes paired with absolute line heights */\n  --hc-text-title1: 28px;\n  --hc-lh-title1: 34px;\n  --hc-text-title2: 22px;\n  --hc-lh-title2: 28px;\n  --hc-text-title3: 20px;\n  --hc-lh-title3: 25px;\n  --hc-text-headline: 17px;\n  --hc-lh-headline: 22px;\n  --hc-text-body: 17px;\n  --hc-lh-body: 22px;\n  --hc-text-callout: 16px;\n  --hc-lh-callout: 21px;\n  --hc-text-subhead: 15px;\n  --hc-lh-subhead: 20px;\n  --hc-text-footnote: 13px;\n  --hc-lh-footnote: 18px;\n  --hc-text-caption1: 12px;\n  --hc-lh-caption1: 16px;\n  --hc-text-caption2: 11px;\n  --hc-lh-caption2: 13px;\n\n  /* Motion */\n  --hc-ease: cubic-bezier(0.32, 0.72, 0, 1);\n  --hc-duration-fast: 200ms;\n  --hc-duration-slow: 300ms;\n\n  /* Font stack */\n  --hc-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",\n    "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;\n  --hc-font-mono: "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Code",\n    Menlo, Consolas, monospace;\n}\n';
 
   // src/ui/components.css
-  var components_default = '/*\n * Component styles.\n *\n * Class-based, scoped under `.halcyon`. All values reference tokens.css; there\n * are no raw colors or sizes here. Interaction states use flat fills and\n * opacity, never gradients.\n */\n\n.halcyon,\n.halcyon * {\n  box-sizing: border-box;\n}\n\n.halcyon {\n  font-family: var(--hc-font);\n  color: var(--hc-label-primary);\n  -webkit-font-smoothing: antialiased;\n}\n\n/* --- Typographic helpers ------------------------------------------------- */\n\n.hc-title2 {\n  font-size: var(--hc-text-title2);\n  line-height: var(--hc-lh-title2);\n  font-weight: 700;\n}\n\n.hc-title3 {\n  font-size: var(--hc-text-title3);\n  line-height: var(--hc-lh-title3);\n  font-weight: 600;\n}\n\n.hc-headline {\n  font-size: var(--hc-text-headline);\n  line-height: var(--hc-lh-headline);\n  font-weight: 600;\n}\n\n.hc-body {\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  font-weight: 400;\n}\n\n.hc-callout {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n}\n\n.hc-footnote {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-muted {\n  color: var(--hc-label-secondary);\n}\n\n/* --- Button -------------------------------------------------------------- */\n\n.hc-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: var(--hc-space-2);\n  border: none;\n  cursor: pointer;\n  font-family: inherit;\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  font-weight: 600;\n  border-radius: var(--hc-radius-md);\n  padding: 0 var(--hc-space-4);\n  height: 40px;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    opacity var(--hc-duration-fast) var(--hc-ease),\n    transform var(--hc-duration-fast) var(--hc-ease);\n  user-select: none;\n  white-space: nowrap;\n}\n\n.hc-btn:active {\n  transform: scale(0.98);\n}\n\n.hc-btn:disabled {\n  opacity: 0.4;\n  cursor: default;\n  transform: none;\n}\n\n.hc-btn--sm {\n  height: 32px;\n  font-size: var(--hc-text-subhead);\n  padding: 0 var(--hc-space-3);\n}\n\n.hc-btn--lg {\n  height: 50px;\n  border-radius: var(--hc-radius-lg);\n}\n\n.hc-btn--primary {\n  background: var(--hc-accent);\n  color: #ffffff;\n}\n\n.hc-btn--primary:hover:not(:disabled) {\n  background: var(--hc-accent-pressed);\n}\n\n.hc-btn--secondary {\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-primary);\n}\n\n.hc-btn--secondary:hover:not(:disabled) {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-btn--plain {\n  background: transparent;\n  color: var(--hc-accent);\n  padding-left: var(--hc-space-2);\n  padding-right: var(--hc-space-2);\n}\n\n.hc-btn--plain:hover:not(:disabled) {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-btn--destructive {\n  background: transparent;\n  color: var(--hc-red);\n}\n\n.hc-btn--destructive:hover:not(:disabled) {\n  background: rgba(255, 69, 58, 0.16);\n}\n\n/* --- Toggle -------------------------------------------------------------- */\n\n.hc-toggle {\n  position: relative;\n  flex: none;\n  width: 51px;\n  height: 31px;\n  border-radius: var(--hc-radius-pill);\n  background: var(--hc-fill-secondary);\n  border: none;\n  cursor: pointer;\n  padding: 0;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-toggle[data-on="true"] {\n  background: var(--hc-green);\n}\n\n.hc-toggle:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n.hc-toggle__knob {\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 27px;\n  height: 27px;\n  border-radius: 50%;\n  background: #ffffff;\n  box-shadow: var(--hc-elev-1);\n  transition: transform var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-toggle[data-on="true"] .hc-toggle__knob {\n  transform: translateX(20px);\n}\n\n/* --- Section ------------------------------------------------------------- */\n\n.hc-section {\n  margin-top: var(--hc-space-6);\n}\n\n.hc-section:first-child {\n  margin-top: 0;\n}\n\n.hc-section__title {\n  font-size: var(--hc-text-subhead);\n  line-height: var(--hc-lh-subhead);\n  color: var(--hc-label-secondary);\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n  padding: 0 var(--hc-space-4);\n  margin-bottom: var(--hc-space-2);\n}\n\n.hc-section__body {\n  background: var(--hc-bg-secondary);\n  border-radius: var(--hc-radius-lg);\n  overflow: hidden;\n}\n\n.hc-section__note {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n  padding: var(--hc-space-2) var(--hc-space-4) 0;\n}\n\n/* --- List row ------------------------------------------------------------ */\n\n.hc-row {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  min-height: 44px;\n  padding: var(--hc-space-2) var(--hc-space-4);\n  position: relative;\n}\n\n.hc-row + .hc-row::before {\n  content: "";\n  position: absolute;\n  top: 0;\n  left: 56px;\n  right: 0;\n  height: 1px;\n  background: var(--hc-separator);\n  transform: scaleY(0.5);\n}\n\n.hc-row--button {\n  cursor: pointer;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-row--button:hover {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-row--button:active {\n  background: var(--hc-fill-primary);\n}\n\n.hc-row__icon {\n  flex: none;\n  width: 28px;\n  height: 28px;\n  border-radius: var(--hc-radius-sm);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  color: #ffffff;\n}\n\n.hc-row__text {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n\n.hc-row__title {\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  color: var(--hc-label-primary);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.hc-row__subtitle {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-row__accessory {\n  flex: none;\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  color: var(--hc-label-secondary);\n}\n\n.hc-row__chevron {\n  color: var(--hc-label-tertiary);\n}\n\n/* --- Text input ---------------------------------------------------------- */\n\n.hc-input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  background: var(--hc-fill-primary);\n  border: 2px solid transparent;\n  border-radius: var(--hc-radius-md);\n  padding: 0 var(--hc-space-3);\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  outline: none;\n  transition: border-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-input::placeholder {\n  color: var(--hc-label-tertiary);\n}\n\n.hc-input:focus {\n  border-color: var(--hc-accent);\n}\n\n/* --- Number stepper ------------------------------------------------------ */\n\n.hc-stepper {\n  display: inline-flex;\n  align-items: center;\n  background: var(--hc-fill-primary);\n  border-radius: var(--hc-radius-md);\n  overflow: hidden;\n}\n\n.hc-stepper__btn {\n  width: 36px;\n  height: 32px;\n  border: none;\n  background: transparent;\n  color: var(--hc-label-primary);\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-stepper__btn:hover:not(:disabled) {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-stepper__btn:disabled {\n  color: var(--hc-label-quaternary);\n  cursor: default;\n}\n\n.hc-stepper__value {\n  min-width: 44px;\n  text-align: center;\n  font-size: var(--hc-text-callout);\n  font-variant-numeric: tabular-nums;\n  color: var(--hc-label-primary);\n}\n\n/* --- Select -------------------------------------------------------------- */\n\n/* Self-drawn dropdown: pill button + floating iOS-style menu sheet. */\n.hc-select {\n  position: relative;\n  display: inline-block;\n}\n\n.hc-select__button {\n  display: inline-flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  height: 32px;\n  background: var(--hc-fill-primary);\n  border: none;\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  padding: 0 var(--hc-space-3);\n  cursor: pointer;\n  outline: none;\n  white-space: nowrap;\n}\n\n.hc-select__button:hover {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-select__button:focus-visible {\n  box-shadow: 0 0 0 2px var(--hc-accent);\n}\n\n.hc-select__chevron {\n  color: var(--hc-label-tertiary);\n  transition: transform 0.15s ease;\n}\n\n.hc-select__chevron[data-open="true"] {\n  transform: rotate(180deg);\n}\n\n.hc-select__menu {\n  /* Positioned by its portal wrapper (fixed, anchored to the button). */\n  max-height: 280px;\n  overflow-y: auto;\n  padding: var(--hc-space-1);\n  background: var(--hc-bg-elevated, #2c2c2e);\n  border-radius: var(--hc-radius-lg, 12px);\n  box-shadow:\n    0 0 0 0.5px rgba(255, 255, 255, 0.08),\n    0 10px 32px rgba(0, 0, 0, 0.45);\n  animation: hc-select-pop 0.14s ease;\n}\n\n@keyframes hc-select-pop {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n  to {\n    opacity: 1;\n    transform: none;\n  }\n}\n\n.hc-select__option {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: var(--hc-space-3);\n  width: 100%;\n  border: none;\n  background: none;\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  text-align: left;\n  padding: 7px var(--hc-space-3);\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n.hc-select__option[data-active="true"] {\n  background: var(--hc-fill-primary);\n}\n\n.hc-select__option[data-selected="true"] {\n  color: var(--hc-accent);\n}\n\n.hc-select__check {\n  flex: none;\n  color: var(--hc-accent);\n}\n\n/* --- String list --------------------------------------------------------- */\n\n.hc-strlist {\n  display: flex;\n  flex-direction: column;\n  gap: var(--hc-space-2);\n  padding: var(--hc-space-2) var(--hc-space-4) var(--hc-space-3);\n}\n\n.hc-strlist__item {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n}\n\n.hc-strlist__add {\n  display: flex;\n  gap: var(--hc-space-2);\n}\n\n.hc-iconbtn {\n  flex: none;\n  width: 32px;\n  height: 32px;\n  border-radius: var(--hc-radius-md);\n  border: none;\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-secondary);\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-iconbtn:hover {\n  background: var(--hc-fill-secondary);\n}\n\n.hc-iconbtn--danger:hover {\n  color: var(--hc-red);\n}\n\n/* --- Badge --------------------------------------------------------------- */\n\n.hc-badge {\n  display: inline-flex;\n  align-items: center;\n  height: 20px;\n  padding: 0 var(--hc-space-2);\n  border-radius: var(--hc-radius-pill);\n  font-size: var(--hc-text-caption1);\n  line-height: var(--hc-lh-caption1);\n  font-weight: 600;\n}\n\n.hc-badge[data-tone="neutral"] {\n  background: var(--hc-fill-secondary);\n  color: var(--hc-label-secondary);\n}\n\n.hc-badge[data-tone="accent"] {\n  background: rgba(10, 132, 255, 0.2);\n  color: var(--hc-accent);\n}\n\n.hc-badge[data-tone="green"] {\n  background: rgba(48, 209, 88, 0.2);\n  color: var(--hc-green);\n}\n\n.hc-badge[data-tone="red"] {\n  background: rgba(255, 69, 58, 0.2);\n  color: var(--hc-red);\n}\n\n.hc-badge[data-tone="orange"] {\n  background: rgba(255, 159, 10, 0.2);\n  color: var(--hc-orange);\n}\n\n/* --- Empty state --------------------------------------------------------- */\n\n.hc-empty {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  text-align: center;\n  padding: var(--hc-space-10) var(--hc-space-6);\n  color: var(--hc-label-tertiary);\n}\n\n.hc-empty__title {\n  font-size: var(--hc-text-headline);\n  line-height: var(--hc-lh-headline);\n  font-weight: 600;\n  color: var(--hc-label-secondary);\n  margin-top: var(--hc-space-4);\n}\n\n.hc-empty__subtitle {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  color: var(--hc-label-tertiary);\n  margin-top: var(--hc-space-2);\n  max-width: 320px;\n}\n\n/* --- Overlay + panel (fallback entry point) ------------------------------ */\n\n.hc-overlay {\n  position: fixed;\n  inset: 0;\n  z-index: 10000;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: rgba(0, 0, 0, 0.6);\n  animation: hc-fade var(--hc-duration-slow) var(--hc-ease);\n}\n\n.hc-panel {\n  width: min(900px, 92vw);\n  height: min(720px, 88vh);\n  background: var(--hc-bg-primary);\n  border-radius: var(--hc-radius-xl);\n  box-shadow: var(--hc-elev-3);\n  display: flex;\n  overflow: hidden;\n  animation: hc-rise var(--hc-duration-slow) var(--hc-ease);\n}\n\n.hc-panel__sidebar {\n  width: 220px;\n  flex: none;\n  background: var(--hc-bg-secondary);\n  border-right: 1px solid var(--hc-separator-opaque);\n  padding: var(--hc-space-4) var(--hc-space-2);\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n\n.hc-panel__brand {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-4);\n  color: var(--hc-label-primary);\n}\n\n.hc-panel__brand-name {\n  font-size: var(--hc-text-headline);\n  font-weight: 700;\n}\n\n.hc-navitem {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  padding: var(--hc-space-2) var(--hc-space-3);\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-secondary);\n  cursor: pointer;\n  font-size: var(--hc-text-callout);\n  border: none;\n  background: transparent;\n  text-align: left;\n  width: 100%;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-navitem:hover {\n  background: var(--hc-fill-secondary);\n  color: var(--hc-label-primary);\n}\n\n.hc-navitem[data-active="true"] {\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-primary);\n}\n\n.hc-panel__content {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n}\n\n.hc-panel__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-4);\n  border-bottom: 1px solid var(--hc-separator-opaque);\n}\n\n.hc-panel__scroll {\n  flex: 1;\n  overflow-y: auto;\n  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-8);\n}\n\n.hc-embed {\n  /* When embedded in Discord\'s own settings pane rather than the overlay. */\n  padding: var(--hc-space-2) 0 var(--hc-space-8);\n}\n\n@keyframes hc-fade {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n\n@keyframes hc-rise {\n  from {\n    opacity: 0;\n    transform: translateY(8px) scale(0.99);\n  }\n  to {\n    opacity: 1;\n    transform: none;\n  }\n}\n\n/* Respect the OS "reduce motion" preference. */\n@media (prefers-reduced-motion: reduce) {\n  .hc-overlay,\n  .hc-panel,\n  .hc-btn,\n  .hc-toggle__knob {\n    animation: none;\n    transition: none;\n  }\n}\n\n/* --- Setting cells (schema-driven form) ---------------------------------- */\n\n.hc-cell {\n  padding: var(--hc-space-2) var(--hc-space-4);\n  position: relative;\n}\n\n.hc-cell + .hc-cell::before {\n  content: "";\n  position: absolute;\n  top: 0;\n  left: var(--hc-space-4);\n  right: 0;\n  height: 1px;\n  background: var(--hc-separator);\n  transform: scaleY(0.5);\n}\n\n.hc-cell--row {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  min-height: 44px;\n}\n\n.hc-cell__main {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n}\n\n.hc-cell__label {\n  font-size: var(--hc-text-body);\n  line-height: var(--hc-lh-body);\n  color: var(--hc-label-primary);\n}\n\n.hc-cell__desc {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-cell__control {\n  flex: none;\n}\n\n.hc-cell__stacked {\n  padding-top: var(--hc-space-2);\n}\n\n/* --- Toolbar (search + actions) ------------------------------------------ */\n\n.hc-toolbar {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  margin-bottom: var(--hc-space-4);\n}\n\n.hc-search {\n  flex: 1;\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  height: 36px;\n  padding: 0 var(--hc-space-3);\n  background: var(--hc-fill-primary);\n  border-radius: var(--hc-radius-md);\n  color: var(--hc-label-tertiary);\n}\n\n.hc-search input {\n  flex: 1;\n  border: none;\n  background: transparent;\n  outline: none;\n  color: var(--hc-label-primary);\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n}\n\n.hc-search input::placeholder {\n  color: var(--hc-label-tertiary);\n}\n\n/* --- Plugin detail header ------------------------------------------------ */\n\n.hc-back {\n  display: inline-flex;\n  align-items: center;\n  gap: var(--hc-space-1);\n  background: transparent;\n  border: none;\n  color: var(--hc-accent);\n  cursor: pointer;\n  font-family: inherit;\n  font-size: var(--hc-text-callout);\n  padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) 0;\n  margin-bottom: var(--hc-space-4);\n}\n\n.hc-detail-head {\n  display: flex;\n  align-items: flex-start;\n  gap: var(--hc-space-3);\n  margin-bottom: var(--hc-space-5);\n}\n\n.hc-detail-head__icon {\n  flex: none;\n  width: 44px;\n  height: 44px;\n  border-radius: var(--hc-radius-lg);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  color: #ffffff;\n}\n\n.hc-detail-head__text {\n  flex: 1;\n  min-width: 0;\n}\n\n.hc-detail-head__name {\n  font-size: var(--hc-text-title3);\n  line-height: var(--hc-lh-title3);\n  font-weight: 600;\n}\n\n.hc-detail-head__desc {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  color: var(--hc-label-secondary);\n  margin-top: 2px;\n}\n\n.hc-detail-head__meta {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-tertiary);\n  margin-top: var(--hc-space-2);\n}\n\n/* --- Log viewer ---------------------------------------------------------- */\n\n.hc-logs {\n  font-family: var(--hc-font-mono);\n  font-size: var(--hc-text-footnote);\n  line-height: 1.7;\n  background: var(--hc-bg-secondary);\n  border-radius: var(--hc-radius-lg);\n  padding: var(--hc-space-3);\n  overflow-x: auto;\n}\n\n.hc-logline {\n  display: flex;\n  gap: var(--hc-space-2);\n  white-space: pre;\n  padding: 1px 0;\n}\n\n.hc-logline__time {\n  color: var(--hc-label-tertiary);\n  flex: none;\n}\n\n.hc-logline__scope {\n  color: var(--hc-label-secondary);\n  flex: none;\n}\n\n.hc-logline__msg {\n  color: var(--hc-label-primary);\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n\n.hc-logline[data-level="warn"] .hc-logline__msg {\n  color: var(--hc-orange);\n}\n\n.hc-logline[data-level="error"] .hc-logline__msg {\n  color: var(--hc-red);\n}\n\n.hc-logline[data-level="debug"] .hc-logline__msg {\n  color: var(--hc-label-secondary);\n}\n\n/* --- About --------------------------------------------------------------- */\n\n.hc-about__row {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n}\n\n.hc-about__value {\n  color: var(--hc-label-secondary);\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- Generic vertical rhythm --------------------------------------------- */\n\n.hc-stack > * + * {\n  margin-top: var(--hc-space-4);\n}\n\n.hc-inline-note {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  color: var(--hc-orange);\n  font-size: var(--hc-text-footnote);\n}\n\n.hc-inline-note--danger {\n  color: var(--hc-red);\n}\n\n/* --- Detail head toggle stays top-aligned with the icon ------------------ */\n\n.hc-detail-head > span {\n  flex: none;\n  padding-top: var(--hc-space-1);\n}\n\n/* --- About hero ---------------------------------------------------------- */\n\n.hc-about-hero {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-2) 0 var(--hc-space-4);\n  color: var(--hc-label-primary);\n}\n\n.hc-about-hero__name {\n  font-size: var(--hc-text-title2);\n  line-height: var(--hc-lh-title2);\n  font-weight: 700;\n}\n\n.hc-about-hero__ver {\n  font-size: var(--hc-text-footnote);\n  line-height: var(--hc-lh-footnote);\n  color: var(--hc-label-secondary);\n}\n\n/* --- Tabs (used by plugin pages) ----------------------------------------- */\n\n.hc-tabs {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  margin-bottom: var(--hc-space-4);\n}\n\n.hc-tabs__spacer {\n  flex: 1;\n}\n\n.hc-tab {\n  display: inline-flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  height: 32px;\n  padding: 0 var(--hc-space-3);\n  border: none;\n  border-radius: var(--hc-radius-md);\n  background: transparent;\n  color: var(--hc-label-secondary);\n  cursor: pointer;\n  font-family: inherit;\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-tab:hover {\n  color: var(--hc-label-primary);\n}\n\n.hc-tab[data-active="true"] {\n  background: var(--hc-fill-primary);\n  color: var(--hc-label-primary);\n}\n\n/* --- Save bar --------------------------------------------------------------- */\n\n.hc-savebar {\n  position: sticky;\n  bottom: var(--hc-space-3);\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: var(--hc-space-4);\n  margin-top: var(--hc-space-4);\n  padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-4);\n  background: var(--hc-bg-elevated, #2c2c2e);\n  border-radius: var(--hc-radius-lg);\n  box-shadow:\n    0 0 0 0.5px rgba(255, 255, 255, 0.08),\n    0 8px 24px rgba(0, 0, 0, 0.35);\n  animation: hc-select-pop 0.14s ease;\n}\n\n.hc-savebar__label {\n  font-size: var(--hc-text-subhead);\n  color: var(--hc-label-secondary);\n}\n\n.hc-savebar__actions {\n  display: flex;\n  gap: var(--hc-space-2);\n  flex: none;\n}\n\n/* --- Segmented control ------------------------------------------------------ */\n\n.hc-segment {\n  display: flex;\n  gap: 2px;\n  padding: 2px;\n  margin-bottom: var(--hc-space-4);\n  background: var(--hc-fill-primary);\n  border-radius: var(--hc-radius-md);\n  width: fit-content;\n}\n\n.hc-segment__item {\n  border: none;\n  background: transparent;\n  color: var(--hc-label-secondary);\n  font-family: inherit;\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  height: 28px;\n  padding: 0 var(--hc-space-4);\n  border-radius: calc(var(--hc-radius-md) - 2px);\n  cursor: pointer;\n  transition: background-color var(--hc-duration-fast) var(--hc-ease),\n    color var(--hc-duration-fast) var(--hc-ease);\n}\n\n.hc-segment__item:hover {\n  color: var(--hc-label-primary);\n}\n\n.hc-segment__item[data-active="true"] {\n  background: var(--hc-bg-elevated, #2c2c2e);\n  color: var(--hc-label-primary);\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);\n}\n\n/* --- Pager ----------------------------------------------------------------- */\n\n.hc-pager {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: var(--hc-space-3);\n  margin-top: var(--hc-space-4);\n}\n\n.hc-pager__label {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  font-variant-numeric: tabular-nums;\n  min-width: 96px;\n  text-align: center;\n}\n\n.hc-pager .hc-tab:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n/* --- Captured message entries -------------------------------------------- */\n\n.hc-msglist {\n  display: flex;\n  flex-direction: column;\n  gap: var(--hc-space-2);\n}\n\n.hc-msg {\n  background: var(--hc-bg-secondary);\n  border-radius: var(--hc-radius-lg);\n  padding: var(--hc-space-3) var(--hc-space-4);\n  border-left: 2px solid var(--hc-red);\n}\n\n.hc-msg__head {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-2);\n  margin-bottom: var(--hc-space-1);\n}\n\n.hc-msg__author {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  color: var(--hc-label-primary);\n}\n\n.hc-msg__where {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n}\n\n.hc-msg__guild {\n  color: var(--hc-label-secondary);\n  font-weight: 600;\n}\n\n.hc-msg__sep {\n  color: var(--hc-label-tertiary);\n  margin: 0 4px;\n}\n\n.hc-msg__time {\n  margin-left: auto;\n  font-size: var(--hc-text-caption1);\n  color: var(--hc-label-tertiary);\n  font-variant-numeric: tabular-nums;\n}\n\n.hc-msg__body {\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n  color: var(--hc-label-primary);\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n\n.hc-msg__empty {\n  color: var(--hc-label-tertiary);\n  font-style: italic;\n}\n\n.hc-msg__meta {\n  margin-top: var(--hc-space-1);\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n}\n\n/* Attachment thumbnails. Constrained so wide/tall media never spills past the\n * message card \u2014 a single image caps at the content width, and the row wraps\n * when there are several. */\n.hc-msg__media {\n  display: flex;\n  flex-wrap: wrap;\n  gap: var(--hc-space-2);\n  margin-top: var(--hc-space-2);\n  min-width: 0;\n}\n\n.hc-msg__media a {\n  color: var(--hc-accent);\n  font-size: var(--hc-text-footnote);\n  word-break: break-all;\n}\n\n.hc-msg__thumb {\n  max-width: 100%;\n  max-height: 240px;\n  width: auto;\n  height: auto;\n  object-fit: contain;\n  border-radius: var(--hc-radius-md);\n  background: var(--hc-fill-secondary);\n}\n\n/* Inline custom emoji, sized to the surrounding text like Discord\'s own. */\n.hc-emoji {\n  display: inline-block;\n  width: 1.375em;\n  height: 1.375em;\n  margin: 0 1px;\n  object-fit: contain;\n  vertical-align: bottom;\n}\n\n.hc-msg__versions {\n  display: flex;\n  flex-direction: column;\n  gap: var(--hc-space-1);\n}\n\n.hc-msg__version {\n  display: flex;\n  gap: var(--hc-space-2);\n  font-size: var(--hc-text-callout);\n  line-height: var(--hc-lh-callout);\n}\n\n.hc-msg__vtag {\n  flex: none;\n  color: var(--hc-label-tertiary);\n  font-variant-numeric: tabular-nums;\n  font-size: var(--hc-text-footnote);\n  padding-top: 2px;\n}\n\n.hc-msg__vbody {\n  color: var(--hc-label-primary);\n  white-space: pre-wrap;\n  word-break: break-word;\n}\n\n/* The `edited` tone reuses the orange rule via a modifier. */\n.hc-msg--edited {\n  border-left-color: var(--hc-orange);\n}\n\n/* --- message-logger status banner ---------------------------------------- *\n * A compact warning on the log page, shown only when at least one of the\n * plugin\'s source patches failed to match the running Discord build. Inside\n * the .halcyon overlay/embed, so tokens are used throughout. Amber tone: the\n * feature isn\'t broken \u2014 records still land in the list below \u2014 but the\n * in-chat red row is off, and this is the only place a non-console user will\n * see that. */\n.hc-mlog-warn {\n  border: 1px solid rgba(224, 165, 63, 0.35);\n  background: rgba(224, 165, 63, 0.08);\n  border-radius: var(--hc-radius-md);\n  padding: var(--hc-space-3) var(--hc-space-4);\n  margin: var(--hc-space-3) 0;\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n}\n.hc-mlog-warn__title {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  color: #e0a53f;\n}\n.hc-mlog-warn__detail {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  line-height: var(--hc-lh-footnote);\n}\n.hc-mlog-warn__list {\n  margin: 2px 0 0;\n  padding-left: 18px;\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- Deleted message (in-chat) ------------------------------------------- */\n\n/*\n * Applied to Discord\'s own message row when a deleted message is kept in place.\n * These live outside the .halcyon scope on purpose \u2014 they decorate Discord\n * elements \u2014 so literal values, no tokens.\n *\n * The row itself only carries the stable .hc-deleted hook; the chosen style is\n * a class on <html> (hc-mlog-<style>). Splitting them lets a style change take\n * effect immediately \u2014 swap the root class and every kept message updates \u2014\n * instead of the pick only landing on rows Discord repaints after the change.\n */\n\n/* Style: red tint (default) \u2014 flat red wash + left bar. */\n.hc-mlog-tint .hc-deleted {\n  background-color: rgba(255, 69, 58, 0.1);\n  box-shadow: inset 2px 0 0 #ff453a;\n}\n\n/* Style: red text \u2014 content turns red, no background. */\n.hc-mlog-text .hc-deleted [class*="messageContent"],\n.hc-mlog-text .hc-deleted [class*="contents"] > div:not([class*="header"]) {\n  color: #f04747 !important;\n}\n.hc-mlog-text .hc-deleted [class*="messageContent"] a {\n  color: #ff6b6b !important;\n}\n\n/* Style: ghost \u2014 the whole row fades. */\n.hc-mlog-ghost .hc-deleted {\n  opacity: 0.45;\n  filter: saturate(0.6);\n}\n\n/* Style: strike \u2014 red strikethrough over the text. */\n.hc-mlog-strike .hc-deleted [class*="messageContent"] {\n  text-decoration: line-through;\n  text-decoration-color: rgba(255, 69, 58, 0.7);\n  text-decoration-thickness: 1.5px;\n}\n.hc-mlog-strike .hc-deleted {\n  box-shadow: inset 2px 0 0 rgba(255, 69, 58, 0.5);\n}\n\n/* "This message was deleted (\u2026)": marker row under the content. One base\n * class plus a look modifier chosen in settings. */\n.hc-deleted-marker {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  margin-top: 2px;\n  font-size: 0.8125rem;\n  line-height: 1.2;\n  color: #f04747;\n  user-select: none;\n}\n.hc-deleted-marker__icon {\n  flex: none;\n}\n\n/* Look: badge \u2014 pill-shaped chip on its OWN line. It used `display: inline-flex`,\n * which let the pill run inline with the message text so the two never wrapped\n * ("\u4E0D\u4F1A\u6362\u884C"). Inheriting the base `display: flex` makes it block-level (its own\n * line); `width: fit-content` keeps the pill only as wide as its label, and\n * `max-width: 100%` stops a long label from overflowing the row. */\n.hc-deleted-marker--badge {\n  width: fit-content;\n  max-width: 100%;\n  background: rgba(255, 69, 58, 0.12);\n  border-radius: 9999px;\n  padding: 2px 10px;\n  margin-top: 4px;\n}\n\n/* Look: quote \u2014 indented behind a red bar, like a blockquote. */\n.hc-deleted-marker--quote {\n  border-left: 3px solid rgba(255, 69, 58, 0.7);\n  padding-left: 8px;\n  margin-top: 4px;\n  color: rgba(240, 71, 71, 0.85);\n}\n\n/* Tone: edited \u2014 same marker layout, calmer amber so an edit doesn\'t read as a\n * deletion. Overrides the red the delete marker uses. */\n.hc-deleted-marker--edited {\n  color: #e0a53f;\n}\n.hc-deleted-marker--edited.hc-deleted-marker--badge {\n  background: rgba(224, 165, 63, 0.14);\n}\n.hc-deleted-marker--edited.hc-deleted-marker--quote {\n  border-left-color: rgba(224, 165, 63, 0.7);\n  color: rgba(224, 165, 63, 0.9);\n}\n\n/* --- Username next to nickname (show-username plugin) --------------------- */\n\n/*\n * Appended inside Discord\'s message header, so literal values, no tokens.\n * One base class plus a per-style modifier chosen in the plugin\'s settings.\n */\n.hc-username {\n  font-size: 0.75rem;\n  font-weight: 500;\n  vertical-align: baseline;\n}\n\n.hc-username--muted {\n  color: var(--text-muted, #949ba4);\n}\n\n.hc-username--pill {\n  color: var(--text-muted, #949ba4);\n  background: rgba(128, 132, 142, 0.16);\n  border-radius: 9999px;\n  padding: 0 6px;\n  line-height: 1.35;\n  display: inline-block;\n}\n\n.hc-username--at {\n  color: #949cf7;\n}\n\n.hc-username--paren {\n  color: var(--text-muted, #949ba4);\n  font-weight: 400;\n}\n\n/* --- Inline edit history (in-chat) ---------------------------------------- */\n\n/*\n * Old versions of an edited message, rendered above the current content by the\n * message-logger content patch. Like .hc-deleted this decorates Discord\'s own\n * DOM, so literal values, no tokens. The base class only handles wrapping; a\n * per-style modifier (chosen in settings) sets the look. MessageExtras re-reads\n * the modifier on every render, so changing the style applies live.\n */\n.hc-edit-history__version {\n  word-break: break-word;\n  white-space: pre-wrap;\n}\n\n/* Per-version edit time, shown inline at the end of each old-version line.\n * Muted and compact; opacity keeps it tied to whatever the version style is,\n * and text-decoration:none stops the strike style from striking the time. */\n.hc-edit-history__time {\n  margin-left: 6px;\n  font-size: 0.72em;\n  opacity: 0.55;\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n  text-decoration: none;\n  vertical-align: baseline;\n}\n\n/* The old-version line mirrors the deleted-message style (tint/text/ghost/\n * strike) so both share one setting; strike stays its natural default look. */\n\n/* Style: red strikethrough \u2014 struck out in red, like removed text. */\n.hc-edit-history__version--strike {\n  color: rgba(255, 69, 58, 0.75);\n  text-decoration: line-through;\n  text-decoration-color: rgba(255, 69, 58, 0.4);\n}\n\n/* Style: red text \u2014 red, no strikethrough. */\n.hc-edit-history__version--text {\n  color: rgba(255, 69, 58, 0.85);\n}\n\n/* Style: ghost \u2014 faded out, keeps the normal text color. */\n.hc-edit-history__version--ghost {\n  opacity: 0.45;\n  filter: saturate(0.6);\n}\n\n/* Style: tint \u2014 red wash + left bar, as a quote-like block on the line. */\n.hc-edit-history__version--tint {\n  background-color: rgba(255, 69, 58, 0.1);\n  box-shadow: inset 2px 0 0 #ff453a;\n  padding: 1px 6px 1px 8px;\n  border-radius: 3px;\n}\n\n/* \u2500\u2500 message-cleaner page \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n * The self-message cleaner\'s operate surface. Scope/confirm reuse .hc-section\n * and .hc-cell; these rules cover the action bar, the live status line, the\n * preview list, and the stat readout. Decorates Halcyon\'s own panel, so every\n * value is a token. */\n.hc-cleaner__actions {\n  display: flex;\n  gap: var(--hc-space-3);\n  margin: var(--hc-space-4) 0;\n}\n.hc-cleaner__actions .hc-btn {\n  flex: 1;\n}\n.hc-cleaner__status {\n  margin: var(--hc-space-3) 0;\n  padding: var(--hc-space-3) var(--hc-space-4);\n  background: var(--hc-fill-secondary);\n  border-radius: var(--hc-radius-md);\n}\n.hc-cleaner__status-state {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  color: var(--hc-label-primary);\n}\n.hc-cleaner__status-detail {\n  margin-top: 2px;\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n  word-break: break-word;\n}\n.hc-cleaner__list {\n  display: flex;\n  flex-direction: column;\n}\n.hc-cleaner__item {\n  display: flex;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-2) var(--hc-space-4);\n  font-size: var(--hc-text-footnote);\n  border-bottom: 1px solid var(--hc-separator);\n}\n.hc-cleaner__item:last-child {\n  border-bottom: none;\n}\n.hc-cleaner__item-time {\n  flex-shrink: 0;\n  color: var(--hc-accent);\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n}\n.hc-cleaner__item-text {\n  color: var(--hc-label-primary);\n  word-break: break-word;\n}\n.hc-cleaner__more {\n  padding: var(--hc-space-2) var(--hc-space-4);\n  font-size: var(--hc-text-caption1);\n  color: var(--hc-label-tertiary);\n}\n.hc-cleaner__stat {\n  display: flex;\n  justify-content: center;\n  align-items: baseline;\n  gap: var(--hc-space-2);\n}\n.hc-cleaner__stat-num {\n  font-size: var(--hc-text-title1);\n  font-weight: 700;\n  color: var(--hc-accent);\n  font-variant-numeric: tabular-nums;\n}\n.hc-cleaner__stat-unit {\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-secondary);\n}\n\n/* \u2500\u2500 message-cleaner picker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */\n.hc-cleaner__picker-head {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-3) var(--hc-space-4);\n  border-bottom: 1px solid var(--hc-separator);\n}\n.hc-cleaner__picker-title {\n  flex: 1;\n  text-align: center;\n  font-weight: 700;\n  font-size: var(--hc-text-subhead);\n  color: var(--hc-label-primary);\n}\n.hc-cleaner__picker-list {\n  display: flex;\n  flex-direction: column;\n  overflow-y: auto;\n  max-height: 360px;\n  padding: var(--hc-space-2);\n}\n.hc-cleaner__picker-item {\n  display: flex;\n  align-items: center;\n  gap: var(--hc-space-3);\n  padding: var(--hc-space-2) var(--hc-space-3);\n  border-radius: var(--hc-radius-md);\n  cursor: pointer;\n  color: var(--hc-label-primary);\n  transition: background var(--hc-duration-fast) var(--hc-ease);\n}\n.hc-cleaner__picker-item:hover {\n  background: var(--hc-fill-secondary);\n}\n.hc-cleaner__picker-icon {\n  width: 36px;\n  height: 36px;\n  border-radius: 50%;\n  background: var(--hc-fill-primary);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  overflow: hidden;\n  flex-shrink: 0;\n  font-size: var(--hc-text-subhead);\n  color: var(--hc-label-secondary);\n}\n.hc-cleaner__picker-icon img {\n  width: 100%;\n  height: 100%;\n  object-fit: cover;\n}\n.hc-cleaner__picker-name {\n  font-size: var(--hc-text-subhead);\n  font-weight: 600;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n.hc-cleaner__picker-empty {\n  padding: var(--hc-space-5);\n  text-align: center;\n  font-size: var(--hc-text-footnote);\n  color: var(--hc-label-tertiary);\n}\n';
+  var components_default = `/*
+ * Component styles.
+ *
+ * Class-based, scoped under \`.halcyon\`. All values reference tokens.css; there
+ * are no raw colors or sizes here. Interaction states use flat fills and
+ * opacity, never gradients.
+ */
+
+.halcyon,
+.halcyon * {
+  box-sizing: border-box;
+}
+
+.halcyon {
+  font-family: var(--hc-font);
+  color: var(--hc-label-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Typographic helpers ------------------------------------------------- */
+
+.hc-title2 {
+  font-size: var(--hc-text-title2);
+  line-height: var(--hc-lh-title2);
+  font-weight: 700;
+}
+
+.hc-title3 {
+  font-size: var(--hc-text-title3);
+  line-height: var(--hc-lh-title3);
+  font-weight: 600;
+}
+
+.hc-headline {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+}
+
+.hc-body {
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  font-weight: 400;
+}
+
+.hc-callout {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+}
+
+.hc-footnote {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-muted {
+  color: var(--hc-label-secondary);
+}
+
+/* --- Button -------------------------------------------------------------- */
+
+.hc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-2);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  font-weight: 600;
+  border-radius: var(--hc-radius-md);
+  padding: 0 var(--hc-space-4);
+  height: 40px;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    opacity var(--hc-duration-fast) var(--hc-ease),
+    transform var(--hc-duration-fast) var(--hc-ease);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.hc-btn:active {
+  transform: scale(0.98);
+}
+
+.hc-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+}
+
+.hc-btn--sm {
+  height: 32px;
+  font-size: var(--hc-text-subhead);
+  padding: 0 var(--hc-space-3);
+}
+
+.hc-btn--lg {
+  height: 50px;
+  border-radius: var(--hc-radius-lg);
+}
+
+.hc-btn--primary {
+  background: var(--hc-accent);
+  color: #ffffff;
+}
+
+.hc-btn--primary:hover:not(:disabled) {
+  background: var(--hc-accent-pressed);
+}
+
+.hc-btn--secondary {
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-primary);
+}
+
+.hc-btn--secondary:hover:not(:disabled) {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-btn--plain {
+  background: transparent;
+  color: var(--hc-accent);
+  padding-left: var(--hc-space-2);
+  padding-right: var(--hc-space-2);
+}
+
+.hc-btn--plain:hover:not(:disabled) {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-btn--destructive {
+  background: transparent;
+  color: var(--hc-red);
+}
+
+.hc-btn--destructive:hover:not(:disabled) {
+  background: rgba(255, 69, 58, 0.16);
+}
+
+/* --- Toggle -------------------------------------------------------------- */
+
+.hc-toggle {
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-fill-secondary);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-toggle[data-on="true"] {
+  background: var(--hc-green);
+}
+
+.hc-toggle:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.hc-toggle__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: var(--hc-elev-1);
+  transition: transform var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-toggle[data-on="true"] .hc-toggle__knob {
+  transform: translateX(20px);
+}
+
+/* --- Section ------------------------------------------------------------- */
+
+.hc-section {
+  margin-top: var(--hc-space-6);
+}
+
+.hc-section:first-child {
+  margin-top: 0;
+}
+
+.hc-section__title {
+  font-size: var(--hc-text-subhead);
+  line-height: var(--hc-lh-subhead);
+  color: var(--hc-label-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 var(--hc-space-4);
+  margin-bottom: var(--hc-space-2);
+}
+
+.hc-section__body {
+  background: var(--hc-bg-secondary);
+  border-radius: var(--hc-radius-lg);
+  overflow: hidden;
+}
+
+.hc-section__note {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+  padding: var(--hc-space-2) var(--hc-space-4) 0;
+}
+
+/* --- List row ------------------------------------------------------------ */
+
+.hc-row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  min-height: 44px;
+  padding: var(--hc-space-2) var(--hc-space-4);
+  position: relative;
+}
+
+.hc-row + .hc-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 56px;
+  right: 0;
+  height: 1px;
+  background: var(--hc-separator);
+  transform: scaleY(0.5);
+}
+
+.hc-row--button {
+  cursor: pointer;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-row--button:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-row--button:active {
+  background: var(--hc-fill-primary);
+}
+
+.hc-row__icon {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--hc-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.hc-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-row__title {
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  color: var(--hc-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-row__subtitle {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-row__accessory {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  color: var(--hc-label-secondary);
+}
+
+.hc-row__chevron {
+  color: var(--hc-label-tertiary);
+}
+
+/* --- Text input ---------------------------------------------------------- */
+
+.hc-input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  background: var(--hc-fill-primary);
+  border: 2px solid transparent;
+  border-radius: var(--hc-radius-md);
+  padding: 0 var(--hc-space-3);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  outline: none;
+  transition: border-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-input::placeholder {
+  color: var(--hc-label-tertiary);
+}
+
+.hc-input:focus {
+  border-color: var(--hc-accent);
+}
+
+/* --- Number stepper ------------------------------------------------------ */
+
+.hc-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: var(--hc-fill-primary);
+  border-radius: var(--hc-radius-md);
+  overflow: hidden;
+}
+
+.hc-stepper__btn {
+  width: 36px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--hc-label-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-stepper__btn:hover:not(:disabled) {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-stepper__btn:disabled {
+  color: var(--hc-label-quaternary);
+  cursor: default;
+}
+
+.hc-stepper__value {
+  min-width: 44px;
+  text-align: center;
+  font-size: var(--hc-text-callout);
+  font-variant-numeric: tabular-nums;
+  color: var(--hc-label-primary);
+}
+
+/* --- Select -------------------------------------------------------------- */
+
+/* Self-drawn dropdown: pill button + floating iOS-style menu sheet. */
+.hc-select {
+  position: relative;
+  display: inline-block;
+}
+
+.hc-select__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 32px;
+  background: var(--hc-fill-primary);
+  border: none;
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  padding: 0 var(--hc-space-3);
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+}
+
+.hc-select__button:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-select__button:focus-visible {
+  box-shadow: 0 0 0 2px var(--hc-accent);
+}
+
+.hc-select__chevron {
+  color: var(--hc-label-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.hc-select__chevron[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+.hc-select__menu {
+  /* Positioned by its portal wrapper (fixed, anchored to the button). */
+  max-height: 280px;
+  overflow-y: auto;
+  padding: var(--hc-space-1);
+  background: var(--hc-bg-elevated, #2c2c2e);
+  border-radius: var(--hc-radius-lg, 12px);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 10px 32px rgba(0, 0, 0, 0.45);
+  animation: hc-select-pop 0.14s ease;
+}
+
+@keyframes hc-select-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hc-select__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-3);
+  width: 100%;
+  border: none;
+  background: none;
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  text-align: left;
+  padding: 7px var(--hc-space-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hc-select__option[data-active="true"] {
+  background: var(--hc-fill-primary);
+}
+
+.hc-select__option[data-selected="true"] {
+  color: var(--hc-accent);
+}
+
+.hc-select__check {
+  flex: none;
+  color: var(--hc-accent);
+}
+
+/* --- String list --------------------------------------------------------- */
+
+.hc-strlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-4) var(--hc-space-3);
+}
+
+.hc-strlist__item {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+}
+
+.hc-strlist__add {
+  display: flex;
+  gap: var(--hc-space-2);
+}
+
+.hc-iconbtn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--hc-radius-md);
+  border: none;
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-iconbtn:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-iconbtn--danger:hover {
+  color: var(--hc-red);
+}
+
+/* --- Badge --------------------------------------------------------------- */
+
+.hc-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--hc-space-2);
+  border-radius: var(--hc-radius-pill);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption1);
+  font-weight: 600;
+}
+
+.hc-badge[data-tone="neutral"] {
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-secondary);
+}
+
+.hc-badge[data-tone="accent"] {
+  background: rgba(10, 132, 255, 0.2);
+  color: var(--hc-accent);
+}
+
+.hc-badge[data-tone="green"] {
+  background: rgba(48, 209, 88, 0.2);
+  color: var(--hc-green);
+}
+
+.hc-badge[data-tone="red"] {
+  background: rgba(255, 69, 58, 0.2);
+  color: var(--hc-red);
+}
+
+.hc-badge[data-tone="orange"] {
+  background: rgba(255, 159, 10, 0.2);
+  color: var(--hc-orange);
+}
+
+/* --- Empty state --------------------------------------------------------- */
+
+.hc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--hc-space-10) var(--hc-space-6);
+  color: var(--hc-label-tertiary);
+}
+
+.hc-empty__title {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+  color: var(--hc-label-secondary);
+  margin-top: var(--hc-space-4);
+}
+
+.hc-empty__subtitle {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  color: var(--hc-label-tertiary);
+  margin-top: var(--hc-space-2);
+  max-width: 320px;
+}
+
+/* --- Overlay + panel (fallback entry point) ------------------------------ */
+
+.hc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  animation: hc-fade var(--hc-duration-slow) var(--hc-ease);
+}
+
+.hc-panel {
+  width: min(900px, 92vw);
+  height: min(720px, 88vh);
+  background: var(--hc-bg-primary);
+  border-radius: var(--hc-radius-xl);
+  box-shadow: var(--hc-elev-3);
+  display: flex;
+  overflow: hidden;
+  animation: hc-rise var(--hc-duration-slow) var(--hc-ease);
+}
+
+.hc-panel__sidebar {
+  width: 220px;
+  flex: none;
+  background: var(--hc-bg-secondary);
+  border-right: 1px solid var(--hc-separator-opaque);
+  padding: var(--hc-space-4) var(--hc-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-panel__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-4);
+  color: var(--hc-label-primary);
+}
+
+.hc-panel__brand-name {
+  font-size: var(--hc-text-headline);
+  font-weight: 700;
+}
+
+.hc-navitem {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-secondary);
+  cursor: pointer;
+  font-size: var(--hc-text-callout);
+  border: none;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-navitem:hover {
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-primary);
+}
+
+.hc-navitem[data-active="true"] {
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-primary);
+}
+
+.hc-panel__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hc-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator-opaque);
+}
+
+.hc-panel__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--hc-space-5) var(--hc-space-6) var(--hc-space-8);
+}
+
+.hc-embed {
+  /* When embedded in Discord's own settings pane rather than the overlay. */
+  padding: var(--hc-space-2) 0 var(--hc-space-8);
+}
+
+@keyframes hc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Respect the OS "reduce motion" preference. */
+@media (prefers-reduced-motion: reduce) {
+  .hc-overlay,
+  .hc-panel,
+  .hc-btn,
+  .hc-toggle__knob {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* --- Setting cells (schema-driven form) ---------------------------------- */
+
+.hc-cell {
+  padding: var(--hc-space-2) var(--hc-space-4);
+  position: relative;
+}
+
+.hc-cell + .hc-cell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--hc-space-4);
+  right: 0;
+  height: 1px;
+  background: var(--hc-separator);
+  transform: scaleY(0.5);
+}
+
+.hc-cell--row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  min-height: 44px;
+}
+
+.hc-cell__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-cell__label {
+  font-size: var(--hc-text-body);
+  line-height: var(--hc-lh-body);
+  color: var(--hc-label-primary);
+}
+
+.hc-cell__desc {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-cell__control {
+  flex: none;
+}
+
+.hc-cell__stacked {
+  padding-top: var(--hc-space-2);
+}
+
+/* --- Toolbar (search + actions) ------------------------------------------ */
+
+.hc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  margin-bottom: var(--hc-space-4);
+}
+
+.hc-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 36px;
+  padding: 0 var(--hc-space-3);
+  background: var(--hc-fill-primary);
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-label-tertiary);
+}
+
+.hc-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+}
+
+.hc-search input::placeholder {
+  color: var(--hc-label-tertiary);
+}
+
+/* --- Plugin detail header ------------------------------------------------ */
+
+.hc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-1);
+  background: transparent;
+  border: none;
+  color: var(--hc-accent);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--hc-text-callout);
+  padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) 0;
+  margin-bottom: var(--hc-space-4);
+}
+
+.hc-detail-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hc-space-3);
+  margin-bottom: var(--hc-space-5);
+}
+
+.hc-detail-head__icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--hc-radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.hc-detail-head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-detail-head__name {
+  font-size: var(--hc-text-title3);
+  line-height: var(--hc-lh-title3);
+  font-weight: 600;
+}
+
+.hc-detail-head__desc {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  color: var(--hc-label-secondary);
+  margin-top: 2px;
+}
+
+.hc-detail-head__meta {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-tertiary);
+  margin-top: var(--hc-space-2);
+}
+
+/* --- Log viewer ---------------------------------------------------------- */
+
+.hc-logs {
+  font-family: var(--hc-font-mono);
+  font-size: var(--hc-text-footnote);
+  line-height: 1.7;
+  background: var(--hc-bg-secondary);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-space-3);
+  overflow-x: auto;
+}
+
+.hc-logline {
+  display: flex;
+  gap: var(--hc-space-2);
+  white-space: pre;
+  padding: 1px 0;
+}
+
+.hc-logline__time {
+  color: var(--hc-label-tertiary);
+  flex: none;
+}
+
+.hc-logline__scope {
+  color: var(--hc-label-secondary);
+  flex: none;
+}
+
+.hc-logline__msg {
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hc-logline[data-level="warn"] .hc-logline__msg {
+  color: var(--hc-orange);
+}
+
+.hc-logline[data-level="error"] .hc-logline__msg {
+  color: var(--hc-red);
+}
+
+.hc-logline[data-level="debug"] .hc-logline__msg {
+  color: var(--hc-label-secondary);
+}
+
+/* --- About --------------------------------------------------------------- */
+
+.hc-about__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hc-about__value {
+  color: var(--hc-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Generic vertical rhythm --------------------------------------------- */
+
+.hc-stack > * + * {
+  margin-top: var(--hc-space-4);
+}
+
+.hc-inline-note {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  color: var(--hc-orange);
+  font-size: var(--hc-text-footnote);
+}
+
+.hc-inline-note--danger {
+  color: var(--hc-red);
+}
+
+/* --- Detail head toggle stays top-aligned with the icon ------------------ */
+
+.hc-detail-head > span {
+  flex: none;
+  padding-top: var(--hc-space-1);
+}
+
+/* --- About hero ---------------------------------------------------------- */
+
+.hc-about-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) 0 var(--hc-space-4);
+  color: var(--hc-label-primary);
+}
+
+.hc-about-hero__name {
+  font-size: var(--hc-text-title2);
+  line-height: var(--hc-lh-title2);
+  font-weight: 700;
+}
+
+.hc-about-hero__ver {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+}
+
+/* --- Tabs (used by plugin pages) ----------------------------------------- */
+
+.hc-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  margin-bottom: var(--hc-space-4);
+}
+
+.hc-tabs__spacer {
+  flex: 1;
+}
+
+.hc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 32px;
+  padding: 0 var(--hc-space-3);
+  border: none;
+  border-radius: var(--hc-radius-md);
+  background: transparent;
+  color: var(--hc-label-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-tab:hover {
+  color: var(--hc-label-primary);
+}
+
+.hc-tab[data-active="true"] {
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-primary);
+}
+
+/* --- Save bar --------------------------------------------------------------- */
+
+.hc-savebar {
+  position: sticky;
+  bottom: var(--hc-space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-4);
+  margin-top: var(--hc-space-4);
+  padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-4);
+  background: var(--hc-bg-elevated, #2c2c2e);
+  border-radius: var(--hc-radius-lg);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+  animation: hc-select-pop 0.14s ease;
+}
+
+.hc-savebar__label {
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-secondary);
+}
+
+.hc-savebar__actions {
+  display: flex;
+  gap: var(--hc-space-2);
+  flex: none;
+}
+
+/* --- Segmented control ------------------------------------------------------ */
+
+.hc-segment {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin-bottom: var(--hc-space-4);
+  background: var(--hc-fill-primary);
+  border-radius: var(--hc-radius-md);
+  width: fit-content;
+}
+
+.hc-segment__item {
+  border: none;
+  background: transparent;
+  color: var(--hc-label-secondary);
+  font-family: inherit;
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  height: 28px;
+  padding: 0 var(--hc-space-4);
+  border-radius: calc(var(--hc-radius-md) - 2px);
+  cursor: pointer;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-segment__item:hover {
+  color: var(--hc-label-primary);
+}
+
+.hc-segment__item[data-active="true"] {
+  background: var(--hc-bg-elevated, #2c2c2e);
+  color: var(--hc-label-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* --- Pager ----------------------------------------------------------------- */
+
+.hc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--hc-space-3);
+  margin-top: var(--hc-space-4);
+}
+
+.hc-pager__label {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 96px;
+  text-align: center;
+}
+
+.hc-pager .hc-tab:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* --- Captured message entries -------------------------------------------- */
+
+.hc-msglist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-2);
+}
+
+.hc-msg {
+  background: var(--hc-bg-secondary);
+  border-radius: var(--hc-radius-lg);
+  padding: var(--hc-space-3) var(--hc-space-4);
+  border-left: 2px solid var(--hc-red);
+}
+
+.hc-msg__head {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  margin-bottom: var(--hc-space-1);
+}
+
+.hc-msg__author {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+
+.hc-msg__where {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+}
+
+.hc-msg__guild {
+  color: var(--hc-label-secondary);
+  font-weight: 600;
+}
+
+.hc-msg__sep {
+  color: var(--hc-label-tertiary);
+  margin: 0 4px;
+}
+
+.hc-msg__time {
+  margin-left: auto;
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Jump-to-message action, pinned to the right of each row's header. Keeps the
+ * header on one line and doesn't steal the space the time claims via
+ * margin-left:auto (which already pushes both to the right edge). */
+.hc-msg__jump {
+  flex: none;
+  margin-left: var(--hc-space-2);
+}
+
+.hc-msg__body {
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hc-msg__empty {
+  color: var(--hc-label-tertiary);
+  font-style: italic;
+}
+
+.hc-msg__meta {
+  margin-top: var(--hc-space-1);
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+}
+
+/* Attachment thumbnails. Constrained so wide/tall media never spills past the
+ * message card \u2014 a single image caps at the content width, and the row wraps
+ * when there are several. */
+.hc-msg__media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hc-space-2);
+  margin-top: var(--hc-space-2);
+  min-width: 0;
+}
+
+.hc-msg__media a {
+  color: var(--hc-accent);
+  font-size: var(--hc-text-footnote);
+  word-break: break-all;
+}
+
+.hc-msg__thumb {
+  max-width: 100%;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-fill-secondary);
+}
+
+/* Inline custom emoji, sized to the surrounding text like Discord's own. */
+.hc-emoji {
+  display: inline-block;
+  width: 1.375em;
+  height: 1.375em;
+  margin: 0 1px;
+  object-fit: contain;
+  vertical-align: bottom;
+}
+
+.hc-msg__versions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-1);
+}
+
+.hc-msg__version {
+  display: flex;
+  gap: var(--hc-space-2);
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+}
+
+.hc-msg__vtag {
+  flex: none;
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--hc-text-footnote);
+  padding-top: 2px;
+}
+
+.hc-msg__vbody {
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The \`edited\` tone reuses the orange rule via a modifier. */
+.hc-msg--edited {
+  border-left-color: var(--hc-orange);
+}
+
+/* --- message-logger status banner ---------------------------------------- *
+ * A compact warning on the log page, shown only when at least one of the
+ * plugin's source patches failed to match the running Discord build. Inside
+ * the .halcyon overlay/embed, so tokens are used throughout. Amber tone: the
+ * feature isn't broken \u2014 records still land in the list below \u2014 but the
+ * in-chat red row is off, and this is the only place a non-console user will
+ * see that. */
+.hc-mlog-warn {
+  border: 1px solid rgba(224, 165, 63, 0.35);
+  background: rgba(224, 165, 63, 0.08);
+  border-radius: var(--hc-radius-md);
+  padding: var(--hc-space-3) var(--hc-space-4);
+  margin: var(--hc-space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hc-mlog-warn__title {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: #e0a53f;
+}
+.hc-mlog-warn__detail {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-mlog-warn__list {
+  margin: 2px 0 0;
+  padding-left: 18px;
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Deleted message (in-chat) ------------------------------------------- */
+
+/*
+ * Applied to Discord's own message row when a deleted message is kept in place.
+ * These live outside the .halcyon scope on purpose \u2014 they decorate Discord
+ * elements \u2014 so literal values, no tokens.
+ *
+ * The row itself only carries the stable .hc-deleted hook; the chosen style is
+ * a class on <html> (hc-mlog-<style>). Splitting them lets a style change take
+ * effect immediately \u2014 swap the root class and every kept message updates \u2014
+ * instead of the pick only landing on rows Discord repaints after the change.
+ */
+
+/* Style: red tint (default) \u2014 flat red wash + left bar. */
+.hc-mlog-tint .hc-deleted {
+  background-color: rgba(255, 69, 58, 0.1);
+  box-shadow: inset 2px 0 0 #ff453a;
+}
+
+/* Style: red text \u2014 content turns red, no background. */
+.hc-mlog-text .hc-deleted [class*="messageContent"],
+.hc-mlog-text .hc-deleted [class*="contents"] > div:not([class*="header"]) {
+  color: #f04747 !important;
+}
+.hc-mlog-text .hc-deleted [class*="messageContent"] a {
+  color: #ff6b6b !important;
+}
+
+/* Style: ghost \u2014 the whole row fades. */
+.hc-mlog-ghost .hc-deleted {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+/* Style: strike \u2014 red strikethrough over the text. */
+.hc-mlog-strike .hc-deleted [class*="messageContent"] {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 69, 58, 0.7);
+  text-decoration-thickness: 1.5px;
+}
+.hc-mlog-strike .hc-deleted {
+  box-shadow: inset 2px 0 0 rgba(255, 69, 58, 0.5);
+}
+
+/* "This message was deleted (\u2026)": marker row under the content. One base
+ * class plus a look modifier chosen in settings. */
+.hc-deleted-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  color: #f04747;
+  user-select: none;
+}
+.hc-deleted-marker__icon {
+  flex: none;
+}
+
+/* Look: badge \u2014 pill-shaped chip on its OWN line. It used \`display: inline-flex\`,
+ * which let the pill run inline with the message text so the two never wrapped
+ * ("\u4E0D\u4F1A\u6362\u884C"). Inheriting the base \`display: flex\` makes it block-level (its own
+ * line); \`width: fit-content\` keeps the pill only as wide as its label, and
+ * \`max-width: 100%\` stops a long label from overflowing the row. */
+.hc-deleted-marker--badge {
+  width: fit-content;
+  max-width: 100%;
+  background: rgba(255, 69, 58, 0.12);
+  border-radius: 9999px;
+  padding: 2px 10px;
+  margin-top: 4px;
+}
+
+/* Look: quote \u2014 indented behind a red bar, like a blockquote. */
+.hc-deleted-marker--quote {
+  border-left: 3px solid rgba(255, 69, 58, 0.7);
+  padding-left: 8px;
+  margin-top: 4px;
+  color: rgba(240, 71, 71, 0.85);
+}
+
+/* Tone: edited \u2014 same marker layout, calmer amber so an edit doesn't read as a
+ * deletion. Overrides the red the delete marker uses. */
+.hc-deleted-marker--edited {
+  color: #e0a53f;
+}
+.hc-deleted-marker--edited.hc-deleted-marker--badge {
+  background: rgba(224, 165, 63, 0.14);
+}
+.hc-deleted-marker--edited.hc-deleted-marker--quote {
+  border-left-color: rgba(224, 165, 63, 0.7);
+  color: rgba(224, 165, 63, 0.9);
+}
+
+/* --- Username next to nickname (show-username plugin) --------------------- */
+
+/*
+ * Appended inside Discord's message header, so literal values, no tokens.
+ * One base class plus a per-style modifier chosen in the plugin's settings.
+ */
+.hc-username {
+  font-size: 0.75rem;
+  font-weight: 500;
+  vertical-align: baseline;
+}
+
+.hc-username--muted {
+  color: var(--text-muted, #949ba4);
+}
+
+.hc-username--pill {
+  color: var(--text-muted, #949ba4);
+  background: rgba(128, 132, 142, 0.16);
+  border-radius: 9999px;
+  padding: 0 6px;
+  line-height: 1.35;
+  display: inline-block;
+}
+
+.hc-username--at {
+  color: #949cf7;
+}
+
+.hc-username--paren {
+  color: var(--text-muted, #949ba4);
+  font-weight: 400;
+}
+
+/* --- Inline edit history (in-chat) ---------------------------------------- */
+
+/*
+ * Old versions of an edited message, rendered above the current content by the
+ * message-logger content patch. Like .hc-deleted this decorates Discord's own
+ * DOM, so literal values, no tokens. The base class only handles wrapping; a
+ * per-style modifier (chosen in settings) sets the look. MessageExtras re-reads
+ * the modifier on every render, so changing the style applies live.
+ */
+.hc-edit-history__version {
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Per-version edit time, shown inline at the end of each old-version line.
+ * Muted and compact; opacity keeps it tied to whatever the version style is,
+ * and text-decoration:none stops the strike style from striking the time. */
+.hc-edit-history__time {
+  margin-left: 6px;
+  font-size: 0.72em;
+  opacity: 0.55;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  vertical-align: baseline;
+}
+
+/* The old-version line mirrors the deleted-message style (tint/text/ghost/
+ * strike) so both share one setting; strike stays its natural default look. */
+
+/* Style: red strikethrough \u2014 struck out in red, like removed text. */
+.hc-edit-history__version--strike {
+  color: rgba(255, 69, 58, 0.75);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 69, 58, 0.4);
+}
+
+/* Style: red text \u2014 red, no strikethrough. */
+.hc-edit-history__version--text {
+  color: rgba(255, 69, 58, 0.85);
+}
+
+/* Style: ghost \u2014 faded out, keeps the normal text color. */
+.hc-edit-history__version--ghost {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+/* Style: tint \u2014 red wash + left bar, as a quote-like block on the line. */
+.hc-edit-history__version--tint {
+  background-color: rgba(255, 69, 58, 0.1);
+  box-shadow: inset 2px 0 0 #ff453a;
+  padding: 1px 6px 1px 8px;
+  border-radius: 3px;
+}
+
+/* \u2500\u2500 message-cleaner page \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+ * The self-message cleaner's operate surface. Scope/confirm reuse .hc-section
+ * and .hc-cell; these rules cover the action bar, the live status line, the
+ * preview list, and the stat readout. Decorates Halcyon's own panel, so every
+ * value is a token. */
+.hc-cleaner__actions {
+  display: flex;
+  gap: var(--hc-space-3);
+  margin: var(--hc-space-4) 0;
+}
+.hc-cleaner__actions .hc-btn {
+  flex: 1;
+}
+.hc-cleaner__status {
+  margin: var(--hc-space-3) 0;
+  padding: var(--hc-space-3) var(--hc-space-4);
+  background: var(--hc-fill-secondary);
+  border-radius: var(--hc-radius-md);
+}
+.hc-cleaner__status-state {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+.hc-cleaner__status-detail {
+  margin-top: 2px;
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+  word-break: break-word;
+}
+.hc-cleaner__list {
+  display: flex;
+  flex-direction: column;
+}
+.hc-cleaner__item {
+  display: flex;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-4);
+  font-size: var(--hc-text-footnote);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__item:last-child {
+  border-bottom: none;
+}
+.hc-cleaner__item-time {
+  flex-shrink: 0;
+  color: var(--hc-accent);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__item-text {
+  color: var(--hc-label-primary);
+  word-break: break-word;
+}
+.hc-cleaner__more {
+  padding: var(--hc-space-2) var(--hc-space-4);
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+}
+.hc-cleaner__stat {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: var(--hc-space-2);
+}
+.hc-cleaner__stat-num {
+  font-size: var(--hc-text-title1);
+  font-weight: 700;
+  color: var(--hc-accent);
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__stat-unit {
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-secondary);
+}
+
+/* \u2500\u2500 message-cleaner picker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+.hc-cleaner__picker-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-3) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__picker-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 700;
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-primary);
+}
+.hc-cleaner__picker-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 360px;
+  padding: var(--hc-space-2);
+}
+.hc-cleaner__picker-item {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  cursor: pointer;
+  color: var(--hc-label-primary);
+  transition: background var(--hc-duration-fast) var(--hc-ease);
+}
+.hc-cleaner__picker-item:hover {
+  background: var(--hc-fill-secondary);
+}
+.hc-cleaner__picker-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--hc-fill-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: var(--hc-text-subhead);
+  color: var(--hc-label-secondary);
+}
+.hc-cleaner__picker-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hc-cleaner__picker-name {
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hc-cleaner__picker-empty {
+  padding: var(--hc-space-5);
+  text-align: center;
+  font-size: var(--hc-text-footnote);
+  color: var(--hc-label-tertiary);
+}
+
+/* \u2500\u2500 emote-cloner server picker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+ * A floating modal (mounted in its own .halcyon host over Discord) shown when
+ * "\u590D\u5236\u8868\u60C5/\u8D34\u7EB8\u5230\u670D\u52A1\u5668" is clicked. Sits on the shared .hc-overlay backdrop;
+ * the panel is compact, with a search box and a scrollable, icon-bearing list
+ * of the servers the account can add expressions to. Decorates Halcyon's own
+ * surface, so every value is a token. */
+.hc-emote-picker {
+  width: min(440px, 92vw);
+  max-height: min(560px, 82vh);
+  background: var(--hc-bg-primary);
+  border-radius: var(--hc-radius-xl);
+  box-shadow: var(--hc-elev-3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: hc-rise var(--hc-duration-slow) var(--hc-ease);
+}
+
+.hc-emote-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-4) var(--hc-space-4) var(--hc-space-3);
+  border-bottom: 1px solid var(--hc-separator-opaque);
+}
+
+.hc-emote-picker__title {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+
+.hc-emote-picker__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--hc-label-secondary);
+  border-radius: var(--hc-radius-md);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-emote-picker__close:hover {
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-primary);
+}
+
+.hc-emote-picker__search {
+  padding: var(--hc-space-3) var(--hc-space-4) var(--hc-space-2);
+}
+
+.hc-emote-picker__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--hc-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-emote-picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  cursor: pointer;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-emote-picker__item:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-emote-picker__icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--hc-fill-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: var(--hc-label-secondary);
+}
+
+.hc-emote-picker__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hc-emote-picker__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--hc-text-body);
+  font-weight: 500;
+  color: var(--hc-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-emote-picker__empty {
+  padding: var(--hc-space-8) var(--hc-space-6);
+  text-align: center;
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-footnote);
+}
+
+/* Thin, subtle scrollbar for the picker list. Our overlay mounts in its own
+ * .halcyon host, which Discord's global scrollbar styling doesn't reach, so
+ * without this the list falls back to the chunky default OS scrollbar. */
+.hc-emote-picker__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.hc-emote-picker__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hc-emote-picker__list::-webkit-scrollbar-thumb {
+  background: var(--hc-fill-secondary);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.hc-emote-picker__list::-webkit-scrollbar-thumb:hover {
+  background: var(--hc-label-tertiary);
+  background-clip: padding-box;
+}
+
+/* Post-pick status view (copying / done / error), shown in place of the list
+ * so a clone never looks like "nothing happened" even when the toast module
+ * isn't present on this build. */
+.hc-emote-picker__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-8) var(--hc-space-6);
+}
+
+.hc-emote-picker__status-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.hc-emote-picker__status[data-state="done"] .hc-emote-picker__status-icon {
+  color: var(--hc-green);
+}
+
+.hc-emote-picker__status[data-state="error"] .hc-emote-picker__status-icon {
+  color: var(--hc-red);
+}
+
+.hc-emote-picker__status-title {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+
+.hc-emote-picker__status-detail {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+  max-width: 340px;
+  word-break: break-word;
+}
+`;
 
   // src/ui/inject-styles.ts
   var STYLE_ID = "halcyon-styles";
@@ -1630,12 +3448,112 @@ ${components_default}`;
     return /* @__PURE__ */ React.createElement("div", { className: "hc-section" }, title && /* @__PURE__ */ React.createElement("div", { className: "hc-section__title" }, title), /* @__PURE__ */ React.createElement("div", { className: "hc-section__body" }, children), note && /* @__PURE__ */ React.createElement("div", { className: "hc-section__note" }, note));
   }
 
+  // src/core/update.ts
+  var log4 = logger("update");
+  var REPO = "mzrodyu/CatieDiscordTools";
+  var VERSION_URL = `https://raw.githubusercontent.com/${REPO}/main/package.json`;
+  var PROJECT_URL = `https://github.com/${REPO}`;
+  var cached = null;
+  var inflight = null;
+  function currentVersion() {
+    return true ? "0.2.0" : "dev";
+  }
+  function getCachedUpdate() {
+    return cached;
+  }
+  function parseVersion(v) {
+    return String(v).trim().replace(/^v/i, "").split(/[.+-]/).map((p) => parseInt(p, 10)).filter((n) => Number.isFinite(n));
+  }
+  function isNewer(remote, local) {
+    const a = parseVersion(remote);
+    const b = parseVersion(local);
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const x = a[i] ?? 0;
+      const y = b[i] ?? 0;
+      if (x !== y) return x > y;
+    }
+    return false;
+  }
+  async function fetchText(url) {
+    const native = globalThis.HalcyonNative;
+    if (native && typeof native.fetchText === "function") {
+      try {
+        const text = await native.fetchText(url);
+        if (typeof text === "string") return text;
+      } catch {
+      }
+    }
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) return await res.text();
+    } catch {
+    }
+    return null;
+  }
+  async function checkForUpdate(force = false) {
+    if (!force && cached && cached.status !== "unknown") return cached;
+    if (inflight) return inflight;
+    inflight = (async () => {
+      const current = currentVersion();
+      const raw = await fetchText(VERSION_URL);
+      let state;
+      if (raw == null) {
+        state = { status: "unknown", current, latest: null };
+      } else {
+        let latest = null;
+        try {
+          const parsed = JSON.parse(raw);
+          latest = typeof parsed?.version === "string" && parsed.version ? parsed.version : null;
+        } catch {
+          latest = null;
+        }
+        if (!latest) {
+          state = { status: "unknown", current, latest: null };
+        } else if (current === "dev") {
+          state = { status: "current", current, latest };
+        } else {
+          state = { status: isNewer(latest, current) ? "outdated" : "current", current, latest };
+        }
+      }
+      if (state.status === "outdated") {
+        log4.info(`update available: ${state.current} \u2192 ${state.latest}`);
+      } else if (state.status === "unknown") {
+        log4.info("could not determine the latest version (CSP or offline) \u2014 skipping notice");
+      } else {
+        log4.info(`up to date (${state.current})`);
+      }
+      cached = state;
+      inflight = null;
+      return state;
+    })();
+    return inflight;
+  }
+
   // src/ui/settings/AboutView.tsx
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.1.9" : "dev";
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
+    const version = true ? "0.2.0" : "dev";
+    const [update, setUpdate] = React.useState(getCachedUpdate);
+    React.useEffect(() => {
+      let alive = true;
+      void checkForUpdate().then((state) => {
+        if (alive) setUpdate(state);
+      });
+      return () => {
+        alive = false;
+      };
+    }, []);
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version, update?.status === "outdated" && "\uFF0C\u6709\u65B0\u7248\u672C\u53EF\u7528"))), update?.status === "outdated" && /* @__PURE__ */ React.createElement(Section, { title: "\u66F4\u65B0" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u53D1\u73B0\u65B0\u7248\u672C ", update.latest)), /* @__PURE__ */ React.createElement(
+      Button,
+      {
+        variant: "primary",
+        size: "sm",
+        onClick: () => window.open(PROJECT_URL, "_blank", "noopener,noreferrer")
+      },
+      "\u524D\u5F80\u4E0B\u8F7D"
+    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
       Section,
       {
         title: "\u9879\u76EE",
@@ -1686,8 +3604,9 @@ ${components_default}`;
   }
 
   // src/ui/settings/overlay.tsx
-  var log4 = logger("settings");
+  var log5 = logger("settings");
   var host = null;
+  var unmount = null;
   var keyHandler = null;
   function openSettings() {
     injectStyles();
@@ -1700,9 +3619,9 @@ ${components_default}`;
     };
     document.addEventListener("keydown", keyHandler);
     try {
-      ReactDOM.render(React.createElement(Overlay, { onClose: closeSettings }), host);
+      unmount = mountDetached(React.createElement(Overlay, { onClose: closeSettings }), host);
     } catch (err) {
-      log4.error("could not open settings overlay", err);
+      log5.error("could not open settings overlay", err);
       closeSettings();
     }
   }
@@ -1711,11 +3630,11 @@ ${components_default}`;
       document.removeEventListener("keydown", keyHandler);
       keyHandler = null;
     }
+    if (unmount) {
+      unmount();
+      unmount = null;
+    }
     if (host) {
-      try {
-        ReactDOM.unmountComponentAtNode(host);
-      } catch {
-      }
       host.remove();
       host = null;
     }
@@ -1737,7 +3656,7 @@ ${components_default}`;
   }
 
   // src/plugins/settings-host/index.tsx
-  var log5 = logger("settings-host");
+  var log6 = logger("settings-host");
   function PluginsSection() {
     return /* @__PURE__ */ React.createElement(EmbeddedView, { tab: "plugins" });
   }
@@ -1783,7 +3702,7 @@ ${components_default}`;
         return layoutTypes;
       }
     } catch (err) {
-      log5.warn("could not resolve settings layout types; using fallback values", err);
+      log6.warn("could not resolve settings layout types; using fallback values", err);
     }
     return FALLBACK_LAYOUT_TYPES;
   }
@@ -1823,7 +3742,7 @@ ${components_default}`;
         }
       }
     } catch (err) {
-      log5.warn("could not read layout types from the live tree; using fallbacks", err);
+      log6.warn("could not read layout types from the live tree; using fallbacks", err);
     }
     return types;
   }
@@ -1911,11 +3830,11 @@ ${components_default}`;
         layout: layout.slice(0, 12).map((n) => describeNode(n, 2))
       };
       globalThis.__halcyonLayoutProbe = JSON.stringify(payload, null, 2);
-      log5.info(
+      log6.info(
         "[embed-probe] captured Discord's settings layout shape. In the console run  copy(__halcyonLayoutProbe)  and paste the result back."
       );
     } catch (err) {
-      log5.warn("[embed-probe] failed to capture layout shape", err);
+      log6.warn("[embed-probe] failed to capture layout shape", err);
     }
   }
   function buildLegacySections() {
@@ -1992,10 +3911,10 @@ ${components_default}`;
         if (index < 0) index = layout.findIndex((n) => n?.key === "user_section");
         if (index < 0) index = Math.min(2, layout.length);
         layout.splice(index, 0, section);
-        log5.info(`native settings embed active \u2014 section inserted at index ${index}/${layout.length}`);
+        log6.info(`native settings embed active \u2014 section inserted at index ${index}/${layout.length}`);
         return layout;
       } catch (err) {
-        log5.error("failed to inject settings section into layout", err);
+        log6.error("failed to inject settings section into layout", err);
         return layout;
       }
     },
@@ -2021,11 +3940,11 @@ ${components_default}`;
         }
         if (!diagLogged) {
           diagLogged = true;
-          log5.info(`native settings embed active (legacy) \u2014 ${sections.length} base sections`);
+          log6.info(`native settings embed active (legacy) \u2014 ${sections.length} base sections`);
         }
         return out;
       } catch (err) {
-        log5.error("failed to inject settings sections", err);
+        log6.error("failed to inject settings sections", err);
         return sections;
       }
     },
@@ -2038,7 +3957,7 @@ ${components_default}`;
         openSettings();
       };
       window.addEventListener("keydown", onKeyDown);
-      log5.info("settings host ready \u2014 open with Ctrl/Cmd+Shift+H");
+      log6.info("settings host ready \u2014 open with Ctrl/Cmd+Shift+H");
     },
     stop() {
       if (onKeyDown) {
@@ -2049,8 +3968,119 @@ ${components_default}`;
     }
   });
 
+  // src/core/common/context-menu.ts
+  var log7 = logger("context-menu");
+  var navPatches = /* @__PURE__ */ new Map();
+  var lastTarget = null;
+  var trackingInstalled = false;
+  function installTargetTracking() {
+    if (trackingInstalled || typeof document === "undefined") return;
+    trackingInstalled = true;
+    document.addEventListener(
+      "contextmenu",
+      (e) => {
+        lastTarget = e.target ?? null;
+      },
+      true
+    );
+  }
+  function getContextMenuTarget() {
+    return lastTarget;
+  }
+  var menuItemComponent = null;
+  function getMenuItemComponent() {
+    return menuItemComponent;
+  }
+  function findMenuItemType(children) {
+    for (const child of children) {
+      if (child == null) continue;
+      if (Array.isArray(child)) {
+        const found = findMenuItemType(child);
+        if (found) return found;
+      }
+      const props = child.props;
+      if (child.type && props && typeof props.id === "string" && (props.action != null || props.label != null || props.render != null || props.onClick != null || props.subtext != null)) {
+        return child.type;
+      }
+      const sub = props?.children;
+      if (sub) {
+        const found = findMenuItemType(Array.isArray(sub) ? sub : [sub]);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  function addContextMenuPatch(navId, callback) {
+    installTargetTracking();
+    const ids = Array.isArray(navId) ? navId : [navId];
+    for (const id of ids) {
+      let set = navPatches.get(id);
+      if (!set) {
+        set = /* @__PURE__ */ new Set();
+        navPatches.set(id, set);
+      }
+      set.add(callback);
+    }
+    return () => {
+      for (const id of ids) navPatches.get(id)?.delete(callback);
+    };
+  }
+  function cloneChildren(children) {
+    if (Array.isArray(children)) return children.slice();
+    return children == null ? [] : [children];
+  }
+  function usePatchContextMenu(props) {
+    try {
+      if (!props || typeof props.navId !== "string") return props;
+      if (!menuItemComponent && props.children != null) {
+        menuItemComponent = findMenuItemType(cloneChildren(props.children));
+      }
+      const set = navPatches.get(props.navId);
+      if (!set || set.size === 0) return props;
+      const next = { ...props, children: cloneChildren(props.children) };
+      for (const cb of set) {
+        try {
+          cb(next.children);
+        } catch (err) {
+          log7.error(`context-menu patch for "${props.navId}" threw`, err);
+        }
+      }
+      return next;
+    } catch (err) {
+      log7.error("failed to apply context-menu patches", err);
+      return props;
+    }
+  }
+
+  // src/plugins/context-menu-api/index.ts
+  var context_menu_api_default = definePlugin({
+    id: "context-menu-api",
+    name: "\u53F3\u952E\u83DC\u5355 API",
+    description: "\u4E3A\u5176\u4ED6\u63D2\u4EF6\u63D0\u4F9B\u5411 Discord \u53F3\u952E\u83DC\u5355\u6CE8\u5165\u83DC\u5355\u9879\u7684\u80FD\u529B\u3002",
+    authors: [{ name: "Vencord" }, { name: "caitemm" }],
+    category: "misc",
+    required: true,
+    hidden: true,
+    patches: [
+      {
+        // The central menu component. Inject our hook at the very top of the
+        // function body, right before it destructures navId out of its props.
+        label: "context-menu central handler",
+        find: "Menu API only allows Items",
+        replacement: {
+          match: /(?=let\{navId:)(?<=function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*)\).+?)/,
+          replace: "$1=$self._usePatchContextMenu($1);"
+        }
+      }
+    ],
+    /** Called from the patched menu component with its props. */
+    _usePatchContextMenu(props) {
+      return usePatchContextMenu(props);
+    }
+  });
+
   // src/core/patcher/index.ts
-  var log6 = logger("patcher");
+  var log8 = logger("patcher");
   var INSTALLED = Symbol("halcyon.patch");
   function ensureInstalled(target, method) {
     const current = target[method];
@@ -2077,7 +4107,7 @@ ${components_default}`;
         try {
           hook(ctx);
         } catch (err) {
-          log6.error(`before-hook on "${method}" threw`, err);
+          log8.error(`before-hook on "${method}" threw`, err);
         }
       }
       if (hooks.instead.size) {
@@ -2088,7 +4118,7 @@ ${components_default}`;
             outcome = hook(ctx);
             ran = true;
           } catch (err) {
-            log6.error(`instead-hook on "${method}" threw; falling back to original`, err);
+            log8.error(`instead-hook on "${method}" threw; falling back to original`, err);
             outcome = ctx.callOriginal();
             ran = true;
           }
@@ -2105,7 +4135,7 @@ ${components_default}`;
         try {
           hook(ctx);
         } catch (err) {
-          log6.error(`after-hook on "${method}" threw`, err);
+          log8.error(`after-hook on "${method}" threw`, err);
         }
       }
       return ctx.result;
@@ -2126,7 +4156,7 @@ ${components_default}`;
   }
   function attach(kind, target, method, hook) {
     if (target == null) {
-      log6.error(`refusing to patch "${method}" on a null target`);
+      log8.error(`refusing to patch "${method}" on a null target`);
       return () => {
       };
     }
@@ -2134,7 +4164,7 @@ ${components_default}`;
     try {
       hooks = ensureInstalled(target, method);
     } catch (err) {
-      log6.error(err);
+      log8.error(err);
       return () => {
       };
     }
@@ -2197,9 +4227,42 @@ ${components_default}`;
     (m) => typeof m?.subscribeToGuild === "function" || typeof m?.subscribeToChannel === "function"
   );
   var moment = lazy((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");
+  var NavigationRouter = lazy(
+    (m) => typeof m?.transitionTo === "function" && typeof m?.replaceWith === "function" && typeof m?.transitionToGuild === "function"
+  );
+  var AppLayers = lazy(
+    (m) => typeof m?.popLayer === "function" && typeof m?.pushLayer === "function"
+  );
+  var RestAPI = lazy(
+    (m) => (
+      // EXACTLY Vencord's discriminator: an *object* carrying `del` AND `put`.
+      // This is what reliably picks Discord's real authenticated API client.
+      // Every earlier attempt failed on the wrong signal: requiring
+      // `getAPIBaseURL` matched nothing (this build doesn't expose it where our
+      // scan looks), and requiring get/post/put/del-as-functions matched a
+      // generic no-op HTTP client that answered 200 with an empty body and
+      // created nothing (the silent sticker-upload failure).
+      typeof m === "object" && typeof m?.del === "function" && typeof m?.put === "function" && // Reject Discord's intl `t` proxy, which answers EVERY property access with
+      // a message value — so del/put "look like" functions and it wins the probe.
+      // A real module returns undefined for a name it doesn't export; the
+      // answer-everything proxy returns a (truthy) message, failing this guard.
+      typeof m?.__halcyon_probe__ === "undefined"
+    )
+  );
+  var PermissionStore = lazy(
+    (m) => m?.getName?.() === "PermissionStore" && typeof m?.can === "function"
+  );
+  var EmojiStore = lazy((m) => m?.getName?.() === "EmojiStore");
+  var Constants = lazy(
+    (m) => typeof m?.Endpoints?.GUILD_STICKER_PACKS === "function"
+  );
+  var StickersStore = lazy((m) => m?.getName?.() === "StickersStore");
+  var Toasts = lazy(
+    (m) => typeof m?.showToast === "function" && typeof m?.createToast === "function"
+  );
 
   // src/core/settings/index.ts
-  var log7 = logger("settings");
+  var log9 = logger("settings");
   function deepClone(value) {
     if (value === null || typeof value !== "object") return value;
     return JSON.parse(JSON.stringify(value));
@@ -2221,7 +4284,7 @@ ${components_default}`;
         try {
           listener(next, prev);
         } catch (err) {
-          log7.error(`settings listener for "${key}" threw`, err);
+          log9.error(`settings listener for "${key}" threw`, err);
         }
       }
     };
@@ -2229,7 +4292,7 @@ ${components_default}`;
       get: (target, key) => target[key],
       set: (target, key, value) => {
         if (!(key in schema)) {
-          log7.warn(`ignoring write to unknown setting "${key}"`);
+          log9.warn(`ignoring write to unknown setting "${key}"`);
           return true;
         }
         const prev = target[key];
@@ -2402,7 +4465,7 @@ ${components_default}`;
   });
 
   // src/plugins/message-logger/store.ts
-  var log8 = logger("message-logger");
+  var log10 = logger("message-logger");
   var DATA_NS = "message-logger.log";
   var MessageLogStore = class {
     deleted = [];
@@ -2521,7 +4584,7 @@ ${components_default}`;
       try {
         saveNamespace(DATA_NS, { deleted: this.deleted, edited: this.edited });
       } catch (err) {
-        log8.error("failed to persist message log", err);
+        log10.error("failed to persist message log", err);
       }
     }
   };
@@ -2563,7 +4626,7 @@ ${components_default}`;
   }
 
   // src/plugins/message-logger/ui/LogPage.tsx
-  var log9 = logger("message-logger");
+  var log11 = logger("message-logger");
   function useLog() {
     const [snapshot, setSnapshot] = useState(() => ({
       deleted: messageLog.getDeleted(),
@@ -2664,8 +4727,71 @@ ${components_default}`;
       "\u4E0B\u4E00\u9875"
     ));
   }
+  function jumpToMessage(channelId, messageId, guildId) {
+    dismissSettingsSurface();
+    setTimeout(() => {
+      try {
+        let gid = guildId;
+        if (!gid) {
+          const channel = ChannelStore.getChannel?.(channelId);
+          gid = channel?.guild_id ?? channel?.guildId ?? void 0;
+        }
+        const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
+        if (typeof NavigationRouter.transitionTo === "function") {
+          NavigationRouter.transitionTo(path);
+        } else {
+          log11.warn("[jump] NavigationRouter.transitionTo not resolved");
+        }
+        setTimeout(() => {
+          try {
+            const now = SelectedChannelStore.getChannelId?.();
+            log11.info("[jump] post-nav selected channel", { now, wanted: channelId, ok: now === channelId });
+          } catch {
+          }
+        }, 200);
+      } catch (err) {
+        log11.error("jump to message failed", err);
+      }
+    }, 60);
+  }
+  function dismissSettingsSurface() {
+    try {
+      closeSettings();
+    } catch {
+    }
+    try {
+      const opts = { key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true, cancelable: true };
+      document.dispatchEvent(new KeyboardEvent("keydown", opts));
+      document.dispatchEvent(new KeyboardEvent("keyup", opts));
+    } catch (err) {
+      log11.error("[jump] escape dispatch failed", err);
+    }
+    try {
+      if (typeof AppLayers.popLayer === "function") {
+        AppLayers.popLayer();
+      } else {
+        getDispatcher()?.dispatch?.({ type: "LAYER_POP" });
+      }
+    } catch (err) {
+      log11.error("[jump] layer pop failed", err);
+    }
+  }
+  function JumpButton({ entry }) {
+    return /* @__PURE__ */ React.createElement(
+      Button,
+      {
+        size: "sm",
+        variant: "plain",
+        className: "hc-msg__jump",
+        icon: /* @__PURE__ */ React.createElement(ChevronRightIcon, { size: 16 }),
+        title: "\u8DF3\u8F6C\u5230\u8BE5\u6D88\u606F\u6240\u5728\u4F4D\u7F6E",
+        onClick: () => jumpToMessage(entry.channelId, entry.id, entry.guildId)
+      },
+      "\u8DF3\u8F6C"
+    );
+  }
   function DeletedRow({ entry }) {
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt))), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? renderContent(entry.content) : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? renderContent(entry.content) : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
       (a, i) => (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? /* @__PURE__ */ React.createElement(
         "img",
         {
@@ -2679,7 +4805,7 @@ ${components_default}`;
     )), !entry.attachmentsRich?.length && entry.attachments.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__meta" }, "\u9644\u4EF6 ", entry.attachments.length, " \u4E2A"));
   }
   function EditedRow({ entry }) {
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt))), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version.content ? renderContent(version.content) : "\uFF08\u7A7A\uFF09")))));
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version.content ? renderContent(version.content) : "\uFF08\u7A7A\uFF09")))));
   }
   function resolveLocation(channelId, guildId) {
     let channelName;
@@ -2726,12 +4852,12 @@ ${components_default}`;
       anchor.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      log9.error("export failed", err);
+      log11.error("export failed", err);
     }
   }
 
   // src/plugins/message-logger/index.tsx
-  var log10 = logger("message-logger");
+  var log12 = logger("message-logger");
   var unpatchDispatch;
   var unsubscribeRetention;
   var unsubscribeDeleteStyle;
@@ -2809,7 +4935,7 @@ ${components_default}`;
       if (!selfIgnoreLogged) {
         selfIgnoreLogged = true;
         const hit = Boolean(authorId && me && authorId === String(me));
-        log10.info(
+        log12.info(
           `\u5C4F\u853D\u81EA\u5DF1 \u81EA\u68C0 \u2014 \u5F00\u5173=on\uFF0C\u6D88\u606F\u4F5C\u8005id=${authorId || "(\u7A7A)"}\uFF0C\u5F53\u524D\u7528\u6237id=${me ?? "(\u53D6\u4E0D\u5230)"}\uFF0C\u5224\u5B9A=${hit ? "\u547D\u4E2D\u2192\u4F1A\u5C4F\u853D" : "\u672A\u547D\u4E2D\u2192\u4E0D\u5C4F\u853D"}`
         );
       }
@@ -2994,7 +5120,7 @@ ${components_default}`;
       };
       dispatcher.dispatch({ type: "MESSAGE_UPDATE", message: raw });
     } catch (err) {
-      log10.debug("force row re-render failed (non-fatal)", err);
+      log12.debug("force row re-render failed (non-fatal)", err);
     }
   }
   function scheduleRerender(channelId, messageId) {
@@ -3011,7 +5137,7 @@ ${components_default}`;
     const message = readMessage(channelId, id);
     const snap = shadow.get(`${channelId}:${id}`);
     if (!message && !snap) {
-      log10.debug(`delete of ${id} skipped: message not in cache or shadow`);
+      log12.debug(`delete of ${id} skipped: message not in cache or shadow`);
       return;
     }
     const author = message?.author ?? snap?.author ?? {};
@@ -3057,13 +5183,13 @@ ${components_default}`;
         const domEl = typeof document !== "undefined" ? document.getElementById(`chat-messages-${cid}-${mid}`) || document.getElementById(`chat-messages-${mid}`) : null;
         const tinted = !!domEl && domEl.classList.contains("hc-deleted");
         if (still && still.deleted === true) {
-          log10.info(
+          log12.info(
             `live keep-deleted \u81EA\u68C0 OK \u2014 \u88AB\u5220\u6D88\u606F\u4ECD\u7559\u5728 store \u4E14\u5DF2\u6807\u8BB0 deleted\uFF1BDOM \u884C${domEl ? tinted ? "\u5DF2\u76F4\u63A5\u67D3\u7EA2\uFF08\u5B9E\u65F6\u7EA2\u6761\u751F\u6548\uFF09" : "\u627E\u5230\u4F46\u672A\u67D3\u7EA2\uFF0C\u8BF7\u53CD\u9988" : "\u672A\u627E\u5230\uFF08\u53EF\u80FD\u5DF2\u6EDA\u51FA\u89C6\u56FE\uFF09"}`
           );
         } else if (still) {
-          log10.warn("live keep-deleted \u81EA\u68C0 PARTIAL \u2014 \u6D88\u606F\u4FDD\u7559\u4F46\u672A\u6807\u8BB0 deleted\uFF0C\u6539\u7528 DOM \u76F4\u63A5\u67D3\u7EA2\u515C\u5E95");
+          log12.warn("live keep-deleted \u81EA\u68C0 PARTIAL \u2014 \u6D88\u606F\u4FDD\u7559\u4F46\u672A\u6807\u8BB0 deleted\uFF0C\u6539\u7528 DOM \u76F4\u63A5\u67D3\u7EA2\u515C\u5E95");
         } else {
-          log10.error(
+          log12.error(
             "live keep-deleted \u81EA\u68C0 FAILED \u2014 MessageStore \u5DF2\u4E22\u5F03\u88AB\u5220\u6D88\u606F\uFF0C\u8BF4\u660E \u201Ckeep deleted message in store\u201D \u8865\u4E01\u672A\u547D\u4E2D\u5F53\u524D\u6784\u5EFA\uFF1B\u88AB\u5220\u6D88\u606F\u53EA\u4F1A\u5728\u91CD\u65B0\u52A0\u8F7D\u9891\u9053\u540E\u7531 revive \u91CD\u65B0\u51FA\u73B0\uFF08\u6B63\u662F\u4F60\u8BF4\u7684\u201C\u5237\u65B0\u624D\u6709\u3001\u5B9E\u65F6\u6CA1\u6709\u201D\uFF09\u3002"
           );
         }
@@ -3082,7 +5208,7 @@ ${components_default}`;
     const previous = snap?.content ?? (typeof existing?.content === "string" ? existing.content : void 0);
     remember(channelId, id, payload);
     if (previous === void 0) {
-      log10.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
+      log12.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
       return;
     }
     if (previous === payload.content) return;
@@ -3172,7 +5298,7 @@ ${components_default}`;
       const c = compareIds(String(a?.id ?? "0"), String(b?.id ?? "0"));
       return descending ? -c : c;
     });
-    log10.info(`revived ${revived.length} deleted message(s) into ${channelId}`);
+    log12.info(`revived ${revived.length} deleted message(s) into ${channelId}`);
   }
   function reflagLoaded(action) {
     if (!settings.store.keepDeletedInChat) return;
@@ -3216,7 +5342,7 @@ ${components_default}`;
         resurrectIntoLoad(action);
         setTimeout(() => reflagLoaded(action), 0);
       } catch (err) {
-        log10.error("failed to revive deleted messages on channel load", err);
+        log12.error("failed to revive deleted messages on channel load", err);
       }
     }
     try {
@@ -3232,10 +5358,10 @@ ${components_default}`;
       }
       if (!firstCaptureLogged) {
         firstCaptureLogged = true;
-        log10.info(`recorder saw its first ${type}`);
+        log12.info(`recorder saw its first ${type}`);
       }
     } catch (err) {
-      log10.error("recorder failed for", type, err);
+      log12.error("recorder failed for", type, err);
     }
   }
   function onDispatch(ctx) {
@@ -3291,7 +5417,7 @@ ${components_default}`;
       } catch {
       }
     }
-    log10.info(`recorder on dispatcher ${tag}: seams [${seams.join(", ") || "none"}]`);
+    log12.info(`recorder on dispatcher ${tag}: seams [${seams.join(", ") || "none"}]`);
     return () => undo.forEach((u) => u());
   }
   function attachRecorderEverywhere() {
@@ -3309,10 +5435,10 @@ ${components_default}`;
       return added;
     };
     const first = sweep();
-    log10.info(`recorder attached to ${first} dispatcher instance(s)`);
+    log12.info(`recorder attached to ${first} dispatcher instance(s)`);
     const timer2 = setInterval(() => {
       const added = sweep();
-      if (added > 0) log10.info(`recorder attached to ${added} late dispatcher instance(s)`);
+      if (added > 0) log12.info(`recorder attached to ${added} late dispatcher instance(s)`);
     }, 5e3);
     const stopTimer = setTimeout(() => clearInterval(timer2), 6e4);
     return () => {
@@ -3408,16 +5534,16 @@ ${components_default}`;
     if (!mine.length) return;
     for (const p of mine) {
       if (p.applied) {
-        log10.info(`patch OK   \xB7 ${p.label} (${p.hits} hit${p.hits === 1 ? "" : "s"})`);
+        log12.info(`patch OK   \xB7 ${p.label} (${p.hits} hit${p.hits === 1 ? "" : "s"})`);
       } else {
-        log10.warn(`patch MISS \xB7 ${p.label} \u2014 \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA`);
+        log12.warn(`patch MISS \xB7 ${p.label} \u2014 \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA`);
       }
     }
     const missed = mine.filter((p) => !p.applied);
     if (missed.length === 0) {
-      log10.info("in-chat patches applied \u2014 \u5168\u90E8\u547D\u4E2D");
+      log12.info("in-chat patches applied \u2014 \u5168\u90E8\u547D\u4E2D");
     } else {
-      log10.warn(
+      log12.warn(
         "\u90E8\u5206 in-chat patch \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA\uFF1A" + missed.map((p) => `"${p.label}"`).join("\u3001") + "\u3002\u5220\u9664\u6D88\u606F\u4ECD\u4F1A\u8BB0\u5F55\u5728\u63D2\u4EF6\u9875\uFF0C\u4F46\u53EF\u80FD\u65E0\u6CD5\u5728\u804A\u5929\u5185\u4FDD\u7559 / \u53D8\u7EA2\u3002"
       );
     }
@@ -3432,11 +5558,11 @@ ${components_default}`;
         }).filter(Boolean);
         const combined = dumps.join("  ||  ").replace(/\s+/g, " ");
         const slice = combined.length > 3800 ? combined.slice(0, 3800) + " \u2026(\u622A\u65AD)" : combined;
-        log10.warn(
+        log12.warn(
           "MESSAGE_DELETE \u5904\u7406\u5668\u771F\u5B9E\u6E90\u7801\u5207\u7247\uFF08\u8865\u4E01\u672A\u547D\u4E2D\uFF0C\u7528\u4E8E\u4FEE\u6B63\uFF0C\u8BF7\u6574\u6BB5\u53D1\u7ED9\u5F00\u53D1\u8005\uFF09\uFF1A" + (slice || "\u672A\u5728\u5DF2\u52A0\u8F7D\u6A21\u5757\u4E2D\u627E\u5230 MESSAGE_DELETE \u5904\u7406\u5668\uFF1B\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u9891\u9053\u540E\u518D\u67E5\u770B\u65E5\u5FD7\u3002")
         );
       } catch (err) {
-        log10.error("could not dump MESSAGE_DELETE handler shape", err);
+        log12.error("could not dump MESSAGE_DELETE handler shape", err);
       }
     }
   }
@@ -3599,9 +5725,9 @@ ${components_default}`;
       setTimeout(reportPatches, 4e3);
       setTimeout(() => {
         if (actionsSeen > 0) {
-          log10.info(`recorder pulse OK \u2014 ${actionsSeen} message action(s) observed so far`);
+          log12.info(`recorder pulse OK \u2014 ${actionsSeen} message action(s) observed so far`);
         } else {
-          log10.error(
+          log12.error(
             "recorder pulse FAILED \u2014 no message actions observed in 30s. The dispatcher hooks are not receiving events on this build. \u8BF7\u628A\u65E5\u5FD7\u9875\u91CC recorder on dispatcher \u5F00\u5934\u7684\u51E0\u884C\u53D1\u7ED9\u5F00\u53D1\u8005\u3002"
           );
         }
@@ -3620,7 +5746,7 @@ ${components_default}`;
       } catch {
       }
       messageLog.flush();
-      log10.info("stopped");
+      log12.info("stopped");
     },
     // --- methods the source patches call through `$self` --------------------
     /**
@@ -3654,7 +5780,7 @@ ${components_default}`;
           mutate(action.id);
         }
       } catch (err) {
-        log10.error("handleDelete failed; messages removed normally", err);
+        log12.error("handleDelete failed; messages removed normally", err);
       }
       return cache;
     },
@@ -3717,7 +5843,7 @@ ${components_default}`;
   });
 
   // src/plugins/show-username/index.tsx
-  var log11 = logger("show-username");
+  var log13 = logger("show-username");
   var settings2 = defineSettings({
     mode: {
       type: "select",
@@ -3776,7 +5902,7 @@ ${components_default}`;
       }
       return /* @__PURE__ */ React.createElement(React.Fragment, null, prefix, nick, " ", /* @__PURE__ */ React.createElement("span", { className: suffixClass }, decorated));
     } catch (err) {
-      log11.error("username render failed; falling back to the nick", err);
+      log13.error("username render failed; falling back to the nick", err);
       return /* @__PURE__ */ React.createElement(React.Fragment, null, prefix, nick);
     }
   }
@@ -3804,7 +5930,7 @@ ${components_default}`;
       }
     ],
     start() {
-      log11.info("appending usernames to message headers");
+      log13.info("appending usernames to message headers");
     },
     stop() {
     },
@@ -3840,7 +5966,7 @@ ${components_default}`;
   });
 
   // src/plugins/guild-monitor/subscribe.ts
-  var log12 = logger("guild-monitor");
+  var log14 = logger("guild-monitor");
   var REFRESH_MS = 5 * 60 * 1e3;
   var timer;
   var getGuildIds = () => [];
@@ -3859,7 +5985,7 @@ ${components_default}`;
       }
       return [...ids];
     } catch (err) {
-      log12.debug(`could not read channels for guild ${guildId}`, err);
+      log14.debug(`could not read channels for guild ${guildId}`, err);
       return [];
     }
   }
@@ -3877,7 +6003,7 @@ ${components_default}`;
         api.subscribeToGuild(guildId);
       }
     } catch (err) {
-      log12.warn(`subscribe failed for guild ${guildId}`, err);
+      log14.warn(`subscribe failed for guild ${guildId}`, err);
     }
   }
   function isSubscriptionSupported() {
@@ -3888,13 +6014,13 @@ ${components_default}`;
     const ids = getGuildIds();
     if (!ids.length) return;
     for (const id of ids) subscribeGuild(id);
-    log12.debug(`refreshed subscriptions for ${ids.length} guild(s)`);
+    log14.debug(`refreshed subscriptions for ${ids.length} guild(s)`);
   }
   function startSubscribing(resolver) {
     getGuildIds = resolver;
     stopSubscribing();
     if (!isSubscriptionSupported()) {
-      log12.warn("this Discord build exposes no guild-subscription action; monitoring is inactive");
+      log14.warn("this Discord build exposes no guild-subscription action; monitoring is inactive");
       return;
     }
     pass();
@@ -3972,7 +6098,7 @@ ${components_default}`;
   }
 
   // src/plugins/guild-monitor/index.tsx
-  var log13 = logger("guild-monitor");
+  var log15 = logger("guild-monitor");
   function activeGuildIds() {
     if (settings3.store.acknowledgedRisk !== true) return [];
     const ids = settings3.store.selectedGuilds;
@@ -3993,7 +6119,7 @@ ${components_default}`;
     start() {
       startSubscribing(activeGuildIds);
       const n = activeGuildIds().length;
-      if (n > 0) log13.info(`monitoring ${n} guild(s)`);
+      if (n > 0) log15.info(`monitoring ${n} guild(s)`);
     },
     stop() {
       stopSubscribing();
@@ -4043,7 +6169,7 @@ ${components_default}`;
   });
 
   // src/plugins/message-cleaner/cleaner.ts
-  var log14 = logger("message-cleaner");
+  var log16 = logger("message-cleaner");
   var API_BASE = "https://discord.com/api/v10";
   var skipList = /* @__PURE__ */ new Set();
   var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -4235,7 +6361,7 @@ ${components_default}`;
       } catch (e) {
         skipped++;
         if (!String(e?.message ?? "").includes("404")) skipList.add(m.id);
-        log14.warn(`skip ${m.id}: ${e?.message ?? e}`);
+        log16.warn(`skip ${m.id}: ${e?.message ?? e}`);
       }
       onProgress("\u5220\u9664\u4E2D", `\u5DF2\u5220\u9664 ${deleted} / ${messages.length}${skipped ? `\uFF08\u8DF3\u8FC7 ${skipped}\uFF09` : ""}`);
       const elapsed = Date.now() - t0;
@@ -4261,7 +6387,7 @@ ${components_default}`;
   }
 
   // src/plugins/message-cleaner/ui/CleanerPage.tsx
-  var log15 = logger("message-cleaner");
+  var log17 = logger("message-cleaner");
   function formatTs(ts) {
     const date = new Date(ts);
     if (Number.isNaN(date.getTime())) return "";
@@ -4434,7 +6560,7 @@ ${components_default}`;
         progress(ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u9884\u89C8\u5B8C\u6210", `\u627E\u5230 ${found.length} \u6761\u4F60\u7684\u6D88\u606F\u3002`);
       } catch (err) {
         progress("\u5931\u8D25", err.message ?? String(err));
-        log15.error("preview failed", err);
+        log17.error("preview failed", err);
       } finally {
         setMode("idle");
       }
@@ -4468,7 +6594,7 @@ ${components_default}`;
         setPreviewed([]);
       } catch (err) {
         progress("\u5931\u8D25", err.message ?? String(err));
-        log15.error("delete failed", err);
+        log17.error("delete failed", err);
       } finally {
         setMode("idle");
       }
@@ -4563,7 +6689,7 @@ ${components_default}`;
   }
 
   // src/plugins/message-cleaner/index.tsx
-  var log16 = logger("message-cleaner");
+  var log18 = logger("message-cleaner");
   var message_cleaner_default = definePlugin({
     id: "message-cleaner",
     name: "\u6D88\u606F\u6E05\u7406",
@@ -4577,14 +6703,14 @@ ${components_default}`;
       component: CleanerPage
     },
     start() {
-      log16.info("message-cleaner ready");
+      log18.info("message-cleaner ready");
     },
     stop() {
     }
   });
 
   // src/plugins/fake-nitro/index.ts
-  var log17 = logger("fake-nitro");
+  var log19 = logger("fake-nitro");
   var settings5 = defineSettings({
     enableEmojiBypass: {
       group: "\u8868\u60C5",
@@ -4638,10 +6764,10 @@ ${components_default}`;
       description: "\u5141\u8BB8\u4EE5 Nitro \u753B\u8D28\u8FDB\u884C\u5C4F\u5E55\u5171\u4EAB\u76F4\u64AD\uFF08\u9700\u91CD\u542F\u5BA2\u6237\u7AEF\u751F\u6548\uFF0C\u56E0\u4E3A\u8FD9\u662F\u6E90\u7801\u7EA7 patch\uFF09\u3002"
     }
   });
-  var EmojiStore = lazy((m) => m?.getName?.() === "EmojiStore");
-  var StickersStore = lazy((m) => m?.getName?.() === "StickersStore");
+  var EmojiStore2 = lazy((m) => m?.getName?.() === "EmojiStore");
+  var StickersStore2 = lazy((m) => m?.getName?.() === "StickersStore");
   var GuildMemberStore = lazy((m) => m?.getName?.() === "GuildMemberStore");
-  var PermissionStore = lazy((m) => m?.getName?.() === "PermissionStore" && typeof m?.can === "function");
+  var PermissionStore2 = lazy((m) => m?.getName?.() === "PermissionStore" && typeof m?.can === "function");
   var PERM = {
     USE_EXTERNAL_EMOJIS: 1n << 18n,
     USE_EXTERNAL_STICKERS: 1n << 37n,
@@ -4664,7 +6790,7 @@ ${components_default}`;
     try {
       const channel = ChannelStore.getChannel?.(channelId);
       if (!channel || channel.isPrivate?.()) return true;
-      return PermissionStore.can?.(bit, channel) ?? true;
+      return PermissionStore2.can?.(bit, channel) ?? true;
     } catch {
       return true;
     }
@@ -4727,13 +6853,13 @@ ${components_default}`;
     if (!settings5.store.enableStickerBypass) return false;
     const ids = options?.stickerIds;
     if (!Array.isArray(ids) || ids.length === 0) return false;
-    const sticker = StickersStore.getStickerById?.(ids[0]);
+    const sticker = StickersStore2.getStickerById?.(ids[0]);
     if (!sticker) return false;
     if ("pack_id" in sticker) return false;
     const canUse = canUseStickersNatively() && hasPermission(channelId, PERM.USE_EXTERNAL_STICKERS);
     if (sticker.available !== false && (canUse || sticker.guild_id === guildId)) return false;
     if (sticker.format_type === STICKER_LOTTIE) {
-      log17.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
+      log19.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
       return false;
     }
     const url = stickerUrl(sticker);
@@ -4773,7 +6899,7 @@ ${components_default}`;
       if (options) rewriteStickers(channelId, message, options, guildId);
       rewriteEmojis(channelId, message, guildId);
     } catch (err) {
-      log17.error("send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+      log19.error("send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
     }
   }
   var EMOJI_TOKEN_RE = /(?<!\\)<a?:(?:\w+):(\d+)>/gi;
@@ -4788,7 +6914,7 @@ ${components_default}`;
       message.content = message.content.replace(
         EMOJI_TOKEN_RE,
         (tokenStr, emojiId, offset, str) => {
-          const emoji = EmojiStore.getCustomEmojiById?.(emojiId);
+          const emoji = EmojiStore2.getCustomEmojiById?.(emojiId);
           if (emoji == null) return tokenStr;
           if (canUseEmote(emoji, channelId, guildId)) return tokenStr;
           const url = emojiUrl(emoji);
@@ -4796,7 +6922,7 @@ ${components_default}`;
         }
       );
     } catch (err) {
-      log17.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
+      log19.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
     }
   }
   function reportPatches2() {
@@ -4804,9 +6930,9 @@ ${components_default}`;
     if (!mine.length) return;
     const missed = mine.filter((p) => !p.applied);
     if (missed.length === 0) {
-      log17.info("\u6240\u6709\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548");
+      log19.info("\u6240\u6709\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548");
     } else {
-      log17.warn(
+      log19.warn(
         "\u90E8\u5206\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF1B\u9009\u62E9\u5668\u89E3\u9501\u6216\u53D1\u9001\u6539\u5199\u53EF\u80FD\u4E0D\u5B8C\u6574\u3002\u672A\u5339\u914D\uFF1A" + missed.map((p) => `\u201C${p.label}\u201D`).join("\u3001")
       );
     }
@@ -5029,19 +7155,19 @@ ${components_default}`;
           try {
             unpatchSend = patcher.before(messageActions, "sendMessage", onSendMessage);
           } catch (err) {
-            log17.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
+            log19.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
           }
         }
         if (typeof messageActions.editMessage === "function") {
           try {
             unpatchEdit = patcher.before(messageActions, "editMessage", onEditMessage);
           } catch (err) {
-            log17.error("\u6302\u63A5 editMessage \u5931\u8D25", err);
+            log19.error("\u6302\u63A5 editMessage \u5931\u8D25", err);
           }
         }
-        log17.info("MessageActions \u5DF2\u6302\u63A5\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF1B\u82E5 pre-send \u8865\u4E01\u5DF2\u751F\u6548\u5219\u6B64 hook \u4EC5\u4F5C fallback\uFF09");
+        log19.info("MessageActions \u5DF2\u6302\u63A5\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF1B\u82E5 pre-send \u8865\u4E01\u5DF2\u751F\u6548\u5219\u6B64 hook \u4EC5\u4F5C fallback\uFF09");
       } else {
-        log17.warn(
+        log19.warn(
           "\u672A\u627E\u5230 MessageActions \u2014\u2014 \u9009\u62E9\u5668\u89E3\u9501\u5DF2\u901A\u8FC7\u6E90\u7801 patch \u751F\u6548\uFF0C\u4F46\u53D1\u9001\u65F6\u7684 URL \u6539\u5199\u4E0D\u53EF\u7528\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\uFF1B\u82E5\u4ECD\u672A\u627E\u5230\uFF0C\u8BF4\u660E\u8BE5 Discord \u7248\u672C\u7684 MessageActions \u5F62\u72B6\u6709\u53D8\u3002"
         );
       }
@@ -5071,14 +7197,14 @@ ${components_default}`;
         rewriteEmojis(channelId, messageObj, guildId);
         messageObj.__fakeNitroRewritten = true;
       } catch (err) {
-        log17.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+        log19.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
       }
       return false;
     }
   });
 
   // src/plugins/console-cleaner/index.ts
-  var log18 = logger("console-cleaner");
+  var log20 = logger("console-cleaner");
   var settings6 = defineSettings({
     hideSelfXss: {
       group: "\u5185\u7F6E\u89C4\u5219",
@@ -5190,7 +7316,7 @@ ${components_default}`;
     start() {
       const con = globalThis.console;
       if (!con) {
-        log18.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        log20.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
         return;
       }
       suppressedCount = 0;
@@ -5200,11 +7326,11 @@ ${components_default}`;
           try {
             unpatchers.push(patcher.instead(con, method, hook));
           } catch (err) {
-            log18.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+            log20.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
           }
         }
       }
-      log18.info(
+      log20.info(
         `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
       );
     },
@@ -5216,15 +7342,478 @@ ${components_default}`;
         }
       }
       unpatchers = [];
-      log18.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+      log20.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+    }
+  });
+
+  // src/plugins/emote-cloner/clone.ts
+  var log21 = logger("emote-cloner");
+  var MAX_EMOJI_SIZE_BYTES = 256 * 1024;
+  var MAX_STICKER_SIZE_BYTES = 512 * 1024;
+  var uploadEmojiAction = null;
+  function getUploadEmoji() {
+    if (uploadEmojiAction) return uploadEmojiAction;
+    uploadEmojiAction = findByCode(".GUILD_EMOJIS(", "EMOJI_UPLOAD_START") ?? null;
+    return uploadEmojiAction;
+  }
+  function sanitizeEmojiName(name) {
+    let n = (name || "emoji").split("~")[0].replace(/[^\w]/g, "_");
+    if (n.length < 2) n = `${n}_e`;
+    return n.slice(0, 32);
+  }
+  function stickerExt(formatType) {
+    if (formatType === 4) return "gif";
+    if (formatType === 3) return "json";
+    return "png";
+  }
+  function emojiUrl2(id, size) {
+    return `https://cdn.discordapp.com/emojis/${id}.webp?size=${size}&lossless=true&animated=true`;
+  }
+  function stickerUrl2(id, ext, size) {
+    return `https://media.discordapp.net/stickers/${id}.${ext}?size=${size}&lossless=true&animated=true`;
+  }
+  async function fetchBlobUnderLimit(makeUrl, maxBytes) {
+    for (let size = 4096; size >= 16; size /= 2) {
+      const url = makeUrl(size);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`\u4E0B\u8F7D\u56FE\u7247\u5931\u8D25\uFF1AHTTP ${res.status}`);
+      const blob = await res.blob();
+      if (blob.size <= maxBytes) return blob;
+    }
+    throw new Error(`\u56FE\u7247\u8D85\u51FA\u5927\u5C0F\u9650\u5236\uFF08${Math.round(maxBytes / 1024)}KB\uFF09`);
+  }
+  function blobToDataUri(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error ?? new Error("\u8BFB\u53D6\u56FE\u7247\u5931\u8D25"));
+      reader.readAsDataURL(blob);
+    });
+  }
+  function resPayload(res) {
+    if (res == null) return null;
+    if (res.body != null && !(typeof res.body === "object" && Object.keys(res.body).length === 0)) {
+      return res.body;
+    }
+    if (typeof res.text === "string" && res.text) {
+      try {
+        return JSON.parse(res.text);
+      } catch {
+      }
+    }
+    return res.body ?? null;
+  }
+  function restErrorMessage(err) {
+    const body = err?.body ?? err?.response?.body;
+    if (body) {
+      try {
+        const walk = (o) => {
+          if (!o || typeof o !== "object") return void 0;
+          if (Array.isArray(o._errors) && o._errors[0]?.message) return o._errors[0].message;
+          for (const k of Object.keys(o)) {
+            const hit = walk(o[k]);
+            if (hit) return hit;
+          }
+          return void 0;
+        };
+        const specific = walk(body.errors);
+        if (specific) return specific;
+      } catch {
+      }
+      if (typeof body.message === "string") return body.message;
+    }
+    if (typeof err?.text === "string") {
+      try {
+        const parsed = JSON.parse(err.text);
+        if (parsed?.message) return parsed.message;
+      } catch {
+      }
+    }
+    return err?.message ? String(err.message) : "\u672A\u77E5\u9519\u8BEF";
+  }
+  async function cloneEmoji(guildId, emoji) {
+    const blob = await fetchBlobUnderLimit((size) => emojiUrl2(emoji.id, size), MAX_EMOJI_SIZE_BYTES);
+    const image = await blobToDataUri(blob);
+    const name = sanitizeEmojiName(emoji.name);
+    const upload = getUploadEmoji();
+    if (typeof upload === "function") {
+      try {
+        await upload({ guildId, name, image });
+        return;
+      } catch (err) {
+        log21.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
+        throw new Error(restErrorMessage(err));
+      }
+    }
+    try {
+      await RestAPI.post({ url: `/guilds/${guildId}/emojis`, body: { image, name, roles: [] } });
+    } catch (err) {
+      log21.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
+      throw new Error(restErrorMessage(err));
+    }
+  }
+  async function fetchStickerInfo(id) {
+    try {
+      const cached2 = StickersStore.getStickerById?.(id);
+      if (cached2) return cached2;
+    } catch {
+    }
+    try {
+      const res = await RestAPI.get({ url: `/stickers/${id}` });
+      const body = resPayload(res);
+      if (body) {
+        try {
+          getDispatcher()?.dispatch({ type: "STICKER_FETCH_SUCCESS", sticker: body });
+        } catch {
+        }
+      }
+      return body;
+    } catch (err) {
+      log21.warn("could not fetch sticker info; using fallbacks", err);
+      return null;
+    }
+  }
+  async function cloneSticker(guildId, sticker) {
+    const info = await fetchStickerInfo(sticker.id);
+    if (info?.format_type === 3) {
+      throw new Error("\u8FD9\u662F Lottie \u52A8\u6001\u8D34\u7EB8\uFF0C\u65E0\u6CD5\u590D\u5236");
+    }
+    const name = (sticker.name || info?.name || "sticker").slice(0, 30);
+    const tags = sticker.tags || info?.tags || "\u{1F642}";
+    const description = (sticker.description ?? info?.description ?? "").slice(0, 100);
+    const ext = stickerExt(info?.format_type);
+    const blob = await fetchBlobUnderLimit(
+      (size) => stickerUrl2(sticker.id, ext, size),
+      MAX_STICKER_SIZE_BYTES
+    );
+    const form = new FormData();
+    form.append("name", name);
+    form.append("tags", tags);
+    form.append("description", description);
+    form.append("file", new File([blob], `sticker.${ext}`, { type: ext === "gif" ? "image/gif" : "image/png" }));
+    const url = Constants?.Endpoints?.GUILD_STICKER_PACKS?.(guildId) ?? `/guilds/${guildId}/stickers`;
+    let created;
+    try {
+      const res = await RestAPI.post({ url, body: form });
+      created = resPayload(res);
+      if (created && !created.id && created.sticker?.id) created = created.sticker;
+    } catch (err) {
+      log21.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
+      throw new Error(restErrorMessage(err));
+    }
+    log21.info("sticker uploaded", { id: created?.id, name: created?.name });
+    try {
+      getDispatcher()?.dispatch({
+        type: "GUILD_STICKERS_CREATE_SUCCESS",
+        guildId,
+        sticker: { ...created, user: UserStore.getCurrentUser?.() }
+      });
+    } catch {
+    }
+  }
+
+  // src/plugins/emote-cloner/picker.tsx
+  var log22 = logger("emote-cloner");
+  function iconUrl(g2) {
+    const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
+    return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
+  }
+  var host2 = null;
+  var unmount2 = null;
+  var keyHandler2 = null;
+  function closeGuildPicker() {
+    if (keyHandler2) {
+      document.removeEventListener("keydown", keyHandler2);
+      keyHandler2 = null;
+    }
+    if (unmount2) {
+      try {
+        unmount2();
+      } catch {
+      }
+      unmount2 = null;
+    }
+    if (host2) {
+      host2.remove();
+      host2 = null;
+    }
+  }
+  function openGuildPicker(opts) {
+    injectStyles();
+    closeGuildPicker();
+    host2 = document.createElement("div");
+    host2.className = "halcyon";
+    document.body.appendChild(host2);
+    keyHandler2 = (event) => {
+      if (event.key === "Escape") closeGuildPicker();
+    };
+    document.addEventListener("keydown", keyHandler2);
+    try {
+      unmount2 = mountDetached(
+        React.createElement(PickerModal, {
+          title: opts.title,
+          guilds: opts.guilds,
+          onPick: opts.onPick,
+          onClose: closeGuildPicker
+        }),
+        host2
+      );
+    } catch (err) {
+      log22.error("could not open guild picker", err);
+      closeGuildPicker();
+    }
+  }
+  function PickerModal({
+    title,
+    guilds,
+    onPick,
+    onClose
+  }) {
+    const [query, setQuery] = useState("");
+    const [status, setStatus] = useState({ state: "idle" });
+    const q = query.trim().toLowerCase();
+    const filtered = q ? guilds.filter((g2) => g2.name.toLowerCase().includes(q)) : guilds;
+    const pick = (g2) => {
+      setStatus({ state: "working", guild: g2.name });
+      Promise.resolve().then(() => onPick(g2.id)).then(() => {
+        setStatus({ state: "done", guild: g2.name });
+        setTimeout(onClose, 1e3);
+      }).catch((err) => {
+        log22.error("clone failed", err);
+        setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
+      });
+    };
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "hc-overlay",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": title,
+        onMouseDown: (e) => {
+          if (e.target === e.currentTarget && status.state !== "working") onClose();
+        }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker" }, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-emote-picker__title" }, title), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "hc-emote-picker__close",
+          onClick: onClose,
+          "aria-label": "\u5173\u95ED",
+          disabled: status.state === "working"
+        },
+        "\u2715"
+      )), status.state === "idle" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__search" }, /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          className: "hc-input",
+          placeholder: "\u641C\u7D22\u670D\u52A1\u5668\u2026",
+          value: query,
+          autoFocus: true,
+          onChange: (e) => setQuery(e.currentTarget.value)
+        }
+      )), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__list" }, filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__empty" }, guilds.length === 0 ? "\u6CA1\u6709\u53EF\u7BA1\u7406\u8868\u60C5\u7684\u670D\u52A1\u5668" : "\u6CA1\u6709\u5339\u914D\u7684\u670D\u52A1\u5668") : filtered.map((g2) => /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: g2.id,
+          className: "hc-emote-picker__item",
+          role: "button",
+          tabIndex: 0,
+          onClick: () => pick(g2),
+          onKeyDown: (e) => {
+            if (e.key === "Enter") pick(g2);
+          }
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__icon" }, g2.icon ? /* @__PURE__ */ React.createElement("img", { src: iconUrl(g2), alt: "" }) : g2.name.charAt(0).toUpperCase()),
+        /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__name" }, g2.name)
+      )))) : /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__status", "data-state": status.state }, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__status-icon" }, status.state === "working" ? "\u23F3" : status.state === "done" ? "\u2713" : "\u2715"), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__status-title" }, status.state === "working" ? `\u6B63\u5728\u590D\u5236\u5230 ${status.guild}\u2026` : status.state === "done" ? `\u5DF2\u590D\u5236\u5230 ${status.guild}` : "\u590D\u5236\u5931\u8D25"), status.state === "error" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__status-detail" }, status.message), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "hc-btn hc-btn--secondary hc-btn--sm",
+          onClick: () => setStatus({ state: "idle" })
+        },
+        "\u8FD4\u56DE\u5217\u8868"
+      ))))
+    );
+  }
+
+  // src/plugins/emote-cloner/index.tsx
+  var log23 = logger("emote-cloner");
+  var PERM2 = {
+    CREATE_GUILD_EXPRESSIONS: 1n << 43n,
+    MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
+    MANAGE_EMOJIS_AND_STICKERS: 1n << 30n
+  };
+  function isGifUrl(url) {
+    if (!url) return false;
+    try {
+      const u = new URL(url, location.href);
+      return u.pathname.endsWith(".gif") || u.searchParams.get("animated") === "true";
+    } catch {
+      return /\.gif(\?|$)/.test(url) || url.includes("animated=true");
+    }
+  }
+  function parseEmojiUrl(src) {
+    const m = src.match(/\/emojis\/(\d+)\.(\w+)/);
+    if (!m) return null;
+    let name;
+    try {
+      const raw = new URL(src, location.href).searchParams.get("name");
+      name = raw ? decodeURIComponent(raw) : void 0;
+    } catch {
+    }
+    return { id: m[1], isAnimated: m[2] === "gif" || /animated=true/.test(src), name };
+  }
+  function emojiNameFromStore(id) {
+    try {
+      const rec = EmojiStore.getCustomEmojiById?.(id) ?? EmojiStore.getUsableCustomEmojiById?.(id);
+      return cleanName(rec?.name);
+    } catch {
+      return void 0;
+    }
+  }
+  function bestEmojiName(id, img, urlName) {
+    const el = img;
+    return emojiNameFromStore(id) ?? cleanName(urlName) ?? cleanName(el?.getAttribute?.("alt")) ?? cleanName(el?.getAttribute?.("aria-label")) ?? cleanName(el?.getAttribute?.("title")) ?? cleanName(el?.dataset?.name);
+  }
+  function parseStickerUrl(src) {
+    const m = src.match(/\/stickers\/(\d+)\./);
+    return m ? { id: m[1] } : null;
+  }
+  function cleanName(raw) {
+    if (!raw) return void 0;
+    const n = raw.replace(/:/g, "").trim();
+    return n || void 0;
+  }
+  function gatherImages(target) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    const add = (el) => {
+      if (el && el.tagName === "IMG" && !seen.has(el)) {
+        seen.add(el);
+        out.push(el);
+      }
+    };
+    add(target);
+    target.querySelectorAll?.("img").forEach(add);
+    let cur = target.parentElement;
+    for (let depth = 0; depth < 4 && cur; depth++, cur = cur.parentElement) {
+      add(cur);
+      cur.querySelectorAll?.(":scope > img").forEach(add);
+    }
+    return out;
+  }
+  function resolveExpression(target) {
+    if (!target) return null;
+    const dataEl = target.closest?.(
+      "[data-type='emoji'],[data-type='sticker'],[data-id]"
+    );
+    if (dataEl) {
+      const { id, name, type } = dataEl.dataset;
+      if (id && type === "emoji") {
+        const img = dataEl.querySelector("img");
+        return {
+          kind: "emoji",
+          id,
+          name: bestEmojiName(id, img, name) ?? "emoji",
+          isAnimated: isGifUrl(img?.currentSrc || img?.src)
+        };
+      }
+      if (id && type === "sticker" && !String(dataEl.className).toLowerCase().includes("lottie")) {
+        return { kind: "sticker", id, name: cleanName(name) };
+      }
+    }
+    for (const img of gatherImages(target)) {
+      const src = img.currentSrc || img.src || "";
+      const emoji = parseEmojiUrl(src);
+      if (emoji) {
+        return {
+          kind: "emoji",
+          id: emoji.id,
+          name: bestEmojiName(emoji.id, img, emoji.name) ?? "emoji",
+          isAnimated: emoji.isAnimated || isGifUrl(src)
+        };
+      }
+      const sticker = parseStickerUrl(src);
+      if (sticker) {
+        if (String(img.className).toLowerCase().includes("lottie")) return null;
+        return { kind: "sticker", id: sticker.id, name: cleanName(img.alt) };
+      }
+    }
+    return null;
+  }
+  function canManageExpressions(guild) {
+    try {
+      return Boolean(
+        PermissionStore.can?.(PERM2.CREATE_GUILD_EXPRESSIONS, guild) || PermissionStore.can?.(PERM2.MANAGE_GUILD_EXPRESSIONS, guild) || PermissionStore.can?.(PERM2.MANAGE_EMOJIS_AND_STICKERS, guild)
+      );
+    } catch {
+      return false;
+    }
+  }
+  function eligibleGuilds() {
+    try {
+      const map = GuildStore.getGuilds?.() ?? {};
+      return Object.values(map).filter((g2) => canManageExpressions(g2)).map((g2) => ({
+        id: String(g2?.id ?? ""),
+        name: String(g2?.name ?? g2?.id ?? "\u672A\u77E5\u670D\u52A1\u5668"),
+        icon: g2?.icon ? String(g2.icon) : null
+      })).filter((g2) => g2.id).sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+    } catch {
+      return [];
+    }
+  }
+  function pickServerAndClone(hit) {
+    const isEmoji = hit.kind === "emoji";
+    openGuildPicker({
+      title: isEmoji ? "\u590D\u5236\u8868\u60C5\u5230\u670D\u52A1\u5668" : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668",
+      guilds: eligibleGuilds(),
+      onPick: (guildId) => isEmoji ? cloneEmoji(guildId, hit) : cloneSticker(guildId, hit)
+    });
+  }
+  function cloneMenuPatch(children) {
+    const hit = resolveExpression(getContextMenuTarget());
+    if (!hit) return;
+    const MenuItem = getMenuItemComponent();
+    if (!MenuItem) {
+      log23.warn("MenuItem component not learned yet; skipping clone item this open");
+      return;
+    }
+    children.push(
+      React.createElement(MenuItem, {
+        id: hit.kind === "emoji" ? "halcyon-clone-emoji" : "halcyon-clone-sticker",
+        label: hit.kind === "emoji" ? "\u590D\u5236\u8868\u60C5\u5230\u670D\u52A1\u5668" : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668",
+        action: () => pickServerAndClone(hit)
+      })
+    );
+  }
+  var unpatchers2 = [];
+  var emote_cloner_default = definePlugin({
+    id: "emote-cloner",
+    name: "\u8868\u60C5\u514B\u9686",
+    description: "\u53F3\u952E\u4EFB\u610F\u81EA\u5B9A\u4E49\u8868\u60C5\u6216\u8D34\u7EB8\uFF0C\u5373\u53EF\u628A\u5B83\u590D\u5236\u5230\u4F60\u6709\u7BA1\u7406\u6743\u9650\u7684\u670D\u52A1\u5668\u3002\u652F\u6301\u6D88\u606F\u91CC\u7684\u8868\u60C5 / \u8D34\u7EB8\uFF0C\u4EE5\u53CA\u8868\u60C5\u9009\u62E9\u5668\u91CC\u7684\u9879\u76EE\u3002",
+    authors: [{ name: "Vencord" }, { name: "caitemm" }],
+    category: "utility",
+    start() {
+      unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
+      log23.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+    },
+    stop() {
+      for (const un of unpatchers2) {
+        try {
+          un();
+        } catch {
+        }
+      }
+      unpatchers2 = [];
     }
   });
 
   // src/plugins/index.ts
-  var plugins = [settings_host_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default, fake_nitro_default, console_cleaner_default];
+  var plugins = [settings_host_default, context_menu_api_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default, fake_nitro_default, console_cleaner_default, emote_cloner_default];
 
   // src/userscript/main.ts
-  var log19 = logger("userscript");
+  var log24 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -5239,6 +7828,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log19.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log19.error("userscript boot failed", err));
+    log24.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log24.error("userscript boot failed", err));
 })();

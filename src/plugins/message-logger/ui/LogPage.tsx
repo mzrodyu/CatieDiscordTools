@@ -5,7 +5,8 @@
 // works whether or not the optional in-chat patches applied.
 
 import { useEffect, useState } from "../../../core/common/react";
-import { ChannelStore, GuildStore } from "../../../core/common/discord";
+import { ChannelStore, GuildStore, NavigationRouter, AppLayers, SelectedChannelStore, getDispatcher } from "../../../core/common/discord";
+import { closeSettings } from "../../../ui/settings/overlay";
 import { logger } from "../../../core/logger";
 import { getSourcePatchReport } from "../../../core/modules/webpack";
 import { messageLog, type DeletedEntry, type EditedEntry } from "../store";
@@ -13,7 +14,7 @@ import { renderContent } from "../render-content";
 import { Button } from "../../../ui/components/Button";
 import { EmptyState } from "../../../ui/components/EmptyState";
 import { Badge } from "../../../ui/components/Badge";
-import { TrashIcon, PencilIcon, DownloadIcon } from "../../../icons";
+import { TrashIcon, PencilIcon, DownloadIcon, ChevronRightIcon } from "../../../icons";
 
 const log = logger("message-logger");
 
@@ -192,6 +193,100 @@ function Pager(props: { page: number; pageCount: number; onChange: (next: number
   );
 }
 
+// Navigate the client to a logged message. Deleted messages no longer exist,
+// so the jump lands on their channel (Discord can't highlight a gone message);
+// edited messages still exist, so it highlights the live row. Resolves the
+// guild from the stored id, falling back to the channel's own guild_id, then
+// to "@me" for DMs / group DMs.
+function jumpToMessage(channelId: string, messageId: string, guildId?: string): void {
+  // Dismiss whatever surface the log page is showing inside FIRST, so the
+  // client is looking at the app when the route change lands. Two surfaces are
+  // possible: Halcyon's own overlay (Ctrl/Cmd+Shift+H) and Discord's native
+  // user-settings surface (the embedded path).
+  dismissSettingsSurface();
+
+  // Then navigate. A short delay lets the surface finish tearing down so the
+  // transition isn't swallowed by the closing animation / re-render.
+  setTimeout(() => {
+    try {
+      let gid = guildId;
+      if (!gid) {
+        const channel = ChannelStore.getChannel?.(channelId);
+        gid = channel?.guild_id ?? channel?.guildId ?? undefined;
+      }
+      const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
+      if (typeof NavigationRouter.transitionTo === "function") {
+        NavigationRouter.transitionTo(path);
+      } else {
+        log.warn("[jump] NavigationRouter.transitionTo not resolved");
+      }
+      // Verify the route actually moved. If the selected channel didn't change,
+      // the router we matched is a no-op lookalike and we say so in the log.
+      setTimeout(() => {
+        try {
+          const now = SelectedChannelStore.getChannelId?.();
+          log.info("[jump] post-nav selected channel", { now, wanted: channelId, ok: now === channelId });
+        } catch {
+          // store not ready
+        }
+      }, 200);
+    } catch (err) {
+      log.error("jump to message failed", err);
+    }
+  }, 60);
+}
+
+/**
+ * Close whichever settings surface is on top. Discord's user settings is not
+ * reliably reachable through the layer-pop action on every build, but it always
+ * closes on Escape (the client listens for it globally), so we dispatch a real
+ * Escape key event as the primary path and fall back to popLayer / LAYER_POP.
+ * Halcyon's own overlay is torn down directly.
+ */
+function dismissSettingsSurface(): void {
+  try {
+    closeSettings(); // Halcyon overlay; no-op if it isn't the surface showing
+  } catch {
+    // overlay not open
+  }
+
+  // Native user settings: Escape is the surest close across builds.
+  try {
+    const opts = { key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true, cancelable: true };
+    document.dispatchEvent(new KeyboardEvent("keydown", opts as any));
+    document.dispatchEvent(new KeyboardEvent("keyup", opts as any));
+  } catch (err) {
+    log.error("[jump] escape dispatch failed", err);
+  }
+
+  // Belt and braces: also pop the layer stack, in case this build routes
+  // settings through it.
+  try {
+    if (typeof AppLayers.popLayer === "function") {
+      AppLayers.popLayer();
+    } else {
+      getDispatcher()?.dispatch?.({ type: "LAYER_POP" });
+    }
+  } catch (err) {
+    log.error("[jump] layer pop failed", err);
+  }
+}
+
+function JumpButton({ entry }: { entry: DeletedEntry | EditedEntry }): React.ReactElement {
+  return (
+    <Button
+      size="sm"
+      variant="plain"
+      className="hc-msg__jump"
+      icon={<ChevronRightIcon size={16} />}
+      title="跳转到该消息所在位置"
+      onClick={() => jumpToMessage(entry.channelId, entry.id, entry.guildId)}
+    >
+      跳转
+    </Button>
+  );
+}
+
 function DeletedRow({ entry }: { entry: DeletedEntry }): React.ReactElement {
   return (
     <div className="hc-msg">
@@ -200,6 +295,7 @@ function DeletedRow({ entry }: { entry: DeletedEntry }): React.ReactElement {
         {entry.author.bot && <Badge tone="neutral">BOT</Badge>}
         <Location channelId={entry.channelId} guildId={entry.guildId} />
         <span className="hc-msg__time">{formatTime(entry.deletedAt)}</span>
+        <JumpButton entry={entry} />
       </div>
       <div className="hc-msg__body">
         {entry.content ? (
@@ -245,6 +341,7 @@ function EditedRow({ entry }: { entry: EditedEntry }): React.ReactElement {
         <span className="hc-msg__author">{entry.author.name}</span>
         <Location channelId={entry.channelId} guildId={entry.guildId} />
         <span className="hc-msg__time">{formatTime(entry.updatedAt)}</span>
+        <JumpButton entry={entry} />
       </div>
       <div className="hc-msg__versions">
         {entry.history.map((version, index) => (

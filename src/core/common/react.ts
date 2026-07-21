@@ -55,6 +55,12 @@ export const React = lazyProxy<typeof import("react")>(() =>
   find(byFunctionProps("createElement", "useState", "useEffect", "useMemo"))
 );
 
+/** A React 18/19 root handle, as returned by `createRoot`. */
+export interface ReactRoot {
+  render(element: unknown): void;
+  unmount(): void;
+}
+
 /** The slice of ReactDOM we use. Kept local so react-dom types aren't a dep. */
 interface ReactDOMApi {
   render(element: unknown, container: Element | DocumentFragment): void;
@@ -69,6 +75,53 @@ export const ReactDOM = lazyProxy<ReactDOMApi>(
     find(byFunctionProps("createPortal", "flushSync")) ??
     find(byFunctionProps("createPortal"))
 );
+
+/**
+ * Resolve `createRoot` from Discord's react-dom/client. Modern React (18/19)
+ * removed the legacy `ReactDOM.render(element, container)` entry point — React
+ * 19 dropped it entirely — so mounting a detached tree (our settings overlay,
+ * the emote-cloner picker) must go through `createRoot(container).render(...)`.
+ *
+ * Not merged into the ReactDOM proxy above because `createRoot` lives on a
+ * different module (react-dom/client) than `createPortal`/`flushSync`. Returns
+ * undefined on the rare build where it can't be found; callers fall back to the
+ * legacy `render` path.
+ */
+export function getCreateRoot(): ((container: Element | DocumentFragment) => ReactRoot) | undefined {
+  const mod =
+    find(byFunctionProps("createRoot", "hydrateRoot")) ?? find(byFunctionProps("createRoot"));
+  return mod?.createRoot?.bind(mod);
+}
+
+/**
+ * Mount a React element into a freshly-created container using whichever API
+ * this build supports: `createRoot` on React 18/19, else legacy
+ * `ReactDOM.render`. Returns an `unmount` fn that undoes the mount the same way.
+ */
+export function mountDetached(element: unknown, container: Element): () => void {
+  const createRoot = getCreateRoot();
+  if (createRoot) {
+    const root = createRoot(container);
+    root.render(element);
+    return () => {
+      try {
+        root.unmount();
+      } catch {
+        // already torn down
+      }
+    };
+  }
+
+  // Legacy fallback (React <18).
+  (ReactDOM as any).render(element, container);
+  return () => {
+    try {
+      (ReactDOM as any).unmountComponentAtNode(container);
+    } catch {
+      // already torn down
+    }
+  };
+}
 
 /**
  * Convenience re-exports of the hooks plugins reach for most. These read

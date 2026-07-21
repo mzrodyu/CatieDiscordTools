@@ -4,7 +4,7 @@
 // works even when the native settings-sidebar injection cannot find its anchor
 // on a given Discord build. Exposed to the runtime as `open()`.
 
-import { React, ReactDOM } from "../../core/common/react";
+import { React, mountDetached } from "../../core/common/react";
 import { injectStyles } from "../inject-styles";
 import { logger } from "../../core/logger";
 import { SettingsRoot } from "./SettingsRoot";
@@ -12,6 +12,7 @@ import { SettingsRoot } from "./SettingsRoot";
 const log = logger("settings");
 
 let host: HTMLDivElement | null = null;
+let unmount: (() => void) | null = null;
 let keyHandler: ((event: KeyboardEvent) => void) | null = null;
 
 export function openSettings(): void {
@@ -28,7 +29,7 @@ export function openSettings(): void {
   document.addEventListener("keydown", keyHandler);
 
   try {
-    ReactDOM.render(React.createElement(Overlay, { onClose: closeSettings }), host);
+    unmount = mountDetached(React.createElement(Overlay, { onClose: closeSettings }), host);
   } catch (err) {
     log.error("could not open settings overlay", err);
     closeSettings();
@@ -40,12 +41,11 @@ export function closeSettings(): void {
     document.removeEventListener("keydown", keyHandler);
     keyHandler = null;
   }
+  if (unmount) {
+    unmount();
+    unmount = null;
+  }
   if (host) {
-    try {
-      ReactDOM.unmountComponentAtNode(host);
-    } catch {
-      // Nothing mounted; fall through to removal.
-    }
     host.remove();
     host = null;
   }

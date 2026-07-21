@@ -6,11 +6,13 @@
 
 import type { Plugin } from "../core/plugin";
 import settingsHost from "./settings-host";
+import contextMenuApi from "./context-menu-api";
 import messageLogger from "./message-logger";
 import showUsername from "./show-username";
 import guildMonitor from "./guild-monitor";
 import messageCleaner from "./message-cleaner";
 import fakeNitro from "./fake-nitro";
 import consoleCleaner from "./console-cleaner";
+import emoteCloner from "./emote-cloner";
 
-export const plugins: Plugin[] = [settingsHost, messageLogger, showUsername, guildMonitor, messageCleaner, fakeNitro, consoleCleaner];
+export const plugins: Plugin[] = [settingsHost, contextMenuApi, messageLogger, showUsername, guildMonitor, messageCleaner, fakeNitro, consoleCleaner, emoteCloner];

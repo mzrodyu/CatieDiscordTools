@@ -1132,6 +1132,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Jump-to-message action, pinned to the right of each row's header. Keeps the
+ * header on one line and doesn't steal the space the time claims via
+ * margin-left:auto (which already pushes both to the right edge). */
+.hc-msg__jump {
+  flex: none;
+  margin-left: var(--hc-space-2);
+}
+
 .hc-msg__body {
   font-size: var(--hc-text-callout);
   line-height: var(--hc-lh-callout);
@@ -1581,4 +1589,192 @@
   text-align: center;
   font-size: var(--hc-text-footnote);
   color: var(--hc-label-tertiary);
+}
+
+/* ── emote-cloner server picker ───────────────────────────────────────────
+ * A floating modal (mounted in its own .halcyon host over Discord) shown when
+ * "复制表情/贴纸到服务器" is clicked. Sits on the shared .hc-overlay backdrop;
+ * the panel is compact, with a search box and a scrollable, icon-bearing list
+ * of the servers the account can add expressions to. Decorates Halcyon's own
+ * surface, so every value is a token. */
+.hc-emote-picker {
+  width: min(440px, 92vw);
+  max-height: min(560px, 82vh);
+  background: var(--hc-bg-primary);
+  border-radius: var(--hc-radius-xl);
+  box-shadow: var(--hc-elev-3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: hc-rise var(--hc-duration-slow) var(--hc-ease);
+}
+
+.hc-emote-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-4) var(--hc-space-4) var(--hc-space-3);
+  border-bottom: 1px solid var(--hc-separator-opaque);
+}
+
+.hc-emote-picker__title {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+
+.hc-emote-picker__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--hc-label-secondary);
+  border-radius: var(--hc-radius-md);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-emote-picker__close:hover {
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-primary);
+}
+
+.hc-emote-picker__search {
+  padding: var(--hc-space-3) var(--hc-space-4) var(--hc-space-2);
+}
+
+.hc-emote-picker__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--hc-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hc-emote-picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-2) var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  cursor: pointer;
+  transition: background-color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-emote-picker__item:hover {
+  background: var(--hc-fill-secondary);
+}
+
+.hc-emote-picker__icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--hc-fill-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: var(--hc-text-subhead);
+  font-weight: 600;
+  color: var(--hc-label-secondary);
+}
+
+.hc-emote-picker__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hc-emote-picker__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--hc-text-body);
+  font-weight: 500;
+  color: var(--hc-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-emote-picker__empty {
+  padding: var(--hc-space-8) var(--hc-space-6);
+  text-align: center;
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-footnote);
+}
+
+/* Thin, subtle scrollbar for the picker list. Our overlay mounts in its own
+ * .halcyon host, which Discord's global scrollbar styling doesn't reach, so
+ * without this the list falls back to the chunky default OS scrollbar. */
+.hc-emote-picker__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.hc-emote-picker__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hc-emote-picker__list::-webkit-scrollbar-thumb {
+  background: var(--hc-fill-secondary);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.hc-emote-picker__list::-webkit-scrollbar-thumb:hover {
+  background: var(--hc-label-tertiary);
+  background-clip: padding-box;
+}
+
+/* Post-pick status view (copying / done / error), shown in place of the list
+ * so a clone never looks like "nothing happened" even when the toast module
+ * isn't present on this build. */
+.hc-emote-picker__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--hc-space-3);
+  padding: var(--hc-space-8) var(--hc-space-6);
+}
+
+.hc-emote-picker__status-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.hc-emote-picker__status[data-state="done"] .hc-emote-picker__status-icon {
+  color: var(--hc-green);
+}
+
+.hc-emote-picker__status[data-state="error"] .hc-emote-picker__status-icon {
+  color: var(--hc-red);
+}
+
+.hc-emote-picker__status-title {
+  font-size: var(--hc-text-headline);
+  line-height: var(--hc-lh-headline);
+  font-weight: 600;
+  color: var(--hc-label-primary);
+}
+
+.hc-emote-picker__status-detail {
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+  color: var(--hc-label-secondary);
+  max-width: 340px;
+  word-break: break-word;
 }
