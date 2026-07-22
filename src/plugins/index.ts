@@ -14,5 +14,6 @@ import messageCleaner from "./message-cleaner";
 import fakeNitro from "./fake-nitro";
 import consoleCleaner from "./console-cleaner";
 import emoteCloner from "./emote-cloner";
+import markAllRead from "./mark-all-read";
 
-export const plugins: Plugin[] = [settingsHost, contextMenuApi, messageLogger, showUsername, guildMonitor, messageCleaner, fakeNitro, consoleCleaner, emoteCloner];
+export const plugins: Plugin[] = [settingsHost, contextMenuApi, messageLogger, showUsername, guildMonitor, messageCleaner, fakeNitro, consoleCleaner, emoteCloner, markAllRead];

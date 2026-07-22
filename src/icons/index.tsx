@@ -148,6 +148,16 @@ export function CheckmarkIcon(props: IconProps) {
   );
 }
 
+/** A message bubble with a check inside — the "mark all read" symbol. */
+export function MessageCheckIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M5 5.5h14a1.5 1.5 0 011.5 1.5v8a1.5 1.5 0 01-1.5 1.5H9.5L5.5 20v-3H5A1.5 1.5 0 013.5 15.5V7A1.5 1.5 0 015 5.5z" />
+      <path d="M8.5 11l2.25 2.25L15.5 8.5" />
+    </Glyph>
+  );
+}
+
 export function SlidersIcon(props: IconProps) {
   return (
     <Glyph {...props}>

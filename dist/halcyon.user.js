@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.2.0
+// @version      0.3.0
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -669,7 +669,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-21 20:04:23" : "dev";
+      const build = true ? "2026-07-22 15:12:28" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -1638,6 +1638,47 @@ ${slices.join("\n  ...  \n")}`);
   align-items: center;
   gap: var(--hc-space-3);
   margin-bottom: var(--hc-space-4);
+}
+
+/* --- Server-rail button (injected under Discord's home/DM button) -------- */
+/* Styled to read as a native rail icon: a 48px rounded square (not a circle)
+   like Discord's own home button, on the same graphite fill, with a muted grey
+   glyph. On hover it snaps to the brand color and squares off a touch \u2014 exactly
+   how Discord's guild pills animate \u2014 so it belongs in the rail instead of
+   standing out as a bright foreign blob. */
+.hc-rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.hc-rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  background: var(--background-secondary, #313338);
+  color: var(--interactive-normal, #b5bac1);
+  cursor: pointer;
+  border-radius: 16px;
+  transition: border-radius var(--hc-duration-fast) var(--hc-ease),
+    background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-rail-btn:hover {
+  border-radius: 14px;
+  background: var(--brand-experiment, var(--hc-accent, #5865f2));
+  color: #fff;
+}
+
+.hc-rail-btn:active {
+  border-radius: 12px;
 }
 
 .hc-search {
@@ -2725,6 +2766,9 @@ ${components_default}`;
   function XmarkIcon(props) {
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M6.5 6.5l11 11M17.5 6.5l-11 11" }));
   }
+  function MessageCheckIcon(props) {
+    return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M5 5.5h14a1.5 1.5 0 011.5 1.5v8a1.5 1.5 0 01-1.5 1.5H9.5L5.5 20v-3H5A1.5 1.5 0 013.5 15.5V7A1.5 1.5 0 015 5.5z" }), /* @__PURE__ */ React.createElement("path", { d: "M8.5 11l2.25 2.25L15.5 8.5" }));
+  }
   function SlidersIcon(props) {
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M4.5 8h9M17 8h2.5M4.5 16h2.5M10.5 16h9" }), /* @__PURE__ */ React.createElement("circle", { cx: "15", cy: "8", r: "2.25" }), /* @__PURE__ */ React.createElement("circle", { cx: "9", cy: "16", r: "2.25" }));
   }
@@ -3456,7 +3500,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.2.0" : "dev";
+    return true ? "0.3.0" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -3534,7 +3578,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.2.0" : "dev";
+    const version = true ? "0.3.0" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -4025,6 +4069,10 @@ ${components_default}`;
       for (const id of ids) navPatches.get(id)?.delete(callback);
     };
   }
+  function removeContextMenuPatch(navId, callback) {
+    const ids = Array.isArray(navId) ? navId : [navId];
+    for (const id of ids) navPatches.get(id)?.delete(callback);
+  }
   function cloneChildren(children) {
     if (Array.isArray(children)) return children.slice();
     return children == null ? [] : [children];
@@ -4195,10 +4243,12 @@ ${components_default}`;
   // src/core/common/discord.ts
   var Dispatcher = lazy(isFluxDispatcher);
   function getDispatcher() {
-    try {
-      const viaStore = UserStore?._dispatcher;
-      if (isFluxDispatcher(viaStore)) return viaStore;
-    } catch {
+    for (const store of [GuildStore, ChannelStore, ReadStateStore]) {
+      try {
+        const viaStore = store?._dispatcher;
+        if (isFluxDispatcher(viaStore)) return viaStore;
+      } catch {
+      }
     }
     return find(isFluxDispatcher);
   }
@@ -4221,7 +4271,15 @@ ${components_default}`;
     (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
   );
   var GuildChannelStore = lazy(
-    (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
+    (m) => (
+      // Name-only, exactly like Vencord's findStoreLazy. A shape probe
+      // (getChannels/getDefaultChannel "look like" functions) also matches
+      // Discord's intl `t` proxy — which answers every property — so getChannels()
+      // returned {locale, ast, deleted} instead of real channels, and the scan
+      // collected zero. The proxy's getName() is a message object, never the
+      // string, so a name check rejects it.
+      m?.getName?.() === "GuildChannelStore"
+    )
   );
   var GuildSubscriptions = lazy(
     (m) => typeof m?.subscribeToGuild === "function" || typeof m?.subscribeToChannel === "function"
@@ -4257,9 +4315,35 @@ ${components_default}`;
     (m) => typeof m?.Endpoints?.GUILD_STICKER_PACKS === "function"
   );
   var StickersStore = lazy((m) => m?.getName?.() === "StickersStore");
-  var Toasts = lazy(
-    (m) => typeof m?.showToast === "function" && typeof m?.createToast === "function"
+  var ReadStateStore = lazy(
+    (m) => (
+      // Name-only (see GuildChannelStore): the method-shape fallback also matched
+      // Discord's answer-everything intl proxy, so hasUnread() returned a truthy
+      // message object for every channel. The store's registered name is stable.
+      m?.getName?.() === "ReadStateStore"
+    )
   );
+  var ActiveJoinedThreadsStore = lazy(
+    (m) => m?.getName?.() === "ActiveJoinedThreadsStore"
+  );
+  var Toasts = lazy(
+    (m) => typeof m?.showToast === "function" && typeof m?.createToast === "function" && // Reject Discord's intl `t` proxy, which answers EVERY property as a
+    // callable — so showToast/createToast "look like" functions and it wins the
+    // probe (which is why toasts silently never appeared). A real module returns
+    // undefined for a name it doesn't export; the answer-everything proxy does not.
+    typeof m?.__halcyon_probe__ === "undefined"
+  );
+  function showToast(message, type = "info") {
+    try {
+      const T = Toasts;
+      const typeEnum = T?.Type ?? {};
+      const resolved = type === "success" ? typeEnum.SUCCESS ?? 1 : type === "failure" ? typeEnum.FAILURE ?? 2 : typeEnum.MESSAGE ?? typeEnum.INFO ?? 0;
+      if (typeof T?.showToast === "function" && typeof T?.createToast === "function") {
+        T.showToast(T.createToast(message, resolved));
+      }
+    } catch {
+    }
+  }
 
   // src/core/settings/index.ts
   var log9 = logger("settings");
@@ -5061,8 +5145,8 @@ ${components_default}`;
   var rerendered = /* @__PURE__ */ new Set();
   function forceRowRerender(channelId, messageId) {
     try {
-      const dispatcher = getDispatcher();
-      if (!dispatcher || typeof dispatcher.dispatch !== "function") return;
+      const dispatcher2 = getDispatcher();
+      if (!dispatcher2 || typeof dispatcher2.dispatch !== "function") return;
       const msg = readMessage(channelId, messageId);
       if (!msg) return;
       const a = msg.author ?? {};
@@ -5118,7 +5202,7 @@ ${components_default}`;
         // Carried so the rebuilt record keeps the flag where our patch preserves it.
         deleted: true
       };
-      dispatcher.dispatch({ type: "MESSAGE_UPDATE", message: raw });
+      dispatcher2.dispatch({ type: "MESSAGE_UPDATE", message: raw });
     } catch (err) {
       log12.debug("force row re-render failed (non-fatal)", err);
     }
@@ -5368,18 +5452,18 @@ ${components_default}`;
     onAction(ctx.args[0]);
   }
   var WATCHED = ["MESSAGE_CREATE", "MESSAGE_UPDATE", "MESSAGE_DELETE", "MESSAGE_DELETE_BULK", "LOAD_MESSAGES_SUCCESS"];
-  function attachRecorder(dispatcher, tag) {
+  function attachRecorder(dispatcher2, tag) {
     const undo = [];
     const seams = [];
-    if (typeof dispatcher.addInterceptor === "function") {
+    if (typeof dispatcher2.addInterceptor === "function") {
       try {
         const interceptor = (action) => {
           onAction(action);
           return false;
         };
-        dispatcher.addInterceptor(interceptor);
+        dispatcher2.addInterceptor(interceptor);
         undo.push(() => {
-          const list = dispatcher._interceptors;
+          const list = dispatcher2._interceptors;
           if (Array.isArray(list)) {
             const at = list.indexOf(interceptor);
             if (at >= 0) list.splice(at, 1);
@@ -5390,24 +5474,24 @@ ${components_default}`;
       }
     }
     for (const method of ["dispatch", "_dispatch"]) {
-      if (typeof dispatcher[method] === "function") {
+      if (typeof dispatcher2[method] === "function") {
         try {
-          undo.push(patcher.before(dispatcher, method, onDispatch));
+          undo.push(patcher.before(dispatcher2, method, onDispatch));
           seams.push(method);
         } catch {
         }
         break;
       }
     }
-    if (typeof dispatcher.subscribe === "function") {
+    if (typeof dispatcher2.subscribe === "function") {
       try {
         const handler = (action) => onAction(action);
-        for (const type of WATCHED) dispatcher.subscribe(type, handler);
+        for (const type of WATCHED) dispatcher2.subscribe(type, handler);
         undo.push(() => {
-          if (typeof dispatcher.unsubscribe === "function") {
+          if (typeof dispatcher2.unsubscribe === "function") {
             for (const type of WATCHED) {
               try {
-                dispatcher.unsubscribe(type, handler);
+                dispatcher2.unsubscribe(type, handler);
               } catch {
               }
             }
@@ -7809,11 +7893,312 @@ ${components_default}`;
     }
   });
 
+  // src/core/flux/index.ts
+  var log24 = logger("flux");
+  var listenersByType = /* @__PURE__ */ new Map();
+  var dispatcherHandlers = /* @__PURE__ */ new Map();
+  function dispatcher() {
+    const d = getDispatcher();
+    if (!d) log24.error("dispatcher unavailable; flux subscriptions are inert");
+    return d;
+  }
+  function ensureBridge(type) {
+    if (dispatcherHandlers.has(type)) return;
+    const handler = (action) => {
+      const set = listenersByType.get(type);
+      if (!set) return;
+      for (const listener of set) {
+        try {
+          listener(action);
+        } catch (err) {
+          log24.error(`listener for ${type} threw`, err);
+        }
+      }
+    };
+    const d = dispatcher();
+    try {
+      d?.subscribe(type, handler);
+      dispatcherHandlers.set(type, handler);
+    } catch (err) {
+      log24.error(`could not subscribe to ${type}`, err);
+    }
+  }
+  function teardownBridge(type) {
+    const set = listenersByType.get(type);
+    if (set && set.size) return;
+    const handler = dispatcherHandlers.get(type);
+    if (!handler) return;
+    try {
+      dispatcher()?.unsubscribe(type, handler);
+    } catch (err) {
+      log24.error(`could not unsubscribe from ${type}`, err);
+    }
+    dispatcherHandlers.delete(type);
+    listenersByType.delete(type);
+  }
+  var flux = {
+    /**
+     * Listen for a dispatched action by type. Returns an unsubscribe function.
+     * The callback runs synchronously on dispatch; keep it fast and side-effect free.
+     */
+    subscribe(type, listener) {
+      let set = listenersByType.get(type);
+      if (!set) {
+        set = /* @__PURE__ */ new Set();
+        listenersByType.set(type, set);
+      }
+      set.add(listener);
+      ensureBridge(type);
+      let live = true;
+      return () => {
+        if (!live) return;
+        live = false;
+        set.delete(listener);
+        teardownBridge(type);
+      };
+    },
+    /** Dispatch an action. Use sparingly; most plugins only ever listen. */
+    dispatch(action) {
+      try {
+        dispatcher()?.dispatch(action);
+      } catch (err) {
+        log24.error("dispatch failed", action?.type, err);
+      }
+    }
+  };
+
+  // src/plugins/mark-all-read/mark.ts
+  var log25 = logger("mark-all-read");
+  var shapeLogged = false;
+  function channelIdOf(entry) {
+    return entry?.channel?.id ?? entry?.id;
+  }
+  function collectUnread() {
+    const channels = [];
+    const guildsWithUnread = /* @__PURE__ */ new Set();
+    const guilds = GuildStore.getGuilds?.() ?? {};
+    for (const guildId of Object.keys(guilds)) {
+      let grouped;
+      try {
+        grouped = GuildChannelStore.getChannels?.(guildId);
+      } catch (err) {
+        log25.warn(`could not read channels for guild ${guildId}`, err);
+        continue;
+      }
+      if (!grouped) continue;
+      const ackIfUnread = (id) => {
+        if (!id) return false;
+        try {
+          if (!ReadStateStore.hasUnread?.(id)) return false;
+        } catch {
+          return false;
+        }
+        channels.push({
+          channelId: id,
+          messageId: ReadStateStore.lastMessageId?.(id) ?? null,
+          readStateType: 0
+        });
+        return true;
+      };
+      if (!shapeLogged) {
+        shapeLogged = true;
+        try {
+          const desc = Object.keys(grouped).map((k) => {
+            const v = grouped[k];
+            if (Array.isArray(v)) return `${k}:array(${v.length})`;
+            return `${k}:${typeof v}`;
+          }).join(", ");
+          log25.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          for (const k of Object.keys(grouped)) {
+            const v = grouped[k];
+            if (Array.isArray(v) && v.length > 0) {
+              log25.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              break;
+            }
+          }
+        } catch (err) {
+          log25.warn("could not describe getChannels shape", err);
+        }
+      }
+      const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
+      for (const bucket of buckets) {
+        for (const entry of bucket) {
+          if (ackIfUnread(channelIdOf(entry))) guildsWithUnread.add(guildId);
+        }
+      }
+      try {
+        const threadGroups = ActiveJoinedThreadsStore.getActiveJoinedThreadsForGuild?.(guildId);
+        if (threadGroups && typeof threadGroups === "object") {
+          for (const group of Object.values(threadGroups)) {
+            if (!group || typeof group !== "object") continue;
+            for (const thread of Object.values(group)) {
+              if (ackIfUnread(thread?.channel?.id ?? thread?.id)) guildsWithUnread.add(guildId);
+            }
+          }
+        }
+      } catch (err) {
+        log25.warn(`could not read joined threads for guild ${guildId}`, err);
+      }
+    }
+    return { channels, guilds: guildsWithUnread.size };
+  }
+  function diagnoseStores() {
+    const probe = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
+    log25.info(
+      "store check \u2014 " + [
+        probe("GuildStore.getGuilds", GuildStore.getGuilds),
+        probe("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
+        probe("ReadStateStore.hasUnread", ReadStateStore.hasUnread),
+        probe("ReadStateStore.lastMessageId", ReadStateStore.lastMessageId),
+        probe(
+          "ActiveJoinedThreadsStore.getActiveJoinedThreadsForGuild",
+          ActiveJoinedThreadsStore.getActiveJoinedThreadsForGuild
+        )
+      ].join(", ")
+    );
+  }
+  function markAllRead() {
+    diagnoseStores();
+    const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
+    const { channels, guilds } = collectUnread();
+    log25.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    if (channels.length === 0) {
+      log25.info("nothing unread; skipping BULK_ACK");
+      return { channels: 0, guilds: 0 };
+    }
+    flux.dispatch({
+      type: "BULK_ACK",
+      context: "APP",
+      channels
+    });
+    log25.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    return { channels: channels.length, guilds };
+  }
+
+  // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
+  var log26 = logger("mark-all-read");
+  function MarkAllReadPage() {
+    const [busy, setBusy] = useState(false);
+    const [state, setState] = useState("\u5F85\u673A");
+    const [detail, setDetail] = useState("\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\uFF0C\u628A\u6240\u6709\u670D\u52A1\u5668\u91CC\u7684\u672A\u8BFB\u4E00\u6B21\u6027\u6E05\u7A7A\u3002");
+    const onMark = () => {
+      if (busy) return;
+      setBusy(true);
+      setState("\u5904\u7406\u4E2D");
+      setDetail("\u6B63\u5728\u6536\u96C6\u672A\u8BFB\u9891\u9053\u2026");
+      try {
+        const result = markAllRead();
+        if (result.channels === 0) {
+          setState("\u5DF2\u662F\u6700\u65B0");
+          setDetail("\u6CA1\u6709\u627E\u5230\u4EFB\u4F55\u672A\u8BFB\uFF0C\u65E0\u9700\u64CD\u4F5C\u3002");
+          showToast("\u6CA1\u6709\u672A\u8BFB\u6D88\u606F", "info");
+        } else {
+          setState("\u5B8C\u6210");
+          setDetail(`\u5DF2\u6E05\u7A7A ${result.guilds} \u4E2A\u670D\u52A1\u5668\u4E2D\u7684 ${result.channels} \u4E2A\u9891\u9053\u3002`);
+          showToast(`\u5DF2\u6807\u8BB0 ${result.channels} \u4E2A\u9891\u9053\u4E3A\u5DF2\u8BFB`, "success");
+        }
+      } catch (err) {
+        setState("\u5931\u8D25");
+        setDetail(err?.message ?? String(err));
+        showToast("\u6807\u8BB0\u5931\u8D25", "failure");
+        log26.error("mark all read failed", err);
+      } finally {
+        setBusy(false);
+      }
+    };
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note" }, /* @__PURE__ */ React.createElement(InfoIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u4E00\u6B21\u6027\u628A", /* @__PURE__ */ React.createElement("strong", null, "\u6240\u6709\u670D\u52A1\u5668"), "\u7684\u672A\u8BFB\u6D88\u606F\u6807\u4E3A\u5DF2\u8BFB\u3002\u6807\u8BB0\u5DF2\u8BFB\u4E0D\u4F1A\u5220\u9664\u4EFB\u4F55\u6D88\u606F\uFF0C\u4F46\u65E0\u6CD5\u64A4\u9500\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "\u64CD\u4F5C" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { variant: "primary", icon: /* @__PURE__ */ React.createElement(MessageCheckIcon, { size: 16 }), disabled: busy, onClick: onMark }, "\u5168\u90E8\u6807\u4E3A\u5DF2\u8BFB"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-state" }, state), detail && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-detail" }, detail)));
+  }
+
+  // src/plugins/mark-all-read/index.tsx
+  var log27 = logger("mark-all-read");
+  function runMark() {
+    try {
+      const result = markAllRead();
+      if (result.channels === 0) {
+        showToast("\u6CA1\u6709\u672A\u8BFB\u6D88\u606F", "info");
+      } else {
+        showToast(`\u5DF2\u6807\u8BB0 ${result.channels} \u4E2A\u9891\u9053\u4E3A\u5DF2\u8BFB`, "success");
+      }
+    } catch (err) {
+      showToast("\u6807\u8BB0\u5931\u8D25", "failure");
+      log27.error("mark all read failed", err);
+    }
+  }
+  function RailButton() {
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-rail-item" }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-rail-btn",
+        "aria-label": "\u5168\u90E8\u670D\u52A1\u5668\u6807\u4E3A\u5DF2\u8BFB",
+        title: "\u5168\u90E8\u670D\u52A1\u5668\u6807\u4E3A\u5DF2\u8BFB",
+        onClick: runMark
+      },
+      /* @__PURE__ */ React.createElement(MessageCheckIcon, { size: 24 })
+    ));
+  }
+  var GUILD_MENUS = ["guild-context", "guild-header-popout"];
+  var patchGuildMenu = (children) => {
+    const MenuItem = getMenuItemComponent();
+    if (!MenuItem) return;
+    const already = children.some((c) => c?.props?.id === "hc-mark-all-read");
+    if (already) return;
+    children.push(
+      React.createElement(MenuItem, {
+        id: "hc-mark-all-read",
+        label: "\u5168\u90E8\u670D\u52A1\u5668\u6807\u4E3A\u5DF2\u8BFB",
+        action: runMark
+      })
+    );
+  };
+  var mark_all_read_default = definePlugin({
+    id: "mark-all-read",
+    name: "\u4E00\u952E\u5DF2\u8BFB",
+    description: "\u5728\u670D\u52A1\u5668\u5217\u8868\u7684\u597D\u53CB\u6309\u94AE\u4E0B\u65B9\u52A0\u4E00\u4E2A\u6309\u94AE\uFF0C\u4E00\u952E\u628A\u6240\u6709\u670D\u52A1\u5668\u7684\u672A\u8BFB\u6D88\u606F\u6807\u4E3A\u5DF2\u8BFB\u3002\u4E5F\u53EF\u53F3\u952E\u4EFB\u610F\u670D\u52A1\u5668\uFF0C\u6216\u5728\u672C\u9875\u70B9\u51FB\u3002\u6807\u8BB0\u5DF2\u8BFB\u4E0D\u4F1A\u5220\u9664\u6D88\u606F\uFF0C\u4F46\u65E0\u6CD5\u64A4\u9500\u3002",
+    authors: [{ name: "caitemm" }, { name: "Vencord" }],
+    category: "utility",
+    dependencies: ["context-menu-api"],
+    // Same target and transform Vencord's ServerListAPI uses for
+    // ServerListRenderPosition.Above, but anchored on the plain runtime string
+    // `tutorialId:"friends-list"` instead of Vencord's build-time intl-hash macro
+    // (which we can't reproduce). It wraps the friends-button element the guild
+    // nav returns into an array and concatenates our button, letting Discord's own
+    // SVG layout give it a real slot right after friends.
+    patches: [
+      {
+        label: "read-all-rail-button",
+        find: 'tutorialId:"friends-list"',
+        replacement: {
+          match: /return(\(.{0,200}?tutorialId:"friends-list".+?\}\))(?=\}function)/,
+          replace: "return[$1].concat($self.renderRailButton())"
+        }
+      }
+    ],
+    /** Called from the patched guild-nav render (via `$self`). Returns the button
+     *  as a keyed single-element array so it slots in right after friends. */
+    renderRailButton() {
+      return [React.createElement(RailButton, { key: "hc-mark-all-read-rail" })];
+    },
+    page: {
+      title: "\u4E00\u952E\u5DF2\u8BFB",
+      icon: MessageCheckIcon,
+      component: MarkAllReadPage
+    },
+    start() {
+      injectStyles();
+      addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
+      log27.info("mark-all-read ready");
+    },
+    stop() {
+      removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
+    }
+  });
+
   // src/plugins/index.ts
-  var plugins = [settings_host_default, context_menu_api_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default, fake_nitro_default, console_cleaner_default, emote_cloner_default];
+  var plugins = [settings_host_default, context_menu_api_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default, fake_nitro_default, console_cleaner_default, emote_cloner_default, mark_all_read_default];
 
   // src/userscript/main.ts
-  var log24 = logger("userscript");
+  var log28 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -7828,6 +8213,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log24.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log24.error("userscript boot failed", err));
+    log28.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log28.error("userscript boot failed", err));
 })();

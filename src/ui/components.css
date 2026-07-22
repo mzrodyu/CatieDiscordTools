@@ -761,6 +761,47 @@
   margin-bottom: var(--hc-space-4);
 }
 
+/* --- Server-rail button (injected under Discord's home/DM button) -------- */
+/* Styled to read as a native rail icon: a 48px rounded square (not a circle)
+   like Discord's own home button, on the same graphite fill, with a muted grey
+   glyph. On hover it snaps to the brand color and squares off a touch — exactly
+   how Discord's guild pills animate — so it belongs in the rail instead of
+   standing out as a bright foreign blob. */
+.hc-rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.hc-rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  background: var(--background-secondary, #313338);
+  color: var(--interactive-normal, #b5bac1);
+  cursor: pointer;
+  border-radius: 16px;
+  transition: border-radius var(--hc-duration-fast) var(--hc-ease),
+    background-color var(--hc-duration-fast) var(--hc-ease),
+    color var(--hc-duration-fast) var(--hc-ease);
+}
+
+.hc-rail-btn:hover {
+  border-radius: 14px;
+  background: var(--brand-experiment, var(--hc-accent, #5865f2));
+  color: #fff;
+}
+
+.hc-rail-btn:active {
+  border-radius: 12px;
+}
+
 .hc-search {
   flex: 1;
   display: flex;

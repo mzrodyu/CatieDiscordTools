@@ -20,11 +20,19 @@ export const Dispatcher = lazy<any>(isFluxDispatcher);
  * on, so prefer the dispatcher reachable from a core store.
  */
 export function getDispatcher(): any {
-  try {
-    const viaStore = (UserStore as any)?._dispatcher;
-    if (isFluxDispatcher(viaStore)) return viaStore;
-  } catch {
-    // fall through to the shape scan
+  // Prefer the dispatcher a *name-resolved* core store is registered on: that
+  // is by definition the one Discord's own stores (ReadStateStore among them)
+  // react on, so a BULK_ACK dispatched through it actually reaches the ack
+  // handler. UserStore is shape-resolved and can land on the intl `t` proxy,
+  // whose `_dispatcher` is a bogus message object — that mis-route is why an
+  // earlier BULK_ACK "dispatched" 758 channels yet cleared nothing.
+  for (const store of [GuildStore, ChannelStore, ReadStateStore]) {
+    try {
+      const viaStore = (store as any)?._dispatcher;
+      if (isFluxDispatcher(viaStore)) return viaStore;
+    } catch {
+      // try the next store
+    }
   }
   return find(isFluxDispatcher);
 }
@@ -68,9 +76,22 @@ export const GuildStore = lazy<any>(
   (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
 );
 
-/** A guild's channels, grouped and queryable. */
+/**
+ * A guild's channels, grouped and queryable. Resolved by store name first
+ * (exactly what Vencord's `findStoreLazy("GuildChannelStore")` does) so a
+ * `getChannels`-shaped lookalike can't shadow the real store and hand back
+ * empty buckets — the failure that left mark-all-read collecting nothing.
+ * Falls back to the method shape only if the name probe misses.
+ */
 export const GuildChannelStore = lazy<any>(
-  (m) => typeof m?.getChannels === "function" && typeof m?.getDefaultChannel === "function"
+  (m) =>
+    // Name-only, exactly like Vencord's findStoreLazy. A shape probe
+    // (getChannels/getDefaultChannel "look like" functions) also matches
+    // Discord's intl `t` proxy — which answers every property — so getChannels()
+    // returned {locale, ast, deleted} instead of real channels, and the scan
+    // collected zero. The proxy's getName() is a message object, never the
+    // string, so a name check rejects it.
+    m?.getName?.() === "GuildChannelStore"
 );
 
 /**
@@ -170,12 +191,44 @@ export const Constants = lazy<any>(
 export const StickersStore = lazy<any>((m) => m?.getName?.() === "StickersStore");
 
 /**
+ * Per-channel read state: what's unread, the last message seen, mention counts.
+ * `hasUnread(channelId)` and `lastMessageId(channelId)` are what mark-all-read
+ * uses to build the ack list. Matched by its method pair (the same one Vencord
+ * keys on) so a lighter lookalike can't shadow the real store.
+ */
+export const ReadStateStore = lazy<any>(
+  (m) =>
+    // Name-only (see GuildChannelStore): the method-shape fallback also matched
+    // Discord's answer-everything intl proxy, so hasUnread() returned a truthy
+    // message object for every channel. The store's registered name is stable.
+    m?.getName?.() === "ReadStateStore"
+);
+
+/**
+ * Threads the current account has actively joined, grouped by guild.
+ * `getActiveJoinedThreadsForGuild(guildId)` returns a map of parent-channel id
+ * -> { threadId: threadChannel }, which mark-all-read flattens so joined
+ * threads get acked too (exactly what Vencord's ReadAllNotificationsButton
+ * does). Resolved by its method name; absent on some builds — callers null-check.
+ */
+export const ActiveJoinedThreadsStore = lazy<any>(
+  (m) => m?.getName?.() === "ActiveJoinedThreadsStore"
+);
+
+/**
  * Transient corner notifications ("已复制", "复制失败", …). `showToast` displays
  * one; `createToast(message, type)` builds it, with `Toasts.Type` naming the
  * variants. Absent on some builds — callers must null-check.
  */
 export const Toasts = lazy<any>(
-  (m) => typeof m?.showToast === "function" && typeof m?.createToast === "function"
+  (m) =>
+    typeof m?.showToast === "function" &&
+    typeof m?.createToast === "function" &&
+    // Reject Discord's intl `t` proxy, which answers EVERY property as a
+    // callable — so showToast/createToast "look like" functions and it wins the
+    // probe (which is why toasts silently never appeared). A real module returns
+    // undefined for a name it doesn't export; the answer-everything proxy does not.
+    typeof m?.__halcyon_probe__ === "undefined"
 );
 
 /**
