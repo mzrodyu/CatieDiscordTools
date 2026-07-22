@@ -1460,6 +1460,13 @@ export default definePlugin({
       const channelId = message?.channel_id ?? message?.channelId;
       if (!id || !channelId) return null;
 
+      // Recording already filters ignored authors (captureEdit/captureDelete
+      // call isIgnored), but the display path can still light up an "edited"
+      // extra straight from Discord's native edited_timestamp — that bypass is
+      // why 屏蔽自己 didn't hide your own edited messages. Consult isIgnored here
+      // too so an ignored author (self / bots / muted ids) shows no extras.
+      if (isIgnored(String(channelId), message?.author)) return null;
+
       const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
       const record = messageLog.findDeleted(String(channelId), String(id));
       const hasHistory = Boolean(entry && entry.history.length > 0);

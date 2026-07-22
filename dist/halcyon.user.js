@@ -669,7 +669,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-22 15:12:28" : "dev";
+      const build = true ? "2026-07-22 15:21:33" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -4259,7 +4259,7 @@ ${components_default}`;
     (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
   );
   var UserStore = lazy(
-    (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
+    (m) => m?.getName?.() === "UserStore" || typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function" && typeof m?.__halcyon_probe__ === "undefined"
   );
   var ChannelStore = lazy(
     (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
@@ -5902,6 +5902,7 @@ ${components_default}`;
         const id = message?.id;
         const channelId = message?.channel_id ?? message?.channelId;
         if (!id || !channelId) return null;
+        if (isIgnored(String(channelId), message?.author)) return null;
         const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
         const record2 = messageLog.findDeleted(String(channelId), String(id));
         const hasHistory = Boolean(entry && entry.history.length > 0);

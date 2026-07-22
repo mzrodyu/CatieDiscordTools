@@ -47,9 +47,22 @@ export const MessageActions = lazy<any>(
   (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
 );
 
-/** Users the client knows about. */
+/**
+ * Users the client knows about. Resolved by the store's registered name first
+ * (like GuildStore / ReadStateStore): the bare getCurrentUser/getUser shape
+ * also matches Discord's answer-everything intl `t` proxy, so getCurrentUser()
+ * handed back a message object with no real `id` — which is why message-logger's
+ * 屏蔽自己 silently never matched (currentUserId() came back undefined, so the
+ * self-compare was always false and your own edits still showed). The proxy's
+ * getName() is a message object, never the string, so the name check rejects it;
+ * the shape branch is kept as a fallback but guarded against the same proxy.
+ */
 export const UserStore = lazy<any>(
-  (m) => typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function"
+  (m) =>
+    m?.getName?.() === "UserStore" ||
+    (typeof m?.getCurrentUser === "function" &&
+      typeof m?.getUser === "function" &&
+      typeof m?.__halcyon_probe__ === "undefined")
 );
 
 /**
