@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.3.0
+// @version      0.3.1
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -669,7 +669,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-22 15:21:33" : "dev";
+      const build = true ? "2026-07-22 15:30:19" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -3500,7 +3500,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.3.0" : "dev";
+    return true ? "0.3.1" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -3578,7 +3578,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.3.0" : "dev";
+    const version = true ? "0.3.1" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
