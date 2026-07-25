@@ -37,9 +37,18 @@ export function getDispatcher(): any {
   return find(isFluxDispatcher);
 }
 
-/** Read access to cached messages, keyed by channel. */
+/**
+ * Read access to cached messages, keyed by channel. Name-resolved first, with
+ * the method shape as fallback — and that fallback guarded against Discord's
+ * answer-everything intl `t` proxy (see UserStore), which otherwise wins the
+ * probe and hands back `{locale, ast}` message objects for every getMessage().
+ */
 export const MessageStore = lazy<any>(
-  (m) => typeof m?.getMessage === "function" && typeof m?.getMessages === "function"
+  (m) =>
+    m?.getName?.() === "MessageStore" ||
+    (typeof m?.getMessage === "function" &&
+      typeof m?.getMessages === "function" &&
+      typeof m?.__halcyon_probe__ === "undefined")
 );
 
 /** Imperative message operations (send / edit / delete / receive). */
@@ -202,6 +211,13 @@ export const Constants = lazy<any>(
  * name so a `getStickerById`-shaped lookalike can't shadow it.
  */
 export const StickersStore = lazy<any>((m) => m?.getName?.() === "StickersStore");
+
+/**
+ * Active quests (time-limited promotional tasks). The store holds a Map or
+ * array of quest records; each has `config` (expiresAt, rewards) and
+ * `userStatus` (completedAt if finished). Resolved by name.
+ */
+export const QuestsStore = lazy<any>((m) => m?.getName?.() === "QuestsStore");
 
 /**
  * Per-channel read state: what's unread, the last message seen, mention counts.

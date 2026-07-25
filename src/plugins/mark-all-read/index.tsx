@@ -22,14 +22,14 @@
 
 import { definePlugin } from "../../core/plugin";
 import { logger } from "../../core/logger";
-import { MessageCheckIcon } from "../../icons";
+import { MessageCheckIcon, QuestIcon } from "../../icons";
 import {
   addContextMenuPatch,
   removeContextMenuPatch,
   getMenuItemComponent,
   type ContextMenuPatchCallback
 } from "../../core/common/context-menu";
-import { showToast } from "../../core/common/discord";
+import { showToast, NavigationRouter } from "../../core/common/discord";
 import { React } from "../../core/common/react";
 import { injectStyles } from "../../ui/inject-styles";
 import { markAllRead } from "./mark";
@@ -68,6 +68,26 @@ function RailButton(): React.ReactElement {
         onClick={runMark}
       >
         <MessageCheckIcon size={24} />
+      </button>
+    </div>
+  );
+}
+
+/** Quest rail button — opens the quest hub. */
+function QuestRailButton(): React.ReactElement {
+  return (
+    <div className="hc-rail-item">
+      <button
+        type="button"
+        className="hc-rail-btn hc-quest-btn"
+        aria-label="任务中心"
+        title="任务中心"
+        onClick={() => {
+          history.pushState(null, "", "/quest-home");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}
+      >
+        <QuestIcon size={24} />
       </button>
     </div>
   );
@@ -124,7 +144,10 @@ export default definePlugin({
   /** Called from the patched guild-nav render (via `$self`). Returns the button
    *  as a keyed single-element array so it slots in right after friends. */
   renderRailButton(): React.ReactNode[] {
-    return [React.createElement(RailButton, { key: "hc-mark-all-read-rail" })];
+    return [
+      React.createElement(RailButton, { key: "hc-mark-all-read-rail" }),
+      React.createElement(QuestRailButton, { key: "hc-quest-indicator-rail" })
+    ];
   },
 
   page: {

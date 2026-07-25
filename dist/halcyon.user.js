@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.3.1
+// @version      0.4.0
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -515,6 +515,32 @@ ${slices.join("\n  ...  \n")}`);
       }
     };
   }
+  function getFiber(node) {
+    if (node == null || typeof node !== "object") return null;
+    try {
+      for (const key of Object.getOwnPropertyNames(node)) {
+        if (key.startsWith("__reactFiber$") || key.startsWith("__reactInternalInstance$")) {
+          return node[key];
+        }
+      }
+    } catch {
+    }
+    return null;
+  }
+  function getFiberPropsChain(node, maxDepth = 30) {
+    const out = [];
+    let fiber = getFiber(node);
+    for (let depth = 0; fiber != null && depth < maxDepth; depth++) {
+      try {
+        const props = fiber.memoizedProps ?? fiber.pendingProps;
+        if (props != null && typeof props === "object") out.push(props);
+        fiber = fiber.return;
+      } catch {
+        break;
+      }
+    }
+    return out;
+  }
   var useState = (...a) => React.useState(...a);
   var useEffect = (...a) => React.useEffect(...a);
   var useMemo = (...a) => React.useMemo(...a);
@@ -669,7 +695,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-22 15:30:19" : "dev";
+      const build = true ? "2026-07-25 03:35:30" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -1662,7 +1688,7 @@ ${slices.join("\n  ...  \n")}`);
   height: 48px;
   padding: 0;
   border: none;
-  background: var(--background-secondary, #313338);
+  background: #000;
   color: var(--interactive-normal, #b5bac1);
   cursor: pointer;
   border-radius: 16px;
@@ -2698,6 +2724,30 @@ ${slices.join("\n  ...  \n")}`);
   max-width: 340px;
   word-break: break-word;
 }
+
+/* --- Quest indicator badge ------------------------------------------------ */
+/* Small count badge on the quest rail button. Positioned at top-right, styled
+   to match Discord's own notification badges. */
+.hc-quest-btn {
+  position: relative;
+}
+
+.hc-quest-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ed4245;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 3px var(--background-tertiary, #1e1f22);
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -2813,6 +2863,9 @@ ${components_default}`;
   }
   function BroadcastIcon(props) {
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "2" }), /* @__PURE__ */ React.createElement("path", { d: "M8.5 8.5a5 5 0 000 7M15.5 8.5a5 5 0 010 7" }), /* @__PURE__ */ React.createElement("path", { d: "M6 6a9 9 0 000 12M18 6a9 9 0 010 12" }));
+  }
+  function QuestIcon(props) {
+    return /* @__PURE__ */ React.createElement(Glyph, { ...props, filled: true }, /* @__PURE__ */ React.createElement("path", { d: "M7.5 21.7a8.95 8.95 0 0 1 9 0 1 1 0 0 0 1-1.73c-.6-.35-1.24-.64-1.9-.87.54-.3 1.05-.65 1.52-1.07a3.98 3.98 0 0 0 5.49-1.8.77.77 0 0 0-.24-.95 3.98 3.98 0 0 0-2.02-.76A4 4 0 0 0 23 10.47a.76.76 0 0 0-.71-.71 4.06 4.06 0 0 0-1.6.22 3.99 3.99 0 0 0 .54-5.35.77.77 0 0 0-.95-.24c-.75.36-1.37.95-1.77 1.67V6a4 4 0 0 0-4.9-3.9.77.77 0 0 0-.6.72 4 4 0 0 0 3.7 4.17c.89 1.3 1.3 2.95 1.3 4.51 0 3.66-2.75 6.5-6 6.5s-6-2.84-6-6.5c0-1.56.41-3.21 1.3-4.51A4 4 0 0 0 11 2.82a.77.77 0 0 0-.6-.72 4.01 4.01 0 0 0-4.9 3.96A4.02 4.02 0 0 0 3.73 4.4a.77.77 0 0 0-.95.24 3.98 3.98 0 0 0 .55 5.35 4 4 0 0 0-1.6-.22.76.76 0 0 0-.72.71l-.01.28a4 4 0 0 0 2.65 3.77c-.75.06-1.45.33-2.02.76-.3.22-.4.62-.24.95a4 4 0 0 0 5.49 1.8c.47.42.98.78 1.53 1.07-.67.23-1.3.52-1.91.87a1 1 0 1 0 1 1.73Z" }));
   }
 
   // src/ui/components/Toggle.tsx
@@ -3500,7 +3553,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.3.1" : "dev";
+    return true ? "0.4.0" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -3578,7 +3631,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version = true ? "0.3.1" : "dev";
+    const version = true ? "0.4.0" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -4253,7 +4306,7 @@ ${components_default}`;
     return find(isFluxDispatcher);
   }
   var MessageStore = lazy(
-    (m) => typeof m?.getMessage === "function" && typeof m?.getMessages === "function"
+    (m) => m?.getName?.() === "MessageStore" || typeof m?.getMessage === "function" && typeof m?.getMessages === "function" && typeof m?.__halcyon_probe__ === "undefined"
   );
   var MessageActions = lazy(
     (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
@@ -4315,6 +4368,7 @@ ${components_default}`;
     (m) => typeof m?.Endpoints?.GUILD_STICKER_PACKS === "function"
   );
   var StickersStore = lazy((m) => m?.getName?.() === "StickersStore");
+  var QuestsStore = lazy((m) => m?.getName?.() === "QuestsStore");
   var ReadStateStore = lazy(
     (m) => (
       // Name-only (see GuildChannelStore): the method-shape fallback also matched
@@ -7563,7 +7617,7 @@ ${components_default}`;
     if (info?.format_type === 3) {
       throw new Error("\u8FD9\u662F Lottie \u52A8\u6001\u8D34\u7EB8\uFF0C\u65E0\u6CD5\u590D\u5236");
     }
-    const name = (sticker.name || info?.name || "sticker").slice(0, 30);
+    const name = (info?.name || sticker.name || "sticker").slice(0, 30);
     const tags = sticker.tags || info?.tags || "\u{1F642}";
     const description = (sticker.description ?? info?.description ?? "").slice(0, 100);
     const ext = stickerExt(info?.format_type);
@@ -7597,8 +7651,288 @@ ${components_default}`;
     }
   }
 
-  // src/plugins/emote-cloner/picker.tsx
+  // src/plugins/emote-cloner/resolve.ts
   var log22 = logger("emote-cloner");
+  var SNOWFLAKE = /^\d{5,25}$/;
+  var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
+  function emojiName(raw) {
+    if (typeof raw !== "string") return void 0;
+    const n = raw.replace(/:/g, "").trim();
+    return EMOJI_NAME.test(n) ? n : void 0;
+  }
+  function stickerName(raw) {
+    if (typeof raw !== "string") return void 0;
+    const n = raw.trim();
+    return n && n.length <= 30 && !n.includes("\n") ? n : void 0;
+  }
+  function isGifUrl(url) {
+    if (!url) return false;
+    try {
+      const u = new URL(url, location.href);
+      return u.pathname.endsWith(".gif") || u.searchParams.get("animated") === "true";
+    } catch {
+      return /\.gif(\?|$)/.test(url) || url.includes("animated=true");
+    }
+  }
+  function parseEmojiUrl(src) {
+    const m = src.match(/\/emojis\/(\d+)\.(\w+)/);
+    if (!m) return null;
+    let name;
+    try {
+      const raw = new URL(src, location.href).searchParams.get("name");
+      name = raw ? decodeURIComponent(raw) : void 0;
+    } catch {
+    }
+    return { id: m[1], isAnimated: m[2] === "gif" || /animated=true/.test(src), name };
+  }
+  function parseStickerUrl(src) {
+    const m = src.match(/\/stickers\/(\d+)\./);
+    return m ? { id: m[1] } : null;
+  }
+  function isLottie(el) {
+    return String(el?.className ?? "").toLowerCase().includes("lottie");
+  }
+  function gatherImages(target) {
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    const add = (el) => {
+      if (el && el.tagName === "IMG" && !seen.has(el)) {
+        seen.add(el);
+        out.push(el);
+      }
+    };
+    add(target);
+    target.querySelectorAll?.("img").forEach(add);
+    let cur = target.parentElement;
+    for (let depth = 0; depth < 4 && cur; depth++, cur = cur.parentElement) {
+      add(cur);
+      cur.querySelectorAll?.(":scope > img").forEach(add);
+    }
+    return out;
+  }
+  function selfAndAncestors(target, depth = 5) {
+    const out = [];
+    let cur = target;
+    for (let i = 0; cur && i <= depth; i++, cur = cur.parentElement) out.push(cur);
+    return out;
+  }
+  var SCAN_MAX_DEPTH = 5;
+  var SCAN_MAX_NODES = 900;
+  function findRecordById(root, id) {
+    let budget = SCAN_MAX_NODES;
+    const seen = /* @__PURE__ */ new Set();
+    const walk = (value, depth) => {
+      if (value == null || typeof value !== "object") return null;
+      if (depth > SCAN_MAX_DEPTH || budget-- <= 0) return null;
+      if (seen.has(value)) return null;
+      seen.add(value);
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          const hit = walk(item, depth + 1);
+          if (hit) return hit;
+        }
+        return null;
+      }
+      if (value.$$typeof != null || value.nodeType != null || value.stateNode != null) return null;
+      try {
+        if (String(value.id ?? "") === id && typeof value.name === "string") {
+          return { name: value.name, animated: Boolean(value.animated ?? value.isAnimated) };
+        }
+        if (typeof value.emojiName === "string" && String(value.emojiId ?? "") === id) {
+          return { name: value.emojiName, animated: Boolean(value.animated ?? value.isAnimated) };
+        }
+      } catch {
+      }
+      let keys;
+      try {
+        keys = Object.keys(value);
+      } catch {
+        return null;
+      }
+      for (const key of keys) {
+        if (key.charCodeAt(0) === 95) continue;
+        let child;
+        try {
+          child = value[key];
+        } catch {
+          continue;
+        }
+        if (child == null || typeof child !== "object") continue;
+        const hit = walk(child, depth + 1);
+        if (hit) return hit;
+      }
+      return null;
+    };
+    return walk(root, 0);
+  }
+  function recordFromFiber(target, id) {
+    for (const props of getFiberPropsChain(target)) {
+      const hit = findRecordById(props, id);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  function messageFromDom(target) {
+    const el = target.closest?.(
+      "[id^='chat-messages-'],[data-list-item-id*='chat-messages']"
+    );
+    if (!el) return null;
+    const raw = el.id || el.dataset?.listItemId || "";
+    const ids = raw.match(/\d{5,25}/g);
+    if (!ids || ids.length === 0) return null;
+    const messageId = ids[ids.length - 1];
+    let channelId = ids.length > 1 ? ids[ids.length - 2] : void 0;
+    try {
+      channelId ??= SelectedChannelStore.getChannelId?.();
+    } catch {
+    }
+    if (!channelId) return null;
+    try {
+      return MessageStore.getMessage?.(channelId, messageId) ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function messagesNear(target) {
+    const out = [];
+    for (const props of getFiberPropsChain(target)) {
+      const msg = props?.message;
+      if (msg && typeof msg === "object" && typeof msg.content === "string") {
+        out.push(msg);
+        break;
+      }
+    }
+    const fromDom = messageFromDom(target);
+    if (fromDom && typeof fromDom === "object" && fromDom !== out[0]) out.push(fromDom);
+    return out;
+  }
+  function emojiNameFromMessages(target, id) {
+    if (!SNOWFLAKE.test(id)) return void 0;
+    const inContent = new RegExp(`<a?:(\\w+)(?:~\\d+)?:${id}>`);
+    for (const msg of messagesNear(target)) {
+      try {
+        const m = typeof msg.content === "string" ? inContent.exec(msg.content) : null;
+        const fromContent = emojiName(m?.[1]);
+        if (fromContent) return fromContent;
+        const reactions = Array.isArray(msg.reactions) ? msg.reactions : [];
+        for (const r of reactions) {
+          if (String(r?.emoji?.id ?? "") === id) {
+            const hit = emojiName(r.emoji.name);
+            if (hit) return hit;
+          }
+        }
+      } catch {
+      }
+    }
+    return void 0;
+  }
+  function stickerNameFromMessages(target, id) {
+    for (const msg of messagesNear(target)) {
+      try {
+        const items = Array.isArray(msg.stickerItems) ? msg.stickerItems : Array.isArray(msg.stickers) ? msg.stickers : [];
+        for (const s of items) {
+          if (String(s?.id ?? "") === id) {
+            const hit = stickerName(s.name);
+            if (hit) return hit;
+          }
+        }
+      } catch {
+      }
+    }
+    return void 0;
+  }
+  function emojiNameFromStore(id) {
+    const store = EmojiStore;
+    const tries = [
+      () => store.getCustomEmojiById?.(id),
+      () => store.getUsableCustomEmojiById?.(id),
+      () => store.getDisambiguatedEmojiContext?.()?.getById?.(id)
+    ];
+    for (const attempt of tries) {
+      try {
+        const hit = emojiName(attempt()?.name);
+        if (hit) return hit;
+      } catch {
+      }
+    }
+    return void 0;
+  }
+  var NAME_ATTRS = ["data-name", "alt", "aria-label", "title"];
+  function emojiNameFromDom(elements) {
+    for (const el of elements) {
+      for (const attr of NAME_ATTRS) {
+        const hit = emojiName(el.getAttribute?.(attr));
+        if (hit) return hit;
+      }
+    }
+    return void 0;
+  }
+  function locate(target) {
+    const dataEl = target.closest?.("[data-type='emoji'],[data-type='sticker']");
+    if (dataEl) {
+      const { id, name, type } = dataEl.dataset;
+      const img = dataEl.tagName === "IMG" ? dataEl : dataEl.querySelector("img");
+      if (id && SNOWFLAKE.test(id) && type === "emoji") {
+        return {
+          kind: "emoji",
+          id,
+          domName: name,
+          img,
+          isAnimated: isGifUrl(img?.currentSrc || img?.src)
+        };
+      }
+      if (id && SNOWFLAKE.test(id) && type === "sticker" && !isLottie(dataEl)) {
+        return { kind: "sticker", id, domName: name, img, isAnimated: false };
+      }
+    }
+    for (const img of gatherImages(target)) {
+      const src = img.currentSrc || img.src || "";
+      const emoji = parseEmojiUrl(src);
+      if (emoji) {
+        return {
+          kind: "emoji",
+          id: emoji.id,
+          domName: emoji.name,
+          img,
+          isAnimated: emoji.isAnimated || isGifUrl(src)
+        };
+      }
+      const sticker = parseStickerUrl(src);
+      if (sticker) {
+        if (isLottie(img)) return null;
+        return { kind: "sticker", id: sticker.id, domName: img.alt, img, isAnimated: false };
+      }
+    }
+    return null;
+  }
+  function resolveExpression(target) {
+    if (!target) return null;
+    const found = locate(target);
+    if (!found) return null;
+    const elements = selfAndAncestors(target);
+    if (found.img && !elements.includes(found.img)) elements.push(found.img);
+    if (found.kind === "sticker") {
+      const record3 = recordFromFiber(target, found.id);
+      const name = stickerName(record3?.name) ?? stickerNameFromMessages(target, found.id) ?? stickerName(found.domName) ?? stickerName(found.img?.alt);
+      return { kind: "sticker", id: found.id, name };
+    }
+    const record2 = recordFromFiber(target, found.id);
+    const resolved = emojiName(record2?.name) ?? emojiNameFromMessages(target, found.id) ?? emojiNameFromStore(found.id) ?? emojiNameFromDom(elements) ?? emojiName(found.domName);
+    if (!resolved) {
+      log22.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
+    } else {
+      log22.debug("resolved emoji", { id: found.id, name: resolved });
+    }
+    return {
+      kind: "emoji",
+      id: found.id,
+      name: resolved ?? "emoji",
+      isAnimated: record2?.animated ?? found.isAnimated
+    };
+  }
+
+  // src/plugins/emote-cloner/picker.tsx
+  var log23 = logger("emote-cloner");
   function iconUrl(g2) {
     const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
     return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
@@ -7644,7 +7978,7 @@ ${components_default}`;
         host2
       );
     } catch (err) {
-      log22.error("could not open guild picker", err);
+      log23.error("could not open guild picker", err);
       closeGuildPicker();
     }
   }
@@ -7664,7 +7998,7 @@ ${components_default}`;
         setStatus({ state: "done", guild: g2.name });
         setTimeout(onClose, 1e3);
       }).catch((err) => {
-        log22.error("clone failed", err);
+        log23.error("clone failed", err);
         setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
       });
     };
@@ -7723,110 +8057,12 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/index.tsx
-  var log23 = logger("emote-cloner");
+  var log24 = logger("emote-cloner");
   var PERM2 = {
     CREATE_GUILD_EXPRESSIONS: 1n << 43n,
     MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
     MANAGE_EMOJIS_AND_STICKERS: 1n << 30n
   };
-  function isGifUrl(url) {
-    if (!url) return false;
-    try {
-      const u = new URL(url, location.href);
-      return u.pathname.endsWith(".gif") || u.searchParams.get("animated") === "true";
-    } catch {
-      return /\.gif(\?|$)/.test(url) || url.includes("animated=true");
-    }
-  }
-  function parseEmojiUrl(src) {
-    const m = src.match(/\/emojis\/(\d+)\.(\w+)/);
-    if (!m) return null;
-    let name;
-    try {
-      const raw = new URL(src, location.href).searchParams.get("name");
-      name = raw ? decodeURIComponent(raw) : void 0;
-    } catch {
-    }
-    return { id: m[1], isAnimated: m[2] === "gif" || /animated=true/.test(src), name };
-  }
-  function emojiNameFromStore(id) {
-    try {
-      const rec = EmojiStore.getCustomEmojiById?.(id) ?? EmojiStore.getUsableCustomEmojiById?.(id);
-      return cleanName(rec?.name);
-    } catch {
-      return void 0;
-    }
-  }
-  function bestEmojiName(id, img, urlName) {
-    const el = img;
-    return emojiNameFromStore(id) ?? cleanName(urlName) ?? cleanName(el?.getAttribute?.("alt")) ?? cleanName(el?.getAttribute?.("aria-label")) ?? cleanName(el?.getAttribute?.("title")) ?? cleanName(el?.dataset?.name);
-  }
-  function parseStickerUrl(src) {
-    const m = src.match(/\/stickers\/(\d+)\./);
-    return m ? { id: m[1] } : null;
-  }
-  function cleanName(raw) {
-    if (!raw) return void 0;
-    const n = raw.replace(/:/g, "").trim();
-    return n || void 0;
-  }
-  function gatherImages(target) {
-    const seen = /* @__PURE__ */ new Set();
-    const out = [];
-    const add = (el) => {
-      if (el && el.tagName === "IMG" && !seen.has(el)) {
-        seen.add(el);
-        out.push(el);
-      }
-    };
-    add(target);
-    target.querySelectorAll?.("img").forEach(add);
-    let cur = target.parentElement;
-    for (let depth = 0; depth < 4 && cur; depth++, cur = cur.parentElement) {
-      add(cur);
-      cur.querySelectorAll?.(":scope > img").forEach(add);
-    }
-    return out;
-  }
-  function resolveExpression(target) {
-    if (!target) return null;
-    const dataEl = target.closest?.(
-      "[data-type='emoji'],[data-type='sticker'],[data-id]"
-    );
-    if (dataEl) {
-      const { id, name, type } = dataEl.dataset;
-      if (id && type === "emoji") {
-        const img = dataEl.querySelector("img");
-        return {
-          kind: "emoji",
-          id,
-          name: bestEmojiName(id, img, name) ?? "emoji",
-          isAnimated: isGifUrl(img?.currentSrc || img?.src)
-        };
-      }
-      if (id && type === "sticker" && !String(dataEl.className).toLowerCase().includes("lottie")) {
-        return { kind: "sticker", id, name: cleanName(name) };
-      }
-    }
-    for (const img of gatherImages(target)) {
-      const src = img.currentSrc || img.src || "";
-      const emoji = parseEmojiUrl(src);
-      if (emoji) {
-        return {
-          kind: "emoji",
-          id: emoji.id,
-          name: bestEmojiName(emoji.id, img, emoji.name) ?? "emoji",
-          isAnimated: emoji.isAnimated || isGifUrl(src)
-        };
-      }
-      const sticker = parseStickerUrl(src);
-      if (sticker) {
-        if (String(img.className).toLowerCase().includes("lottie")) return null;
-        return { kind: "sticker", id: sticker.id, name: cleanName(img.alt) };
-      }
-    }
-    return null;
-  }
   function canManageExpressions(guild) {
     try {
       return Boolean(
@@ -7861,13 +8097,14 @@ ${components_default}`;
     if (!hit) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) {
-      log23.warn("MenuItem component not learned yet; skipping clone item this open");
+      log24.warn("MenuItem component not learned yet; skipping clone item this open");
       return;
     }
+    const label = hit.kind === "emoji" ? `\u590D\u5236\u8868\u60C5 :${hit.name}: \u5230\u670D\u52A1\u5668` : hit.name ? `\u590D\u5236\u8D34\u7EB8 ${hit.name} \u5230\u670D\u52A1\u5668` : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668";
     children.push(
       React.createElement(MenuItem, {
         id: hit.kind === "emoji" ? "halcyon-clone-emoji" : "halcyon-clone-sticker",
-        label: hit.kind === "emoji" ? "\u590D\u5236\u8868\u60C5\u5230\u670D\u52A1\u5668" : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668",
+        label,
         action: () => pickServerAndClone(hit)
       })
     );
@@ -7876,12 +8113,12 @@ ${components_default}`;
   var emote_cloner_default = definePlugin({
     id: "emote-cloner",
     name: "\u8868\u60C5\u514B\u9686",
-    description: "\u53F3\u952E\u4EFB\u610F\u81EA\u5B9A\u4E49\u8868\u60C5\u6216\u8D34\u7EB8\uFF0C\u5373\u53EF\u628A\u5B83\u590D\u5236\u5230\u4F60\u6709\u7BA1\u7406\u6743\u9650\u7684\u670D\u52A1\u5668\u3002\u652F\u6301\u6D88\u606F\u91CC\u7684\u8868\u60C5 / \u8D34\u7EB8\uFF0C\u4EE5\u53CA\u8868\u60C5\u9009\u62E9\u5668\u91CC\u7684\u9879\u76EE\u3002",
+    description: "\u53F3\u952E\u4EFB\u610F\u81EA\u5B9A\u4E49\u8868\u60C5\u6216\u8D34\u7EB8\uFF0C\u5373\u53EF\u628A\u5B83\u590D\u5236\u5230\u4F60\u6709\u7BA1\u7406\u6743\u9650\u7684\u670D\u52A1\u5668\uFF08\u4FDD\u7559\u539F\u540D\uFF09\u3002\u652F\u6301\u6D88\u606F\u91CC\u7684\u8868\u60C5 / \u8868\u60C5\u56DE\u5E94 / \u8D34\u7EB8\uFF0C\u4EE5\u53CA\u8868\u60C5\u9009\u62E9\u5668\u91CC\u7684\u9879\u76EE\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "utility",
     start() {
       unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
-      log23.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+      log24.info("emote-cloner ready \u2014 right-click an emoji or sticker");
     },
     stop() {
       for (const un of unpatchers2) {
@@ -7895,12 +8132,12 @@ ${components_default}`;
   });
 
   // src/core/flux/index.ts
-  var log24 = logger("flux");
+  var log25 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log24.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log25.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -7912,7 +8149,7 @@ ${components_default}`;
         try {
           listener(action);
         } catch (err) {
-          log24.error(`listener for ${type} threw`, err);
+          log25.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -7921,7 +8158,7 @@ ${components_default}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log24.error(`could not subscribe to ${type}`, err);
+      log25.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -7932,7 +8169,7 @@ ${components_default}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log24.error(`could not unsubscribe from ${type}`, err);
+      log25.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -7963,13 +8200,13 @@ ${components_default}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log24.error("dispatch failed", action?.type, err);
+        log25.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log25 = logger("mark-all-read");
+  var log26 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -7983,7 +8220,7 @@ ${components_default}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log25.warn(`could not read channels for guild ${guildId}`, err);
+        log26.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -8009,16 +8246,16 @@ ${components_default}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log25.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log26.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log25.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log26.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log25.warn("could not describe getChannels shape", err);
+          log26.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -8038,14 +8275,14 @@ ${components_default}`;
           }
         }
       } catch (err) {
-        log25.warn(`could not read joined threads for guild ${guildId}`, err);
+        log26.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log25.info(
+    log26.info(
       "store check \u2014 " + [
         probe("GuildStore.getGuilds", GuildStore.getGuilds),
         probe("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -8062,9 +8299,9 @@ ${components_default}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log25.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log26.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log25.info("nothing unread; skipping BULK_ACK");
+      log26.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -8072,12 +8309,12 @@ ${components_default}`;
       context: "APP",
       channels
     });
-    log25.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log26.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log26 = logger("mark-all-read");
+  var log27 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -8102,7 +8339,7 @@ ${components_default}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log26.error("mark all read failed", err);
+        log27.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -8111,7 +8348,7 @@ ${components_default}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log27 = logger("mark-all-read");
+  var log28 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -8122,7 +8359,7 @@ ${components_default}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log27.error("mark all read failed", err);
+      log28.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -8136,6 +8373,22 @@ ${components_default}`;
         onClick: runMark
       },
       /* @__PURE__ */ React.createElement(MessageCheckIcon, { size: 24 })
+    ));
+  }
+  function QuestRailButton() {
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-rail-item" }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-rail-btn hc-quest-btn",
+        "aria-label": "\u4EFB\u52A1\u4E2D\u5FC3",
+        title: "\u4EFB\u52A1\u4E2D\u5FC3",
+        onClick: () => {
+          history.pushState(null, "", "/quest-home");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      },
+      /* @__PURE__ */ React.createElement(QuestIcon, { size: 24 })
     ));
   }
   var GUILD_MENUS = ["guild-context", "guild-header-popout"];
@@ -8178,7 +8431,10 @@ ${components_default}`;
     /** Called from the patched guild-nav render (via `$self`). Returns the button
      *  as a keyed single-element array so it slots in right after friends. */
     renderRailButton() {
-      return [React.createElement(RailButton, { key: "hc-mark-all-read-rail" })];
+      return [
+        React.createElement(RailButton, { key: "hc-mark-all-read-rail" }),
+        React.createElement(QuestRailButton, { key: "hc-quest-indicator-rail" })
+      ];
     },
     page: {
       title: "\u4E00\u952E\u5DF2\u8BFB",
@@ -8188,7 +8444,7 @@ ${components_default}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log27.info("mark-all-read ready");
+      log28.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -8199,7 +8455,7 @@ ${components_default}`;
   var plugins = [settings_host_default, context_menu_api_default, message_logger_default, show_username_default, guild_monitor_default, message_cleaner_default, fake_nitro_default, console_cleaner_default, emote_cloner_default, mark_all_read_default];
 
   // src/userscript/main.ts
-  var log28 = logger("userscript");
+  var log29 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -8214,6 +8470,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log28.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log28.error("userscript boot failed", err));
+    log29.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log29.error("userscript boot failed", err));
 })();
