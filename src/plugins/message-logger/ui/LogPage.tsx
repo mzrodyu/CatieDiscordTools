@@ -14,7 +14,7 @@ import { renderContent } from "../render-content";
 import { Button } from "../../../ui/components/Button";
 import { EmptyState } from "../../../ui/components/EmptyState";
 import { Badge } from "../../../ui/components/Badge";
-import { TrashIcon, PencilIcon, DownloadIcon, ChevronRightIcon } from "../../../icons";
+import { TrashIcon, PencilIcon, DownloadIcon, ChevronRightIcon, SearchIcon } from "../../../icons";
 
 const log = logger("message-logger");
 
@@ -91,15 +91,29 @@ export function LogPage(): React.ReactElement {
   const [tab, setTab] = useState<Tab>("deleted");
   // Page index per tab, so switching tabs doesn't lose your place.
   const [pages, setPages] = useState<Record<Tab, number>>({ deleted: 0, edited: 0 });
+  const [query, setQuery] = useState("");
 
-  const entries = tab === "deleted" ? deleted : edited;
+  const all = tab === "deleted" ? deleted : edited;
+  const needle = query.trim().toLowerCase();
+  // Filter by author, content (incl. every edit version), and guild / channel
+  // names, so "search" means the same thing whichever tab you're on.
+  const entries = needle
+    ? (all as ReadonlyArray<DeletedEntry | EditedEntry>).filter((e) => entryMatches(e, needle))
+    : all;
+
   const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
-  // Entries shrink on clear/retention; clamp rather than showing a blank page.
+  // Entries shrink on clear/retention/search; clamp rather than blank-paging.
   const page = Math.min(pages[tab], pageCount - 1);
   const visible = entries.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const goTo = (next: number) =>
     setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
+
+  // Any query change resets to the first page of results.
+  const onQuery = (value: string): void => {
+    setQuery(value);
+    setPages((prev) => ({ ...prev, [tab]: 0 }));
+  };
 
   return (
     <div>
@@ -133,13 +147,33 @@ export function LogPage(): React.ReactElement {
           size="sm"
           variant="destructive"
           onClick={() => messageLog.clear()}
-          disabled={entries.length === 0}
+          disabled={all.length === 0}
         >
           清空
         </Button>
       </div>
 
-      {entries.length === 0 ? (
+      <div className="hc-mlog-search">
+        <SearchIcon size={18} />
+        <input
+          value={query}
+          onChange={(event) => onQuery(event.currentTarget.value)}
+          placeholder="搜索作者、内容、服务器 / 频道"
+          aria-label="搜索消息记录"
+        />
+        {query && (
+          <button
+            type="button"
+            className="hc-mlog-search__clear"
+            aria-label="清除搜索"
+            onClick={() => onQuery("")}
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      {all.length === 0 ? (
         tab === "deleted" ? (
           <EmptyState
             icon={<TrashIcon size={48} />}
@@ -153,6 +187,12 @@ export function LogPage(): React.ReactElement {
             subtitle="消息被编辑前的内容会保留在这里。"
           />
         )
+      ) : entries.length === 0 ? (
+        <EmptyState
+          icon={<SearchIcon size={48} />}
+          title="没有匹配的记录"
+          subtitle={`没有包含“${query.trim()}”的记录，换个关键词试试。`}
+        />
       ) : (
         <>
           <div className="hc-msglist">
@@ -429,6 +469,34 @@ function Location({ channelId, guildId }: { channelId: string; guildId?: string 
       <span>{loc.channel}</span>
     </span>
   );
+}
+
+/**
+ * Whether a log entry matches a lowercased search needle. Searches the author,
+ * the resolved guild / channel names, and the message text — for edited
+ * entries that means every captured version, so you can find a message by any
+ * of its wordings.
+ */
+function entryMatches(entry: DeletedEntry | EditedEntry, needle: string): boolean {
+  try {
+    if (entry.author?.name && entry.author.name.toLowerCase().includes(needle)) return true;
+
+    const loc = resolveLocation(entry.channelId, entry.guildId);
+    if (loc.guild && loc.guild.toLowerCase().includes(needle)) return true;
+    if (loc.channel && loc.channel.toLowerCase().includes(needle)) return true;
+
+    if ("content" in entry && typeof entry.content === "string") {
+      if (entry.content.toLowerCase().includes(needle)) return true;
+    }
+    if ("history" in entry && Array.isArray(entry.history)) {
+      for (const v of entry.history) {
+        if (v?.content && v.content.toLowerCase().includes(needle)) return true;
+      }
+    }
+  } catch {
+    // resolveLocation touching a not-ready store; treat as no match
+  }
+  return false;
 }
 
 function formatTime(time: number): string {

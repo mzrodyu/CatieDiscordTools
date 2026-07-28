@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.0
+// @version      0.6.1
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -742,7 +742,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-28 06:15:16" : "dev";
+      const build = true ? "2026-07-28 06:19:35" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -3121,6 +3121,93 @@ ${slices.join("\n  ...  \n")}`);
 .hc-mlog-toolbtn:active {
   color: var(--interactive-active, #fff);
 }
+
+
+/* --- Message-log search box ---------------------------------------------- */
+/* Inside the .halcyon panel, so design tokens throughout. Mirrors the plugin
+ * browser's search field but on its own row above the list. */
+.hc-mlog-search {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 36px;
+  margin: var(--hc-space-2) 0 var(--hc-space-3);
+  padding: 0 var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-secondary);
+}
+.hc-mlog-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--hc-label-primary);
+  font-size: var(--hc-text-callout);
+  font-family: var(--hc-font);
+}
+.hc-mlog-search input::placeholder {
+  color: var(--hc-label-tertiary);
+}
+.hc-mlog-search__clear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-secondary);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.hc-mlog-search__clear:hover {
+  color: var(--hc-label-primary);
+}
+
+/* --- Thin scrollbars for Halcyon's own scroll areas ---------------------- */
+/*
+ * The settings panel and embedded views scroll with the OS default scrollbar,
+ * which is a chunky light bar that reads as foreign inside the dark iOS-styled
+ * panel. Give those containers the same slim, self-colored bar the emote picker
+ * uses. Our surfaces mount in their own .halcyon host, outside Discord's global
+ * scrollbar styling, so these rules are needed here.
+ */
+.hc-panel__scroll,
+.hc-embed,
+.hc-msglist {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hc-fill-primary) transparent;
+}
+.hc-panel__scroll::-webkit-scrollbar,
+.hc-embed::-webkit-scrollbar,
+.hc-msglist::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.hc-panel__scroll::-webkit-scrollbar-track,
+.hc-embed::-webkit-scrollbar-track,
+.hc-msglist::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hc-panel__scroll::-webkit-scrollbar-thumb,
+.hc-embed::-webkit-scrollbar-thumb,
+.hc-msglist::-webkit-scrollbar-thumb {
+  background: var(--hc-fill-secondary);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.hc-panel__scroll::-webkit-scrollbar-thumb:hover,
+.hc-embed::-webkit-scrollbar-thumb:hover,
+.hc-msglist::-webkit-scrollbar-thumb:hover {
+  background: var(--hc-label-tertiary);
+  background-clip: padding-box;
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -3943,7 +4030,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.0" : "dev";
+    return true ? "0.6.1" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4021,7 +4108,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.0" : "dev";
+    const version2 = true ? "0.6.1" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5263,11 +5350,18 @@ ${components_default}`;
     const { deleted, edited } = useLog();
     const [tab, setTab] = useState("deleted");
     const [pages, setPages] = useState({ deleted: 0, edited: 0 });
-    const entries = tab === "deleted" ? deleted : edited;
+    const [query, setQuery] = useState("");
+    const all = tab === "deleted" ? deleted : edited;
+    const needle = query.trim().toLowerCase();
+    const entries = needle ? all.filter((e) => entryMatches(e, needle)) : all;
     const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE2));
     const page = Math.min(pages[tab], pageCount - 1);
     const visible = entries.slice(page * PAGE_SIZE2, (page + 1) * PAGE_SIZE2);
     const goTo = (next) => setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
+    const onQuery = (value) => {
+      setQuery(value);
+      setPages((prev) => ({ ...prev, [tab]: 0 }));
+    };
     return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(InChatStatus, null), /* @__PURE__ */ React.createElement("div", { className: "hc-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -5296,10 +5390,27 @@ ${components_default}`;
         size: "sm",
         variant: "destructive",
         onClick: () => messageLog.clear(),
-        disabled: entries.length === 0
+        disabled: all.length === 0
       },
       "\u6E05\u7A7A"
-    )), entries.length === 0 ? tab === "deleted" ? /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-search" }, /* @__PURE__ */ React.createElement(SearchIcon, { size: 18 }), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: query,
+        onChange: (event) => onQuery(event.currentTarget.value),
+        placeholder: "\u641C\u7D22\u4F5C\u8005\u3001\u5185\u5BB9\u3001\u670D\u52A1\u5668 / \u9891\u9053",
+        "aria-label": "\u641C\u7D22\u6D88\u606F\u8BB0\u5F55"
+      }
+    ), query && /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-mlog-search__clear",
+        "aria-label": "\u6E05\u9664\u641C\u7D22",
+        onClick: () => onQuery("")
+      },
+      "\xD7"
+    )), all.length === 0 ? tab === "deleted" ? /* @__PURE__ */ React.createElement(
       EmptyState,
       {
         icon: /* @__PURE__ */ React.createElement(TrashIcon, { size: 48 }),
@@ -5312,6 +5423,13 @@ ${components_default}`;
         icon: /* @__PURE__ */ React.createElement(PencilIcon, { size: 48 }),
         title: "\u8FD8\u6CA1\u6709\u7F16\u8F91\u8BB0\u5F55",
         subtitle: "\u6D88\u606F\u88AB\u7F16\u8F91\u524D\u7684\u5185\u5BB9\u4F1A\u4FDD\u7559\u5728\u8FD9\u91CC\u3002"
+      }
+    ) : entries.length === 0 ? /* @__PURE__ */ React.createElement(
+      EmptyState,
+      {
+        icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 48 }),
+        title: "\u6CA1\u6709\u5339\u914D\u7684\u8BB0\u5F55",
+        subtitle: `\u6CA1\u6709\u5305\u542B\u201C${query.trim()}\u201D\u7684\u8BB0\u5F55\uFF0C\u6362\u4E2A\u5173\u952E\u8BCD\u8BD5\u8BD5\u3002`
       }
     ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-msglist" }, tab === "deleted" ? visible.map((entry) => /* @__PURE__ */ React.createElement(DeletedRow, { key: `${entry.channelId}-${entry.id}`, entry })) : visible.map((entry) => /* @__PURE__ */ React.createElement(EditedRow, { key: `${entry.channelId}-${entry.id}`, entry }))), pageCount > 1 && /* @__PURE__ */ React.createElement(Pager, { page, pageCount, onChange: goTo })));
   }
@@ -5455,6 +5573,24 @@ ${components_default}`;
   function Location({ channelId, guildId }) {
     const loc = resolveLocation(channelId, guildId);
     return /* @__PURE__ */ React.createElement("span", { className: "hc-msg__where" }, loc.guild && /* @__PURE__ */ React.createElement("span", { className: "hc-msg__guild" }, loc.guild), loc.guild && /* @__PURE__ */ React.createElement("span", { className: "hc-msg__sep" }, "\u203A"), /* @__PURE__ */ React.createElement("span", null, loc.channel));
+  }
+  function entryMatches(entry, needle) {
+    try {
+      if (entry.author?.name && entry.author.name.toLowerCase().includes(needle)) return true;
+      const loc = resolveLocation(entry.channelId, entry.guildId);
+      if (loc.guild && loc.guild.toLowerCase().includes(needle)) return true;
+      if (loc.channel && loc.channel.toLowerCase().includes(needle)) return true;
+      if ("content" in entry && typeof entry.content === "string") {
+        if (entry.content.toLowerCase().includes(needle)) return true;
+      }
+      if ("history" in entry && Array.isArray(entry.history)) {
+        for (const v of entry.history) {
+          if (v?.content && v.content.toLowerCase().includes(needle)) return true;
+        }
+      }
+    } catch {
+    }
+    return false;
   }
   function formatTime2(time) {
     const date = new Date(time);
@@ -11040,8 +11176,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.0" : "dev",
-      build: true ? "2026-07-28 06:15:16" : "dev",
+      version: true ? "0.6.1" : "dev",
+      build: true ? "2026-07-28 06:19:35" : "dev",
       href: (() => {
         try {
           return location.pathname;

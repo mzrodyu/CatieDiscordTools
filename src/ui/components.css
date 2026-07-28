@@ -2169,3 +2169,90 @@
 .hc-mlog-toolbtn:active {
   color: var(--interactive-active, #fff);
 }
+
+
+/* --- Message-log search box ---------------------------------------------- */
+/* Inside the .halcyon panel, so design tokens throughout. Mirrors the plugin
+ * browser's search field but on its own row above the list. */
+.hc-mlog-search {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  height: 36px;
+  margin: var(--hc-space-2) 0 var(--hc-space-3);
+  padding: 0 var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-secondary);
+}
+.hc-mlog-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--hc-label-primary);
+  font-size: var(--hc-text-callout);
+  font-family: var(--hc-font);
+}
+.hc-mlog-search input::placeholder {
+  color: var(--hc-label-tertiary);
+}
+.hc-mlog-search__clear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-fill-primary);
+  color: var(--hc-label-secondary);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.hc-mlog-search__clear:hover {
+  color: var(--hc-label-primary);
+}
+
+/* --- Thin scrollbars for Halcyon's own scroll areas ---------------------- */
+/*
+ * The settings panel and embedded views scroll with the OS default scrollbar,
+ * which is a chunky light bar that reads as foreign inside the dark iOS-styled
+ * panel. Give those containers the same slim, self-colored bar the emote picker
+ * uses. Our surfaces mount in their own .halcyon host, outside Discord's global
+ * scrollbar styling, so these rules are needed here.
+ */
+.hc-panel__scroll,
+.hc-embed,
+.hc-msglist {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hc-fill-primary) transparent;
+}
+.hc-panel__scroll::-webkit-scrollbar,
+.hc-embed::-webkit-scrollbar,
+.hc-msglist::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.hc-panel__scroll::-webkit-scrollbar-track,
+.hc-embed::-webkit-scrollbar-track,
+.hc-msglist::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hc-panel__scroll::-webkit-scrollbar-thumb,
+.hc-embed::-webkit-scrollbar-thumb,
+.hc-msglist::-webkit-scrollbar-thumb {
+  background: var(--hc-fill-secondary);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.hc-panel__scroll::-webkit-scrollbar-thumb:hover,
+.hc-embed::-webkit-scrollbar-thumb:hover,
+.hc-msglist::-webkit-scrollbar-thumb:hover {
+  background: var(--hc-label-tertiary);
+  background-clip: padding-box;
+}
