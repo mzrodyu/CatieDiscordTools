@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.5.0
+// @version      0.5.1
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -742,7 +742,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-28 05:31:32" : "dev";
+      const build = true ? "2026-07-28 06:01:51" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -3061,6 +3061,34 @@ ${slices.join("\n  ...  \n")}`);
 [class*="reactionMe"] .hc-inline-reactors__avatar {
   border-color: rgba(88, 101, 242, 0.35);
 }
+
+
+/* --- Recovered media on a deleted message (message-logger, in-chat) ------- */
+/*
+ * Discord strips a deleted message's attachments/embeds from its render, so we
+ * paint the recovered thumbnails back in beneath the "\u6B64\u6D88\u606F\u5DF2\u5220\u9664" marker. Sits
+ * inside Discord's own message row, so literal values, no tokens.
+ */
+.hc-deleted-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.hc-deleted-media__thumb {
+  max-width: 240px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.hc-deleted-media__file {
+  color: #00a8fc;
+  font-size: 0.8125rem;
+  word-break: break-all;
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -3881,7 +3909,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.5.0" : "dev";
+    return true ? "0.5.1" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -3959,7 +3987,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.5.0" : "dev";
+    const version2 = true ? "0.5.1" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -4667,13 +4695,39 @@ ${components_default}`;
   );
   var moment = lazy((m) => typeof m === "function" && typeof m?.locale === "function" && typeof m?.utc === "function");
   var NavigationRouter = lazy(
-    (m) => typeof m?.transitionTo === "function" && typeof m?.replaceWith === "function" && typeof m?.transitionToGuild === "function" && // Reject Discord's answer-everything intl `t` proxy, which reports EVERY
-    // property as callable — so it satisfies the triple-method probe and wins.
-    // Calling its "transitionTo" does nothing and throws nothing, which is
-    // exactly the "点跳转没反应、日志里也没有报错" failure. Every other handle in
-    // this file already carries this guard; these two did not.
+    (m) => typeof m?.transitionTo === "function" && // One companion method to avoid matching a bare transitionTo-only helper.
+    // NOT the full {replaceWith AND transitionToGuild} triple: on the current
+    // build the real router doesn't expose transitionToGuild, so requiring it
+    // made this resolve to NOTHING — which sent NavigationRouter callers down
+    // their fallback path (quest-indicator to `location.href`, i.e. a full page
+    // reload — the "任务中心变成刷新了" report — and the log-page jump to a warn).
+    // The intl-proxy is rejected by the __halcyon_probe__ guard alone, so the
+    // companion check only needs to be specific enough, not exhaustive.
+    (typeof m?.replaceWith === "function" || typeof m?.transitionToGuild === "function" || typeof m?.back === "function") && // Reject Discord's answer-everything intl `t` proxy, which reports EVERY
+    // property as callable — so it satisfies any method probe and would win.
     typeof m?.__halcyon_probe__ === "undefined"
   );
+  function navigate(path) {
+    try {
+      const router = NavigationRouter;
+      if (typeof router?.transitionTo === "function") {
+        router.transitionTo(path);
+        return true;
+      }
+    } catch {
+    }
+    try {
+      const m = find(
+        (x) => typeof x?.transitionTo === "function" && typeof x?.__halcyon_probe__ === "undefined"
+      );
+      if (typeof m?.transitionTo === "function") {
+        m.transitionTo(path);
+        return true;
+      }
+    } catch {
+    }
+    return false;
+  }
   var AppLayers = lazy(
     (m) => typeof m?.popLayer === "function" && typeof m?.pushLayer === "function" && // Same intl-proxy rejection as NavigationRouter above.
     typeof m?.__halcyon_probe__ === "undefined"
@@ -5204,35 +5258,50 @@ ${components_default}`;
   }
   function jumpToMessage(channelId, messageId, guildId) {
     dismissSettingsSurface();
-    setTimeout(() => {
+    let gid = guildId;
+    if (!gid) {
       try {
-        const jump = JumpActions;
-        if (typeof jump?.jumpToMessage === "function") {
-          jump.jumpToMessage({ channelId, messageId, flash: true });
-        } else {
-          let gid = guildId;
-          if (!gid) {
-            const channel = ChannelStore.getChannel?.(channelId);
-            gid = channel?.guild_id ?? channel?.guildId ?? void 0;
-          }
-          const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
-          if (typeof NavigationRouter.transitionTo === "function") {
-            NavigationRouter.transitionTo(path);
-          } else {
-            log11.warn("[jump] \u8DF3\u8F6C\u5931\u8D25\uFF1ANavigationRouter \u4E0E JumpActions \u5747\u672A\u89E3\u6790\u5230\uFF08\u53EF\u80FD\u5339\u914D\u5230\u4E86 intl \u4EE3\u7406\uFF09");
-          }
-        }
-        setTimeout(() => {
-          try {
-            const now = SelectedChannelStore.getChannelId?.();
-            log11.info("[jump] post-nav selected channel", { now, wanted: channelId, ok: now === channelId });
-          } catch {
-          }
-        }, 200);
-      } catch (err) {
-        log11.error("jump to message failed", err);
+        const channel = ChannelStore.getChannel?.(channelId);
+        gid = channel?.guild_id ?? channel?.guildId ?? void 0;
+      } catch {
       }
-    }, 60);
+    }
+    const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
+    const selected = () => {
+      try {
+        return SelectedChannelStore.getChannelId?.();
+      } catch {
+        return void 0;
+      }
+    };
+    const doJump = () => {
+      const jump = JumpActions;
+      if (typeof jump?.jumpToMessage === "function") {
+        try {
+          jump.jumpToMessage({ channelId, messageId, flash: true });
+          if (selected() !== channelId) navigate(path);
+          return;
+        } catch (err) {
+          log11.warn("[jump] jumpToMessage threw; falling back to route", err);
+        }
+      }
+      if (!navigate(path)) {
+        log11.warn("[jump] \u8DF3\u8F6C\u5931\u8D25\uFF1AJumpActions \u4E0E NavigationRouter \u5747\u672A\u89E3\u6790\u5230");
+      }
+    };
+    const schedule = [80, 220, 450, 800];
+    let i = 0;
+    const tick = () => {
+      doJump();
+      const now = selected();
+      const ok = now === channelId;
+      log11.info(`[jump] \u7B2C ${i + 1} \u6B21 \xB7 now=${now ?? "?"} wanted=${channelId} ok=${ok}`);
+      i++;
+      if (!ok && i < schedule.length) {
+        setTimeout(tick, schedule[i] - schedule[i - 1]);
+      }
+    };
+    setTimeout(tick, schedule[0]);
   }
   function dismissSettingsSurface() {
     try {
@@ -6000,6 +6069,24 @@ ${components_default}`;
       return () => unsubs.forEach((unsub) => unsub());
     }, []);
   }
+  function collectDeletedMedia(attachments, embeds) {
+    const out = [];
+    for (const a of attachments ?? []) {
+      const url = a.proxy_url ?? a.url;
+      if (!url) continue;
+      const ct = a.content_type ?? "";
+      out.push({
+        url,
+        kind: ct.startsWith("video/") ? "video" : ct.startsWith("image/") ? "image" : "file",
+        name: a.filename
+      });
+    }
+    for (const e of embeds ?? []) {
+      const img = e?.image?.proxy_url ?? e?.image?.url ?? e?.thumbnail?.proxy_url ?? e?.thumbnail?.url;
+      if (typeof img === "string" && img) out.push({ url: img, kind: "image" });
+    }
+    return out.slice(0, 6);
+  }
   function MessageExtras(props) {
     useMlogSettings();
     const s = settings.store;
@@ -6025,6 +6112,34 @@ ${components_default}`;
     }
     if (s.showDeletedMarker && props.isDeleted) {
       nodes.push(/* @__PURE__ */ React.createElement(MessageMarker, { key: "hc-deleted-marker", text: "\u6B64\u6D88\u606F\u5DF2\u5220\u9664", at: props.deletedAt }));
+    }
+    if (props.isDeleted && props.media && props.media.length > 0) {
+      nodes.push(
+        /* @__PURE__ */ React.createElement("div", { className: "hc-deleted-media", key: "hc-deleted-media" }, props.media.map(
+          (m, i) => m.kind === "file" ? /* @__PURE__ */ React.createElement(
+            "a",
+            {
+              className: "hc-deleted-media__file",
+              key: i,
+              href: m.url,
+              target: "_blank",
+              rel: "noreferrer"
+            },
+            "\u{1F4CE} ",
+            m.name ?? "\u9644\u4EF6"
+          ) : /* @__PURE__ */ React.createElement(
+            "img",
+            {
+              className: "hc-deleted-media__thumb",
+              key: i,
+              src: m.url,
+              alt: m.name ?? "",
+              loading: "lazy",
+              referrerPolicy: "no-referrer"
+            }
+          )
+        ))
+      );
     }
     return nodes.length ? /* @__PURE__ */ React.createElement(React.Fragment, null, nodes) : null;
   }
@@ -6086,6 +6201,30 @@ ${components_default}`;
       title: "\u6D88\u606F\u8BB0\u5F55",
       icon: ClockIcon,
       component: LogPage
+    },
+    /** Diagnostic snapshot for HalcyonAPI.probe() — jump readiness in particular. */
+    probe() {
+      const jump = JumpActions;
+      const router = NavigationRouter;
+      let scanRouterFound = false;
+      try {
+        scanRouterFound = typeof find(
+          (x) => typeof x?.transitionTo === "function" && typeof x?.__halcyon_probe__ === "undefined"
+        )?.transitionTo === "function";
+      } catch {
+        scanRouterFound = false;
+      }
+      return {
+        jumpActionsFound: jump != null,
+        jumpToMessageIsFn: typeof jump?.jumpToMessage === "function",
+        navigationRouterFound: router != null,
+        transitionToIsFn: typeof router?.transitionTo === "function",
+        scanRouterFound,
+        deletedCount: messageLog.getDeleted().length,
+        settingsHostEmbedded: getSourcePatchReport().some(
+          (p) => p.pluginId === "halcyon-settings" && p.applied
+        )
+      };
     },
     patches: [
       {
@@ -6343,7 +6482,8 @@ ${components_default}`;
             deletedAt: record2?.deletedAt,
             editedAt,
             isDeleted,
-            isEdited
+            isEdited,
+            media: isDeleted ? collectDeletedMedia(record2?.attachmentsRich, record2?.embeds) : void 0
           }
         );
       } catch {
@@ -10734,8 +10874,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.5.0" : "dev",
-      build: true ? "2026-07-28 05:31:32" : "dev",
+      version: true ? "0.5.1" : "dev",
+      build: true ? "2026-07-28 06:01:51" : "dev",
       href: (() => {
         try {
           return location.pathname;

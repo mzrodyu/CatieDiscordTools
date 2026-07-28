@@ -150,15 +150,51 @@ export const moment = lazy<any>((m) => typeof m === "function" && typeof m?.loca
 export const NavigationRouter = lazy<any>(
   (m) =>
     typeof m?.transitionTo === "function" &&
-    typeof m?.replaceWith === "function" &&
-    typeof m?.transitionToGuild === "function" &&
+    // One companion method to avoid matching a bare transitionTo-only helper.
+    // NOT the full {replaceWith AND transitionToGuild} triple: on the current
+    // build the real router doesn't expose transitionToGuild, so requiring it
+    // made this resolve to NOTHING — which sent NavigationRouter callers down
+    // their fallback path (quest-indicator to `location.href`, i.e. a full page
+    // reload — the "任务中心变成刷新了" report — and the log-page jump to a warn).
+    // The intl-proxy is rejected by the __halcyon_probe__ guard alone, so the
+    // companion check only needs to be specific enough, not exhaustive.
+    (typeof m?.replaceWith === "function" ||
+      typeof m?.transitionToGuild === "function" ||
+      typeof m?.back === "function") &&
     // Reject Discord's answer-everything intl `t` proxy, which reports EVERY
-    // property as callable — so it satisfies the triple-method probe and wins.
-    // Calling its "transitionTo" does nothing and throws nothing, which is
-    // exactly the "点跳转没反应、日志里也没有报错" failure. Every other handle in
-    // this file already carries this guard; these two did not.
+    // property as callable — so it satisfies any method probe and would win.
     typeof m?.__halcyon_probe__ === "undefined"
 );
+
+/**
+ * Push an in-app route without a full reload. Prefers the resolved
+ * NavigationRouter, and if that misses on this build, finds any real module
+ * exposing `transitionTo` at call time. Returns whether it navigated — callers
+ * MUST NOT fall back to `location.href` (a full reload) on false.
+ */
+export function navigate(path: string): boolean {
+  try {
+    const router = NavigationRouter as any;
+    if (typeof router?.transitionTo === "function") {
+      router.transitionTo(path);
+      return true;
+    }
+  } catch {
+    // fall through to a fresh scan
+  }
+  try {
+    const m = find(
+      (x: any) => typeof x?.transitionTo === "function" && typeof x?.__halcyon_probe__ === "undefined"
+    );
+    if (typeof m?.transitionTo === "function") {
+      m.transitionTo(path);
+      return true;
+    }
+  } catch {
+    // give up quietly; caller decides what to do
+  }
+  return false;
+}
 
 /**
  * Discord's app-layer stack. User settings, the emoji popout and similar

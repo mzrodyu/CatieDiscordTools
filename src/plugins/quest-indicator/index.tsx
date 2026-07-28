@@ -15,7 +15,7 @@ import { logger } from "../../core/logger";
 import { React, useState, useEffect } from "../../core/common/react";
 import { injectStyles } from "../../ui/inject-styles";
 import { QuestIcon } from "../../icons";
-import { QuestsStore, NavigationRouter } from "../../core/common/discord";
+import { QuestsStore, navigate } from "../../core/common/discord";
 
 const log = logger("quest-indicator");
 
@@ -63,18 +63,12 @@ function isExpired(quest: any): boolean {
 }
 
 function openQuestHub(): void {
-  try {
-    // NavigationRouter.transitionTo 在某些构建不可用，直接用 location
-    const nav = NavigationRouter as any;
-    if (typeof nav?.transitionTo === "function") {
-      nav.transitionTo("/quest-home");
-    } else {
-      location.href = "/quest-home";
-    }
-  } catch (err) {
-    log.warn("could not open quest hub", err);
-    location.href = "/quest-home";
-  }
+  // Never `location.href = …` — that is a FULL PAGE RELOAD (the "任务中心变成
+  // 刷新了" report). navigate() does an in-app SPA transition, or returns false
+  // if no router resolved, in which case we log and do nothing rather than
+  // nuking the session with a reload.
+  if (navigate("/quest-home")) return;
+  log.warn("无法打开任务中心：未解析到 Discord 的导航路由。为避免整页刷新，已放弃跳转。");
 }
 
 function RailButton(): React.ReactElement {

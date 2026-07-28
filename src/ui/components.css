@@ -2109,3 +2109,31 @@
 [class*="reactionMe"] .hc-inline-reactors__avatar {
   border-color: rgba(88, 101, 242, 0.35);
 }
+
+
+/* --- Recovered media on a deleted message (message-logger, in-chat) ------- */
+/*
+ * Discord strips a deleted message's attachments/embeds from its render, so we
+ * paint the recovered thumbnails back in beneath the "此消息已删除" marker. Sits
+ * inside Discord's own message row, so literal values, no tokens.
+ */
+.hc-deleted-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.hc-deleted-media__thumb {
+  max-width: 240px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.hc-deleted-media__file {
+  color: #00a8fc;
+  font-size: 0.8125rem;
+  word-break: break-all;
+}

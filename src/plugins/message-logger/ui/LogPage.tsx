@@ -5,7 +5,7 @@
 // works whether or not the optional in-chat patches applied.
 
 import { useEffect, useState } from "../../../core/common/react";
-import { ChannelStore, GuildStore, NavigationRouter, AppLayers, JumpActions, SelectedChannelStore, getDispatcher } from "../../../core/common/discord";
+import { ChannelStore, GuildStore, navigate, AppLayers, JumpActions, SelectedChannelStore, getDispatcher } from "../../../core/common/discord";
 import { closeSettings } from "../../../ui/settings/overlay";
 import { logger } from "../../../core/logger";
 import { getSourcePatchReport } from "../../../core/modules/webpack";
@@ -199,50 +199,71 @@ function Pager(props: { page: number; pageCount: number; onChange: (next: number
 // guild from the stored id, falling back to the channel's own guild_id, then
 // to "@me" for DMs / group DMs.
 function jumpToMessage(channelId: string, messageId: string, guildId?: string): void {
-  // Dismiss whatever surface the log page is showing inside FIRST, so the
-  // client is looking at the app when the route change lands. Two surfaces are
-  // possible: Halcyon's own overlay (Ctrl/Cmd+Shift+H) and Discord's native
-  // user-settings surface (the embedded path).
+  // Close the settings surface first so the app is what's on screen when the
+  // route lands. On this build Halcyon's settings is its OWN overlay (the
+  // native-embed patches don't apply), so closeSettings() is what actually
+  // closes it; the Escape / popLayer belt-and-braces stay for embedded builds.
   dismissSettingsSurface();
 
-  // Then navigate. A short delay lets the surface finish tearing down so the
-  // transition isn't swallowed by the closing animation / re-render.
-  setTimeout(() => {
+  let gid = guildId;
+  if (!gid) {
     try {
-      // Prefer Discord's own jump action: it switches channel, loads the
-      // surrounding history page, scrolls to the row and flashes it — things a
-      // bare route push can't do when the target page isn't loaded. Fall back
-      // to the router only when the action isn't on this build.
-      const jump = JumpActions as any;
-      if (typeof jump?.jumpToMessage === "function") {
-        jump.jumpToMessage({ channelId, messageId, flash: true });
-      } else {
-        let gid = guildId;
-        if (!gid) {
-          const channel = ChannelStore.getChannel?.(channelId);
-          gid = channel?.guild_id ?? channel?.guildId ?? undefined;
-        }
-        const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
-        if (typeof NavigationRouter.transitionTo === "function") {
-          NavigationRouter.transitionTo(path);
-        } else {
-          log.warn("[jump] 跳转失败：NavigationRouter 与 JumpActions 均未解析到（可能匹配到了 intl 代理）");
-        }
-      }
-      // Verify the route actually moved. If the selected channel didn't change,
-      // the router we matched is a no-op lookalike and we say so in the log.
-      setTimeout(() => {
-        try {
-          const now = SelectedChannelStore.getChannelId?.();
-          log.info("[jump] post-nav selected channel", { now, wanted: channelId, ok: now === channelId });
-        } catch {
-          // store not ready
-        }
-      }, 200);
-    } catch (err) {
-      log.error("jump to message failed", err);
+      const channel = ChannelStore.getChannel?.(channelId);
+      gid = channel?.guild_id ?? channel?.guildId ?? undefined;
+    } catch {
+      // channel not cached; @me path still works for DMs
     }
-  }, 60);
+  }
+  // A full message deep-link. transitionTo-ing to this is exactly what "复制
+  // 消息链接" + click does: switch channel, load the page around the message,
+  // scroll to it, flash it.
+  const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
+
+  const selected = (): string | undefined => {
+    try {
+      return SelectedChannelStore.getChannelId?.();
+    } catch {
+      return undefined;
+    }
+  };
+
+  const doJump = (): void => {
+    // Prefer Discord's own jump action (handles scroll + flash even when the
+    // target page isn't loaded); otherwise push the deep-link route.
+    const jump = JumpActions as any;
+    if (typeof jump?.jumpToMessage === "function") {
+      try {
+        jump.jumpToMessage({ channelId, messageId, flash: true });
+        // jumpToMessage doesn't always switch channel by itself on every
+        // build, so also push the route to guarantee the channel change.
+        if (selected() !== channelId) navigate(path);
+        return;
+      } catch (err) {
+        log.warn("[jump] jumpToMessage threw; falling back to route", err);
+      }
+    }
+    if (!navigate(path)) {
+      log.warn("[jump] 跳转失败：JumpActions 与 NavigationRouter 均未解析到");
+    }
+  };
+
+  // Retry across a few hundred ms. Closing the settings overlay (and, on
+  // embedded builds, Discord restoring the previous route afterwards) can land
+  // AFTER a single early nav and revert it — the "点了没反应" symptom. Retrying
+  // until the selected channel actually matches beats that race.
+  const schedule = [80, 220, 450, 800];
+  let i = 0;
+  const tick = (): void => {
+    doJump();
+    const now = selected();
+    const ok = now === channelId;
+    log.info(`[jump] 第 ${i + 1} 次 · now=${now ?? "?"} wanted=${channelId} ok=${ok}`);
+    i++;
+    if (!ok && i < schedule.length) {
+      setTimeout(tick, schedule[i] - schedule[i - 1]);
+    }
+  };
+  setTimeout(tick, schedule[0]);
 }
 
 /**

@@ -19,8 +19,8 @@
 
 import { definePlugin } from "../../core/plugin";
 import { patcher, type Unpatch, type PatchContext } from "../../core/patcher";
-import { getSourcePatchReport, findAll, isFluxDispatcher, dumpFactorySource } from "../../core/modules/webpack";
-import { getDispatcher, MessageStore, UserStore } from "../../core/common/discord";
+import { getSourcePatchReport, findAll, find, isFluxDispatcher, dumpFactorySource } from "../../core/modules/webpack";
+import { getDispatcher, MessageStore, UserStore, JumpActions, NavigationRouter } from "../../core/common/discord";
 import { useState, useEffect } from "../../core/common/react";
 import { logger } from "../../core/logger";
 import { ClockIcon } from "../../icons";
@@ -1102,12 +1102,47 @@ function useMlogSettings(): void {
  * message *could* show either extra (has history, or is deleted) even if the
  * matching toggle is currently off, so turning a toggle on updates it in place.
  */
+/** One displayable media item recovered from a deleted message's record. */
+interface DeletedMedia {
+  url: string;
+  kind: "image" | "video" | "file";
+  name?: string;
+}
+
+/**
+ * Collect the images / videos / files a deleted message carried, from our own
+ * stored record. Discord strips a deleted message's attachments and embeds from
+ * its render (the message is "gone" as far as the client is concerned), so the
+ * row keeps only text — which is why the picture shows on the log page (that
+ * reads our store) but vanishes in chat. We render these back in ourselves.
+ */
+function collectDeletedMedia(attachments?: RichAttachment[], embeds?: any[]): DeletedMedia[] {
+  const out: DeletedMedia[] = [];
+  for (const a of attachments ?? []) {
+    const url = a.proxy_url ?? a.url;
+    if (!url) continue;
+    const ct = a.content_type ?? "";
+    out.push({
+      url,
+      kind: ct.startsWith("video/") ? "video" : ct.startsWith("image/") ? "image" : "file",
+      name: a.filename
+    });
+  }
+  for (const e of embeds ?? []) {
+    const img =
+      e?.image?.proxy_url ?? e?.image?.url ?? e?.thumbnail?.proxy_url ?? e?.thumbnail?.url;
+    if (typeof img === "string" && img) out.push({ url: img, kind: "image" });
+  }
+  return out.slice(0, 6);
+}
+
 function MessageExtras(props: {
   history?: Array<{ content: string; at: number }>;
   deletedAt?: number;
   editedAt?: number;
   isDeleted: boolean;
   isEdited: boolean;
+  media?: DeletedMedia[];
 }): React.ReactElement | null {
   useMlogSettings();
   const s = settings.store;
@@ -1143,6 +1178,39 @@ function MessageExtras(props: {
 
   if (s.showDeletedMarker && props.isDeleted) {
     nodes.push(<MessageMarker key="hc-deleted-marker" text="此消息已删除" at={props.deletedAt} />);
+  }
+
+  // Re-render the deleted message's media. Discord drops attachments/embeds
+  // from a deleted row's render, so without this the picture is only visible on
+  // the log page. Deleted-only: a live (edited) message still renders its own
+  // media, so adding ours there would double it.
+  if (props.isDeleted && props.media && props.media.length > 0) {
+    nodes.push(
+      <div className="hc-deleted-media" key="hc-deleted-media">
+        {props.media.map((m, i) =>
+          m.kind === "file" ? (
+            <a
+              className="hc-deleted-media__file"
+              key={i}
+              href={m.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              📎 {m.name ?? "附件"}
+            </a>
+          ) : (
+            <img
+              className="hc-deleted-media__thumb"
+              key={i}
+              src={m.url}
+              alt={m.name ?? ""}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          )
+        )}
+      </div>
+    );
   }
 
   return nodes.length ? <>{nodes}</> : null;
@@ -1240,6 +1308,34 @@ export default definePlugin({
     title: "消息记录",
     icon: ClockIcon,
     component: LogPage
+  },
+
+  /** Diagnostic snapshot for HalcyonAPI.probe() — jump readiness in particular. */
+  probe(): Record<string, unknown> {
+    const jump = JumpActions as any;
+    const router = NavigationRouter as any;
+    // A fresh call-time scan for any module exposing transitionTo, the exact
+    // thing navigate()'s fallback relies on.
+    let scanRouterFound = false;
+    try {
+      scanRouterFound =
+        typeof find(
+          (x: any) => typeof x?.transitionTo === "function" && typeof x?.__halcyon_probe__ === "undefined"
+        )?.transitionTo === "function";
+    } catch {
+      scanRouterFound = false;
+    }
+    return {
+      jumpActionsFound: jump != null,
+      jumpToMessageIsFn: typeof jump?.jumpToMessage === "function",
+      navigationRouterFound: router != null,
+      transitionToIsFn: typeof router?.transitionTo === "function",
+      scanRouterFound,
+      deletedCount: messageLog.getDeleted().length,
+      settingsHostEmbedded: getSourcePatchReport().some(
+        (p) => p.pluginId === "halcyon-settings" && p.applied
+      )
+    };
   },
 
   patches: [
@@ -1552,6 +1648,9 @@ export default definePlugin({
           editedAt={editedAt}
           isDeleted={isDeleted}
           isEdited={isEdited}
+          media={
+            isDeleted ? collectDeletedMedia(record?.attachmentsRich, record?.embeds) : undefined
+          }
         />
       );
     } catch {
