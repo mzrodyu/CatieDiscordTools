@@ -19,9 +19,14 @@ import {
   type IconProps
 } from "../../icons";
 
-export function PluginsView(): React.ReactElement {
+export function PluginsView({
+  initialSelectedId
+}: {
+  /** Open straight into this plugin's detail page. Consumed on first render. */
+  initialSelectedId?: string;
+} = {}): React.ReactElement {
   const plugins = useRuntimeList().filter((p) => !p.hidden);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
   const [query, setQuery] = useState("");
 
   const selected = selectedId ? plugins.find((p) => p.id === selectedId) : undefined;

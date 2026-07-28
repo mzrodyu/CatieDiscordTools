@@ -34,10 +34,10 @@ const TABS: TabDef[] = [
   { id: "about", label: "关于", title: "关于 Halcyon", Icon: InfoIcon }
 ];
 
-function renderView(tab: SettingsTab): React.ReactElement {
+function renderView(tab: SettingsTab, initialPluginId?: string): React.ReactElement {
   switch (tab) {
     case "plugins":
-      return <PluginsView />;
+      return <PluginsView initialSelectedId={initialPluginId} />;
     case "logs":
       return <LogsView />;
     case "about":
@@ -45,8 +45,23 @@ function renderView(tab: SettingsTab): React.ReactElement {
   }
 }
 
-export function SettingsRoot({ onClose }: { onClose?: () => void }): React.ReactElement {
-  const [tab, setTab] = useState<SettingsTab>("plugins");
+/** Optional deep-link target when the panel opens. */
+export interface SettingsInitial {
+  tab?: SettingsTab;
+  pluginId?: string;
+}
+
+export function SettingsRoot({
+  onClose,
+  initial
+}: {
+  onClose?: () => void;
+  initial?: SettingsInitial;
+}): React.ReactElement {
+  const [tab, setTab] = useState<SettingsTab>(initial?.tab ?? "plugins");
+  // Consumed only on first render of PluginsView; clearing on tab change keeps
+  // manual navigation from snapping back to the deep-linked plugin.
+  const [initialPluginId] = useState<string | undefined>(initial?.pluginId);
   const active = TABS.find((t) => t.id === tab) ?? TABS[0];
 
   return (
@@ -79,7 +94,9 @@ export function SettingsRoot({ onClose }: { onClose?: () => void }): React.React
             </button>
           )}
         </header>
-        <div className="hc-panel__scroll">{renderView(tab)}</div>
+        <div className="hc-panel__scroll">
+          {renderView(tab, tab === "plugins" ? initialPluginId : undefined)}
+        </div>
       </section>
     </div>
   );

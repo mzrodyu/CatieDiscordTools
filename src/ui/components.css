@@ -2137,3 +2137,35 @@
   font-size: 0.8125rem;
   word-break: break-all;
 }
+
+
+/* --- Message-log button in the channel header toolbar -------------------- */
+/*
+ * Sits among Discord's own header icons (pin, members, …), so it must read as
+ * one of them: same 24px hit target, muted normal color, brighter on hover.
+ * Decorates Discord's toolbar, so literal values + Discord CSS variables.
+ */
+.hc-mlog-toolbtn-host {
+  display: inline-flex;
+  align-items: center;
+}
+.hc-mlog-toolbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--interactive-normal, #b5bac1);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.hc-mlog-toolbtn:hover {
+  color: var(--interactive-hover, #dbdee1);
+}
+.hc-mlog-toolbtn:active {
+  color: var(--interactive-active, #fff);
+}

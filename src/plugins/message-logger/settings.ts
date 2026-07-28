@@ -15,6 +15,13 @@ export const settings = defineSettings({
     label: "在聊天中保留被删消息",
     description: "被删除的消息不再消失，而是标记保留在原位。需要客户端补丁生效。"
   },
+  toolbarButton: {
+    group: "记录",
+    type: "boolean",
+    default: true,
+    label: "频道顶栏加「消息记录」按钮",
+    description: "在频道右上角工具条放一个图标，点一下直接打开消息记录页，不用翻设置。"
+  },
   logEdits: {
     group: "记录",
     type: "boolean",

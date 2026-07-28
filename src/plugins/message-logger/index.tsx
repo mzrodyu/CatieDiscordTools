@@ -28,6 +28,7 @@ import { settings } from "./settings";
 import { messageLog, type Author, type DeletedEntry, type RichAttachment } from "./store";
 import { renderContent } from "./render-content";
 import { LogPage } from "./ui/LogPage";
+import { startToolbarButton, stopToolbarButton } from "./toolbar-button";
 
 const log = logger("message-logger");
 
@@ -1495,6 +1496,9 @@ export default definePlugin({
     // on some shapes (jumbo emoji, sticker-only) drops the hook — this re-adds it.
     startDomTinter();
 
+    // The channel-header shortcut to this plugin's log page.
+    startToolbarButton();
+
     // Give module loading a moment, then report whether the in-chat patches took.
     setTimeout(reportPatches, 4000);
 
@@ -1522,6 +1526,7 @@ export default definePlugin({
     unsubscribeDeleteStyle?.();
     unsubscribeDeleteStyle = undefined;
     stopDomTinter();
+    stopToolbarButton();
     try {
       for (const s of DELETE_STYLE_CLASSES) document.documentElement?.classList.remove(`hc-mlog-${s}`);
     } catch {

@@ -7,7 +7,7 @@
 import { React, mountDetached } from "../../core/common/react";
 import { injectStyles } from "../inject-styles";
 import { logger } from "../../core/logger";
-import { SettingsRoot } from "./SettingsRoot";
+import { SettingsRoot, type SettingsTab } from "./SettingsRoot";
 
 const log = logger("settings");
 
@@ -15,7 +15,14 @@ let host: HTMLDivElement | null = null;
 let unmount: (() => void) | null = null;
 let keyHandler: ((event: KeyboardEvent) => void) | null = null;
 
-export function openSettings(): void {
+/** Where to land when the panel opens. Omit for the default (plugins list). */
+export interface SettingsTarget {
+  tab?: SettingsTab;
+  /** Open straight into this plugin's detail page (e.g. "message-logger"). */
+  pluginId?: string;
+}
+
+export function openSettings(target?: SettingsTarget): void {
   injectStyles();
   if (host) return; // already open
 
@@ -29,7 +36,10 @@ export function openSettings(): void {
   document.addEventListener("keydown", keyHandler);
 
   try {
-    unmount = mountDetached(React.createElement(Overlay, { onClose: closeSettings }), host);
+    unmount = mountDetached(
+      React.createElement(Overlay, { onClose: closeSettings, target }),
+      host
+    );
   } catch (err) {
     log.error("could not open settings overlay", err);
     closeSettings();
@@ -55,7 +65,13 @@ export function isSettingsOpen(): boolean {
   return host != null;
 }
 
-function Overlay({ onClose }: { onClose: () => void }): React.ReactElement {
+function Overlay({
+  onClose,
+  target
+}: {
+  onClose: () => void;
+  target?: SettingsTarget;
+}): React.ReactElement {
   return (
     <div
       className="hc-overlay"
@@ -66,7 +82,7 @@ function Overlay({ onClose }: { onClose: () => void }): React.ReactElement {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <SettingsRoot onClose={onClose} />
+      <SettingsRoot onClose={onClose} initial={target} />
     </div>
   );
 }
