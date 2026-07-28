@@ -123,6 +123,69 @@ export function mountDetached(element: unknown, container: Element): () => void 
   };
 }
 
+// --- fiber introspection ---------------------------------------------------
+//
+// React stores, on every DOM node it renders, a back-reference to the fiber that
+// produced it. Reading it lets a plugin recover the data behind an element it
+// only knows as a DOM node — the emoji record behind an <img>, the message
+// behind a row — without patching anything and without relying on whatever
+// attributes the current build happens to render. Everything here is
+// best-effort: a build that renames the keys (or an element React never
+// rendered) just yields null/empty, and callers fall back to the DOM.
+
+/**
+ * The React fiber attached to a DOM node. React 17+ uses
+ * `__reactFiber$<random>`; older builds `__reactInternalInstance$<random>`.
+ * These properties are non-enumerable, so Object.keys() misses them —
+ * Object.getOwnPropertyNames() is required.
+ */
+export function getFiber(node: unknown): any {
+  if (node == null || typeof node !== "object") return null;
+  try {
+    for (const key of Object.getOwnPropertyNames(node)) {
+      if (key.startsWith("__reactFiber$") || key.startsWith("__reactInternalInstance$")) {
+        return (node as any)[key];
+      }
+    }
+  } catch {
+    // exotic object; treat as "no fiber"
+  }
+  return null;
+}
+
+/** The props React rendered a DOM node with (`__reactProps$<random>`). */
+export function getDomProps(node: unknown): any {
+  if (node == null || typeof node !== "object") return null;
+  try {
+    for (const key of Object.getOwnPropertyNames(node)) {
+      if (key.startsWith("__reactProps$")) return (node as any)[key];
+    }
+  } catch {
+    // exotic object; treat as "no props"
+  }
+  return null;
+}
+
+/**
+ * The props of a DOM node's own component plus those of its React ancestors,
+ * innermost first. `maxDepth` bounds the climb — Discord's trees are deep and
+ * every caller only cares about a nearby ancestor.
+ */
+export function getFiberPropsChain(node: unknown, maxDepth = 30): any[] {
+  const out: any[] = [];
+  let fiber = getFiber(node);
+  for (let depth = 0; fiber != null && depth < maxDepth; depth++) {
+    try {
+      const props = fiber.memoizedProps ?? fiber.pendingProps;
+      if (props != null && typeof props === "object") out.push(props);
+      fiber = fiber.return;
+    } catch {
+      break;
+    }
+  }
+  return out;
+}
+
 /**
  * Convenience re-exports of the hooks plugins reach for most. These read
  * through the same lazy proxy, so they are safe to destructure at module top

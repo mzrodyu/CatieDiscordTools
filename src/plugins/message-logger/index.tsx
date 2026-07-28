@@ -376,6 +376,66 @@ function tintRowInDom(channelId: string, messageId: string): void {
   scheduleSweep();
 }
 
+/**
+ * Build the `author` for a synthetic raw message WITHOUT clobbering UserStore.
+ *
+ * Discord ingests the author of any MESSAGE_UPDATE / LOAD_MESSAGES_SUCCESS
+ * payload back into UserStore. An earlier version fabricated the author with
+ * `avatar: null`, which OVERWROTE the real avatar hash for that user across the
+ * entire client — so anyone whose message had been deleted lost their avatar
+ * (a default one showed) until the next gateway refresh. That is the "莫名其妙
+ * 吞别人头像" report. The fix is to echo the user's REAL record back: its actual
+ * avatar hash, so the merge is a no-op. Fall back to the stored name only when
+ * the user isn't cached (rare — you just saw their message), and then omit the
+ * `avatar` key entirely so there is nothing to wipe.
+ */
+function rawAuthorFor(authorId: string, fallbackName: string, fallbackBot: boolean): any {
+  try {
+    const u: any = UserStore.getUser?.(authorId);
+    if (u) {
+      const author: any = {
+        id: String(u.id),
+        username: u.username ?? fallbackName,
+        global_name: u.globalName ?? u.global_name ?? null,
+        discriminator: String(u.discriminator ?? "0"),
+        bot: Boolean(u.bot),
+        public_flags: u.publicFlags ?? u.public_flags ?? 0
+      };
+      // Only send avatar when we actually know it, so a real one is never nulled.
+      if (u.avatar !== undefined) author.avatar = u.avatar;
+      const deco = u.avatarDecorationData ?? u.avatar_decoration_data;
+      if (deco !== undefined) author.avatar_decoration_data = deco;
+      return author;
+    }
+  } catch {
+    // fall through to the minimal author
+  }
+  return {
+    id: String(authorId || "0"),
+    username: fallbackName,
+    global_name: fallbackName,
+    discriminator: "0",
+    bot: fallbackBot
+  };
+}
+
+/**
+ * Whether the two patches that make a deleted row repaint on its own applied to
+ * this build: `deleted` declared as a real record field, and the row memo
+ * comparator extended to compare it. When both are in place, flipping
+ * `deleted:true` in handleDelete already yields a not-equal record, so Discord
+ * repaints the row naturally — keeping its ORIGINAL author and attachments.
+ */
+function liveRepaintPatchesApplied(): boolean {
+  try {
+    const mine = getSourcePatchReport().filter((p) => p.pluginId === "message-logger");
+    const needed = ["re-render on deleted flag", "declare deleted field on message record"];
+    return needed.every((label) => mine.some((p) => p.label === label && p.applied));
+  } catch {
+    return false;
+  }
+}
+
 // Deletes we've already asked Discord to repaint, so multiple recorder seams
 // firing for one delete don't each dispatch a redundant update. Cleared after a
 // beat — a later genuine re-delete of the same id (rare) can still repaint.
@@ -436,15 +496,12 @@ function forceRowRerender(channelId: string, messageId: string): void {
       guild_id: msg.guild_id ?? msg.guildId ?? entry?.guildId ?? null,
       type: typeof msg.type === "number" ? msg.type : 0,
       content,
-      author: {
-        id: String(a.id ?? entry?.author.id ?? "0"),
-        username: a.username ?? a.global_name ?? a.globalName ?? entry?.author.name ?? "user",
-        global_name: a.globalName ?? a.global_name ?? a.username ?? entry?.author.name ?? null,
-        discriminator: String(a.discriminator ?? "0"),
-        avatar: a.avatar ?? null,
-        bot: Boolean(a.bot ?? entry?.author.bot),
-        public_flags: a.publicFlags ?? a.public_flags ?? 0
-      },
+      // Echo the REAL user (real avatar hash) so this update can't wipe it.
+      author: rawAuthorFor(
+        String(a.id ?? entry?.author.id ?? "0"),
+        a.username ?? a.global_name ?? a.globalName ?? entry?.author.name ?? "user",
+        Boolean(a.bot ?? entry?.author.bot)
+      ),
       timestamp: iso(msg.timestamp) ?? new Date().toISOString(),
       edited_timestamp: iso(msg.editedTimestamp ?? msg.edited_timestamp),
       tts: Boolean(msg.tts),
@@ -477,6 +534,16 @@ function forceRowRerender(channelId: string, messageId: string): void {
 
 /** Defer + dedupe a forced repaint so it lands after the current dispatch. */
 function scheduleRerender(channelId: string, messageId: string): void {
+  // When the record-schema + memo-comparator patches applied, flipping
+  // deleted:true already repaints the row naturally, keeping its ORIGINAL
+  // author and attachments. Re-dispatching a fabricated MESSAGE_UPDATE then is
+  // not just redundant — it REPLACES the live record with our rebuilt one,
+  // which is how in-chat images vanished (thin attachments) and how avatars got
+  // wiped (author merge). So only take that path as a fallback, on builds where
+  // the natural repaint isn't available. The DOM tinter still paints the row
+  // red live regardless.
+  if (liveRepaintPatchesApplied()) return;
+
   const key = `${channelId}:${messageId}`;
   if (rerendered.has(key)) return;
   rerendered.add(key);
@@ -657,14 +724,9 @@ function entryToRaw(entry: DeletedEntry): any {
     content:
       entry.content ||
       (attachments.length === 0 && entry.attachments.length ? `📎 ${entry.attachments.join(", ")}` : ""),
-    author: {
-      id: entry.author.id,
-      username: entry.author.name,
-      global_name: entry.author.name,
-      discriminator: "0000",
-      bot: entry.author.bot,
-      avatar: null
-    },
+    // Echo the real user so resurrecting a deleted message on reload can't null
+    // that user's avatar across the client (the "吞头像" bug).
+    author: rawAuthorFor(entry.author.id, entry.author.name, entry.author.bot),
     timestamp: new Date(entry.sentAt).toISOString(),
     attachments,
     embeds: entry.embeds ?? [],

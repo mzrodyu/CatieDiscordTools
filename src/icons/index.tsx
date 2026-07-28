@@ -329,3 +329,79 @@ export function QuestIcon(props: IconProps) {
     </Glyph>
   );
 }
+
+/** Two people — used for member counts and anything roster-shaped. */
+export function PeopleIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <circle cx="9" cy="8.25" r="3.25" />
+      <path d="M3.5 19.5c0-2.9 2.46-5.25 5.5-5.25s5.5 2.35 5.5 5.25" />
+      <path d="M16 5.4a3.25 3.25 0 010 6.2" />
+      <path d="M17.2 14.6c2.03.6 3.3 2.4 3.3 4.9" />
+    </Glyph>
+  );
+}
+
+/** Desktop client — a monitor on a stand. */
+export function DesktopIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="3" y="4.5" width="18" height="11.5" rx="2" />
+      <path d="M9 19.5h6M12 16v3.5" />
+    </Glyph>
+  );
+}
+
+/** Mobile client — a phone with a home indicator. */
+export function MobileIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="7" y="2.75" width="10" height="18.5" rx="2.5" />
+      <path d="M10.75 18.25h2.5" />
+    </Glyph>
+  );
+}
+
+/** Web client — a globe with a meridian and an equator. */
+export function GlobeIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <circle cx="12" cy="12" r="8.25" />
+      <path d="M3.75 12h16.5" />
+      <path d="M12 3.75c2.2 2.3 3.3 5.05 3.3 8.25S14.2 17.95 12 20.25c-2.2-2.3-3.3-5.05-3.3-8.25S9.8 6.05 12 3.75z" />
+    </Glyph>
+  );
+}
+
+/** Embedded / console client — a gamepad. */
+export function GamepadIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M7.5 7.5h9a5 5 0 014.9 6l-.5 2.6A2.5 2.5 0 0118.45 18c-.9 0-1.73-.48-2.17-1.26L15.5 15.5h-7l-.78 1.24A2.5 2.5 0 015.55 18a2.5 2.5 0 01-2.45-1.9l-.5-2.6a5 5 0 014.9-6z" />
+      <path d="M8.25 10.5v2.25M7.12 11.6h2.26" />
+      <path d="M15.25 11h.01M17 12.75h.01" />
+    </Glyph>
+  );
+}
+
+/** A smiling face — reactions and anything emoji-shaped. */
+export function ReactionIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <circle cx="12" cy="12" r="8.25" />
+      <path d="M9 9.75h.01M15 9.75h.01" />
+      <path d="M8.5 14.25a4.2 4.2 0 007 0" />
+    </Glyph>
+  );
+}
+
+/** A keyboard — typing-related settings and indicators. */
+export function KeyboardIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="2.75" y="6.5" width="18.5" height="11" rx="2.5" />
+      <path d="M6.5 10h.01M9.75 10h.01M13 10h.01M16.25 10h.01" />
+      <path d="M8 13.75h8" />
+    </Glyph>
+  );
+}

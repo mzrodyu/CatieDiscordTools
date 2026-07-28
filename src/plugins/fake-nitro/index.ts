@@ -231,24 +231,87 @@ function rewriteStickers(channelId: string, message: any, options: any, guildId:
   return true;
 }
 
+/**
+ * `<:name:id>` / `<a:name:id>`, skipping an escaped leading `\<`. Captures:
+ *   1: "a" if animated, empty otherwise
+ *   2: id
+ * The `animated` flag is captured directly from the token so URL rewriting
+ * doesn't have to consult EmojiStore — which is critical for cross-server
+ * emoji where the emoji record may not be cached at all.
+ */
+const EMOJI_TOKEN_RE = /(?<!\\)<(a)?:(\w+):(\d+)>/gi;
+
 function rewriteEmojis(channelId: string, message: any, guildId: string | undefined): boolean {
   if (!settings.store.enableEmojiBypass) return false;
-  const emojis = message?.validNonShortcutEmojis;
-  if (!Array.isArray(emojis) || emojis.length === 0) return false;
 
   let changed = false;
-  for (const emoji of emojis) {
-    if (canUseEmote(emoji, channelId, guildId)) continue;
+  const emojis = message?.validNonShortcutEmojis;
 
-    const token = `<${emoji.animated ? "a" : ""}:${emoji.originalName || emoji.name}:${emoji.id}>`;
-    const url = emojiUrl(emoji);
-    const re = new RegExp(escapeRegExp(token), "g");
-    message.content = String(message.content ?? "").replace(re, (match: string, offset: number, str: string) => {
-      changed = true;
-      return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + match.length)}`;
-    });
+  // Fast path: Discord already parsed the draft's emojis for us. This is what
+  // the compose box normally supplies, complete with `animated` / `guildId`.
+  if (Array.isArray(emojis) && emojis.length > 0) {
+    for (const emoji of emojis) {
+      if (canUseEmote(emoji, channelId, guildId)) continue;
+
+      const token = `<${emoji.animated ? "a" : ""}:${emoji.originalName || emoji.name}:${emoji.id}>`;
+      const url = emojiUrl(emoji);
+      const re = new RegExp(escapeRegExp(token), "g");
+      message.content = String(message.content ?? "").replace(
+        re,
+        (match: string, offset: number, str: string) => {
+          changed = true;
+          return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + match.length)}`;
+        }
+      );
+    }
   }
+
+  // Fallback: scan the raw content for `<a?:name:id>` tokens directly. This is
+  // what covers cross-server emoji, where validNonShortcutEmojis silently drops
+  // them (parse only lists emojis whose id is currently in EmojiStore, and a
+  // cross-server one may not be cached at all). The token itself already tells
+  // us everything we need to build the URL — the leading `a` marks it animated,
+  // the id goes into the CDN path — so we do NOT gate this on EmojiStore
+  // presence. That gate was the actual failure: a cross-server emoji token
+  // whose id wasn't in the local cache used to be `return tokenStr`-ed, so it
+  // left the client unmodified and the recipient saw `:name:` because their
+  // client also couldn't resolve the id.
+  const before = String(message.content ?? "");
+  EMOJI_TOKEN_RE.lastIndex = 0;
+  if (before.length > 0 && EMOJI_TOKEN_RE.test(before)) {
+    EMOJI_TOKEN_RE.lastIndex = 0;
+    const rewritten = before.replace(
+      EMOJI_TOKEN_RE,
+      (tokenStr: string, animatedFlag: string | undefined, _name: string, emojiId: string, offset: number, str: string) => {
+        // If we have the emoji cached AND it's usable natively here, keep the
+        // token (Discord will render it inline for free). Otherwise rewrite —
+        // including when the emoji isn't cached at all, which is the exact
+        // cross-server case.
+        const cached = EmojiStore.getCustomEmojiById?.(emojiId);
+        if (cached && canUseEmote(cached, channelId, guildId)) return tokenStr;
+
+        changed = true;
+        const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
+        return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
+      }
+    );
+    if (rewritten !== before) message.content = rewritten;
+  }
+
   return changed;
+}
+
+/**
+ * Build a CDN URL from just an emoji id + animated flag — no store lookup.
+ * Same shape `emojiUrl(emoji)` produces; kept split so the token-scan fallback
+ * above can call in without a full emoji record.
+ */
+function emojiUrlFromParts(id: string, animated: boolean): string {
+  const size = Number(settings.store.emojiSize) || 48;
+  const ext = animated ? "gif" : "webp";
+  const url = new URL(`https://cdn.discordapp.com/emojis/${id}.${ext}`);
+  url.searchParams.set("size", String(size));
+  return url.toString();
 }
 
 let unpatchSend: Unpatch | undefined;
@@ -274,8 +337,6 @@ function onSendMessage(ctx: PatchContext): void {
   }
 }
 
-const EMOJI_TOKEN_RE = /(?<!\\)<a?:(?:\w+):(\d+)>/gi;
-
 function onEditMessage(ctx: PatchContext): void {
   try {
     if (!settings.store.enableEmojiBypass) return;
@@ -287,11 +348,14 @@ function onEditMessage(ctx: PatchContext): void {
     const guildId = guildIdOfChannel(channelId);
     message.content = message.content.replace(
       EMOJI_TOKEN_RE,
-      (tokenStr: string, emojiId: string, offset: number, str: string) => {
-        const emoji = EmojiStore.getCustomEmojiById?.(emojiId);
-        if (emoji == null) return tokenStr;
-        if (canUseEmote(emoji, channelId, guildId)) return tokenStr;
-        const url = emojiUrl(emoji);
+      (tokenStr: string, animatedFlag: string | undefined, _name: string, emojiId: string, offset: number, str: string) => {
+        // Same policy as the send fallback: keep the token only when the emoji
+        // is cached AND usable natively here. Everything else — a rewrite in
+        // progress, cross-server, no cache — becomes a URL, using the token's
+        // own `animated` flag so we don't need a store record to build it.
+        const cached = EmojiStore.getCustomEmojiById?.(emojiId);
+        if (cached && canUseEmote(cached, channelId, guildId)) return tokenStr;
+        const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
         return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
       }
     );

@@ -226,7 +226,9 @@ export async function cloneSticker(guildId: string, sticker: StickerRef): Promis
     throw new Error("这是 Lottie 动态贴纸，无法复制");
   }
 
-  const name = (sticker.name || info?.name || "sticker").slice(0, 30);
+  // The store/REST record wins over the name scraped off the DOM: it is the
+  // sticker's real name, while the DOM one can be a truncated label.
+  const name = (info?.name || sticker.name || "sticker").slice(0, 30);
   const tags = sticker.tags || info?.tags || "🙂";
   const description = (sticker.description ?? info?.description ?? "").slice(0, 100);
   const ext = stickerExt(info?.format_type);

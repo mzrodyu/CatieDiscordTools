@@ -514,6 +514,87 @@ export function findStore(name: string): any {
   return find((exp) => exp?.getName?.() === name || exp?.constructor?.displayName === name);
 }
 
+/**
+ * Every Flux store instance the client has created.
+ *
+ * `find()` can only see modules that are in Webpack's cache AND whose store sits
+ * on the exports object (or one key deep). Discord has stores that satisfy
+ * neither — behind two levels of namespace, or behind a getter — so a name scan
+ * over module exports quietly misses them (`GuildMemberCountStore` is one:
+ * present and populated, invisible to the export scan, which is why the member
+ * count came back null on a live client).
+ *
+ * Flux's own `Store` class keeps a registry of every instance it constructs, so
+ * asking Flux is both cheaper and complete. The export scan stays as a fallback
+ * for a build that renames `getAll`.
+ */
+export function getAllStores(): any[] {
+  const fluxModule = find(
+    (exp) => typeof exp?.Store === "function" && typeof exp.Store.getAll === "function"
+  );
+  if (fluxModule) {
+    try {
+      const all = fluxModule.Store.getAll();
+      if (Array.isArray(all) && all.length > 0) return all;
+    } catch {
+      // fall through to the scan
+    }
+  }
+
+  return findAll(
+    (exp) =>
+      typeof exp?.getName === "function" &&
+      typeof exp?.addChangeListener === "function" &&
+      // Reject Discord's answer-everything intl proxy (see UserStore).
+      typeof exp?.__halcyon_probe__ === "undefined"
+  );
+}
+
+/** The registered name of every store, for diagnostics. */
+export function storeNames(): string[] {
+  const names = new Set<string>();
+  for (const store of getAllStores()) {
+    try {
+      const name = store?.getName?.();
+      if (typeof name === "string" && name) names.add(name);
+    } catch {
+      // a store whose getName throws is not one we can address by name
+    }
+  }
+  return [...names].sort();
+}
+
+/**
+ * Locate a store by name, trying the module scan first (cheap) and Flux's own
+ * instance registry second (complete). Prefer this over `findStore` for any
+ * store outside the handful that core already resolves.
+ */
+export function findStoreByName(name: string): any {
+  const direct = findStore(name);
+  if (direct) return direct;
+
+  for (const store of getAllStores()) {
+    try {
+      if (store?.getName?.() === name || store?.constructor?.displayName === name) return store;
+    } catch {
+      // keep looking
+    }
+  }
+  return undefined;
+}
+
+/** The first store exposing every named method. A rename-tolerant last resort. */
+export function findStoreWithMethods(...methods: string[]): any {
+  for (const store of getAllStores()) {
+    try {
+      if (methods.every((m) => typeof store?.[m] === "function")) return store;
+    } catch {
+      // keep looking
+    }
+  }
+  return undefined;
+}
+
 /** Register a callback fired once a matching module appears (now or later). */
 export function waitFor(filter: ModuleFilter, callback: (exports: any) => void): void {
   // Check what is already loaded first.

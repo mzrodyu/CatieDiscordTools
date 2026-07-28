@@ -10,6 +10,7 @@ import { plugins } from "./plugins";
 import { injectStyles } from "./ui/inject-styles";
 import { openSettings, closeSettings } from "./ui/settings/overlay";
 import { getSourcePatchReport, dumpFactorySource, diagnoseSettings } from "./core/modules/webpack";
+import { probe } from "./core/probe";
 import { logger } from "./core/logger";
 
 const log = logger("main");
@@ -37,7 +38,8 @@ try {
     runtime,
     patchReport: () => getSourcePatchReport(),
     dumpSource: (needle: string, radius?: number) => dumpFactorySource(needle, radius),
-    diagnose: () => diagnoseSettings()
+    diagnose: () => diagnoseSettings(),
+    probe
   };
 } catch {
   /* non-fatal */

@@ -15,6 +15,7 @@ import { plugins } from "../plugins";
 import { openSettings, closeSettings } from "../ui/settings/overlay";
 import { injectStyles } from "../ui/inject-styles";
 import { getSourcePatchReport, dumpFactorySource, diagnoseSettings } from "../core/modules/webpack";
+import { probe } from "../core/probe";
 import { logger } from "../core/logger";
 
 const log = logger("extension");
@@ -43,7 +44,8 @@ async function start(): Promise<void> {
       runtime,
       patchReport: () => getSourcePatchReport(),
       dumpSource: (needle: string, radius?: number) => dumpFactorySource(needle, radius),
-      diagnose: () => diagnoseSettings()
+      diagnose: () => diagnoseSettings(),
+      probe
     };
   } catch {
     // A frozen global is not fatal; the keybind still opens the panel.

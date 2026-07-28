@@ -84,9 +84,21 @@ export const ChannelStore = lazy<any>(
   (m) => m?.getName?.() === "ChannelStore" || m?.constructor?.displayName === "ChannelStore"
 );
 
-/** The currently focused channel / guild. */
+/**
+ * The currently focused channel / guild. Resolved by store name first
+ * (`SelectedChannelStore`), because the shape-only fallback also matches
+ * Discord's answer-everything intl proxy — with which `getChannelId()` "works"
+ * but returns a `{locale, ast}` message object instead of a channel id, so
+ * downstream `ChannelStore.getChannel(<object>)` finds nothing and every plugin
+ * that keys off the current channel silently sees no data. That is exactly why
+ * member-count showed empty on this build: the id it read wasn't an id at all.
+ */
 export const SelectedChannelStore = lazy<any>(
-  (m) => typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function"
+  (m) =>
+    m?.getName?.() === "SelectedChannelStore" ||
+    (typeof m?.getChannelId === "function" &&
+      typeof m?.getLastSelectedChannelId === "function" &&
+      typeof m?.__halcyon_probe__ === "undefined")
 );
 
 /**
@@ -139,7 +151,13 @@ export const NavigationRouter = lazy<any>(
   (m) =>
     typeof m?.transitionTo === "function" &&
     typeof m?.replaceWith === "function" &&
-    typeof m?.transitionToGuild === "function"
+    typeof m?.transitionToGuild === "function" &&
+    // Reject Discord's answer-everything intl `t` proxy, which reports EVERY
+    // property as callable — so it satisfies the triple-method probe and wins.
+    // Calling its "transitionTo" does nothing and throws nothing, which is
+    // exactly the "点跳转没反应、日志里也没有报错" failure. Every other handle in
+    // this file already carries this guard; these two did not.
+    typeof m?.__halcyon_probe__ === "undefined"
 );
 
 /**
@@ -150,7 +168,23 @@ export const NavigationRouter = lazy<any>(
  * Matched by the pair so a partial lookalike can't shadow the real module.
  */
 export const AppLayers = lazy<any>(
-  (m) => typeof m?.popLayer === "function" && typeof m?.pushLayer === "function"
+  (m) =>
+    typeof m?.popLayer === "function" &&
+    typeof m?.pushLayer === "function" &&
+    // Same intl-proxy rejection as NavigationRouter above.
+    typeof m?.__halcyon_probe__ === "undefined"
+);
+
+/**
+ * Discord's own "jump to this message" action — what clicking a search result or
+ * a reply reference uses. It handles the whole job: switch channel, load the
+ * surrounding history page, scroll to the row, flash it. Preferred over
+ * hand-building a `/channels/g/c/m` route because it also works when the target
+ * page isn't loaded. Absent on some builds — callers fall back to the router.
+ */
+export const JumpActions = lazy<any>(
+  (m) =>
+    typeof m?.jumpToMessage === "function" && typeof m?.__halcyon_probe__ === "undefined"
 );
 
 /**

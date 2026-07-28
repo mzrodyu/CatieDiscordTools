@@ -5,7 +5,7 @@
 // works whether or not the optional in-chat patches applied.
 
 import { useEffect, useState } from "../../../core/common/react";
-import { ChannelStore, GuildStore, NavigationRouter, AppLayers, SelectedChannelStore, getDispatcher } from "../../../core/common/discord";
+import { ChannelStore, GuildStore, NavigationRouter, AppLayers, JumpActions, SelectedChannelStore, getDispatcher } from "../../../core/common/discord";
 import { closeSettings } from "../../../ui/settings/overlay";
 import { logger } from "../../../core/logger";
 import { getSourcePatchReport } from "../../../core/modules/webpack";
@@ -209,16 +209,25 @@ function jumpToMessage(channelId: string, messageId: string, guildId?: string): 
   // transition isn't swallowed by the closing animation / re-render.
   setTimeout(() => {
     try {
-      let gid = guildId;
-      if (!gid) {
-        const channel = ChannelStore.getChannel?.(channelId);
-        gid = channel?.guild_id ?? channel?.guildId ?? undefined;
-      }
-      const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
-      if (typeof NavigationRouter.transitionTo === "function") {
-        NavigationRouter.transitionTo(path);
+      // Prefer Discord's own jump action: it switches channel, loads the
+      // surrounding history page, scrolls to the row and flashes it — things a
+      // bare route push can't do when the target page isn't loaded. Fall back
+      // to the router only when the action isn't on this build.
+      const jump = JumpActions as any;
+      if (typeof jump?.jumpToMessage === "function") {
+        jump.jumpToMessage({ channelId, messageId, flash: true });
       } else {
-        log.warn("[jump] NavigationRouter.transitionTo not resolved");
+        let gid = guildId;
+        if (!gid) {
+          const channel = ChannelStore.getChannel?.(channelId);
+          gid = channel?.guild_id ?? channel?.guildId ?? undefined;
+        }
+        const path = `/channels/${gid ?? "@me"}/${channelId}/${messageId}`;
+        if (typeof NavigationRouter.transitionTo === "function") {
+          NavigationRouter.transitionTo(path);
+        } else {
+          log.warn("[jump] 跳转失败：NavigationRouter 与 JumpActions 均未解析到（可能匹配到了 intl 代理）");
+        }
       }
       // Verify the route actually moved. If the selected channel didn't change,
       // the router we matched is a no-op lookalike and we say so in the log.

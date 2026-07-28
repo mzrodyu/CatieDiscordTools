@@ -1843,3 +1843,269 @@
   text-align: center;
   box-shadow: 0 0 0 3px var(--background-tertiary, #1e1f22);
 }
+
+/* --- Member count chip (member-count plugin) ------------------------------ */
+/*
+ * Inserted into Discord's channel header toolbar or above its member list, so
+ * literal values and Discord's own CSS variables — the `--hc-*` tokens are
+ * scoped to `.halcyon` and do not reach this far into the client's tree.
+ * The host is inert: an empty chip (a DM, or a guild with no numbers yet)
+ * occupies nothing.
+ */
+.hc-membercount-host {
+  display: contents;
+}
+.hc-membercount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  margin-right: 8px;
+  border-radius: 8px;
+  background: rgba(128, 132, 142, 0.12);
+  color: var(--interactive-normal, #b5bac1);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+.hc-membercount__icon {
+  flex: 0 0 auto;
+  opacity: 0.75;
+}
+.hc-membercount__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.hc-membercount__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #23a55a;
+}
+.hc-membercount__label {
+  color: var(--text-muted, #949ba4);
+  font-weight: 400;
+}
+.hc-membercount__value {
+  font-variant-numeric: tabular-nums;
+}
+.hc-membercount__sep {
+  color: var(--text-muted, #949ba4);
+  opacity: 0.6;
+}
+/* Above the member list, the chip sits inside the scroller (before the first
+ * group header), so it flows as a natural roster line rather than floating in
+ * empty space above everything. Layout is the same pill as the header variant;
+ * only the outer margin changes so it doesn't hug the aside's edge. */
+.hc-membercount--list {
+  margin: 8px 12px 4px;
+}
+
+/* --- Reactor list card (who-reacted plugin) ------------------------------- */
+/*
+ * Our own floating surface on document.body, hosted inside a `.halcyon`
+ * element, so this one does use the design tokens. Non-interactive by design:
+ * pointer-events stay off so the card can never eat the click that toggles a
+ * reaction.
+ */
+.hc-whoreacted-host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 4000;
+  pointer-events: none;
+}
+.hc-whoreacted {
+  min-width: 180px;
+  max-width: 280px;
+  padding: var(--hc-space-2) 0;
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-bg-elevated);
+  box-shadow: var(--hc-elev-2);
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-whoreacted__head {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-1) var(--hc-space-3) var(--hc-space-2);
+  border-bottom: 1px solid var(--hc-separator);
+  margin-bottom: var(--hc-space-2);
+}
+.hc-whoreacted__emoji-img {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.hc-whoreacted__emoji-char {
+  flex: 0 0 auto;
+  font-size: 16px;
+  line-height: 18px;
+}
+.hc-whoreacted__title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--hc-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hc-whoreacted__count {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: var(--hc-radius-pill);
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-secondary);
+  font-size: var(--hc-text-caption2);
+  font-variant-numeric: tabular-nums;
+}
+.hc-whoreacted__hint {
+  padding: var(--hc-space-1) var(--hc-space-3) var(--hc-space-2);
+  color: var(--hc-label-secondary);
+}
+.hc-whoreacted__hint--error {
+  color: var(--hc-red);
+}
+.hc-whoreacted__list {
+  max-height: 260px;
+  overflow: hidden;
+}
+.hc-whoreacted__row {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: 3px var(--hc-space-3);
+}
+.hc-whoreacted__avatar {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.hc-whoreacted__name {
+  flex: 1;
+  min-width: 0;
+  color: var(--hc-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hc-whoreacted__tag {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border-radius: var(--hc-radius-xs);
+  background: var(--hc-accent);
+  color: #fff;
+  font-size: var(--hc-text-caption2);
+  font-weight: 600;
+  line-height: 14px;
+}
+.hc-whoreacted__id {
+  flex: 0 0 auto;
+  color: var(--hc-label-tertiary);
+  font-family: var(--hc-font-mono);
+  font-size: var(--hc-text-caption2);
+}
+.hc-whoreacted__more {
+  padding: var(--hc-space-1) var(--hc-space-3) 0;
+  color: var(--hc-label-tertiary);
+}
+
+/* --- Platform indicators (platform-indicators plugin) --------------------- */
+/*
+ * Inline glyphs appended inside Discord's message header and member rows, so
+ * literal values, no tokens. `vertical-align: middle` keeps them on the name's
+ * baseline; the status colors match Discord's own presence dots.
+ */
+.hc-platform-host {
+  display: inline;
+}
+.hc-platform {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+.hc-platform__item {
+  display: inline-flex;
+  align-items: center;
+}
+.hc-platform__item--online {
+  color: #23a55a;
+}
+.hc-platform__item--idle {
+  color: #f0b232;
+}
+.hc-platform__item--dnd {
+  color: #f23f43;
+}
+.hc-platform__item--offline,
+.hc-platform__item--muted {
+  color: var(--text-muted, #949ba4);
+}
+
+
+
+
+/* --- Inline reactor avatars (who-reacted plugin) -------------------------- */
+/*
+ * Reactor faces inside every reaction pill — the primary surface. Meant to
+ * blend with Discord's own count layout: same vertical center, small enough
+ * that a pill with 3 avatars is only a little wider than one without, and no
+ * background of our own so the pill's own tint (blue for reactionMe, grey
+ * otherwise) shows through.
+ *
+ * Attached inside `.reactionInner__…` as its last child. Sits after the count
+ * with a small margin, so it reads as an appended detail rather than a
+ * standalone widget.
+ */
+.hc-inline-reactors {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  gap: 0;
+  line-height: 1;
+  /* Not interactive: this must never eat the click that toggles your own
+   * reaction on the pill it's inside. */
+  pointer-events: none;
+}
+.hc-inline-reactors__avatar {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+  /* A slim rim in the pill's background color visually separates overlapping
+   * avatars from each other without adding a foreign block color. */
+  border: 1.5px solid var(--background-secondary, #2b2d31);
+  background: var(--background-tertiary, #1e1f22);
+  /* Overlap each next avatar over the previous one; the first stands alone. */
+  margin-left: -4px;
+}
+.hc-inline-reactors__avatar:first-child {
+  margin-left: 0;
+}
+.hc-inline-reactors__more {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--interactive-normal, #b5bac1);
+  font-variant-numeric: tabular-nums;
+}
+/* When the pill is the "I reacted" variant Discord tints the whole pill blue,
+ * so switch the avatar rim to that darker inner tone (approximation — no exact
+ * token exists for the "reactionMe" background) so avatars don't rim in a
+ * conflicting color. Falls back to the default rim on builds without that
+ * class. */
+[class*="reactionMe"] .hc-inline-reactors__avatar {
+  border-color: rgba(88, 101, 242, 0.35);
+}
