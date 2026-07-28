@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.5.1
+// @version      0.5.2
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -742,7 +742,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-28 06:01:51" : "dev";
+      const build = true ? "2026-07-28 06:08:20" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -3909,7 +3909,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.5.1" : "dev";
+    return true ? "0.5.2" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -3987,7 +3987,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.5.1" : "dev";
+    const version2 = true ? "0.5.2" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -4716,13 +4716,34 @@ ${components_default}`;
       }
     } catch {
     }
+    let scanned;
     try {
-      const m = find(
+      scanned = find(
         (x) => typeof x?.transitionTo === "function" && typeof x?.__halcyon_probe__ === "undefined"
       );
-      if (typeof m?.transitionTo === "function") {
-        m.transitionTo(path);
+      if (typeof scanned?.transitionTo === "function") {
+        scanned.transitionTo(path);
         return true;
+      }
+    } catch {
+    }
+    try {
+      const candidates = [NavigationRouter, scanned];
+      try {
+        candidates.push(
+          find((x) => typeof x?.getHistory === "function" && typeof x?.__halcyon_probe__ === "undefined")
+        );
+      } catch {
+      }
+      for (const c of candidates) {
+        try {
+          const history2 = c?.getHistory?.();
+          if (history2 && typeof history2.push === "function") {
+            history2.push(path);
+            return true;
+          }
+        } catch {
+        }
       }
     } catch {
     }
@@ -10874,8 +10895,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.5.1" : "dev",
-      build: true ? "2026-07-28 06:01:51" : "dev",
+      version: true ? "0.5.2" : "dev",
+      build: true ? "2026-07-28 06:08:20" : "dev",
       href: (() => {
         try {
           return location.pathname;

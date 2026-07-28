@@ -173,6 +173,7 @@ export const NavigationRouter = lazy<any>(
  * MUST NOT fall back to `location.href` (a full reload) on false.
  */
 export function navigate(path: string): boolean {
+  // 1. The resolved router's transitionTo.
   try {
     const router = NavigationRouter as any;
     if (typeof router?.transitionTo === "function") {
@@ -180,19 +181,51 @@ export function navigate(path: string): boolean {
       return true;
     }
   } catch {
-    // fall through to a fresh scan
+    // fall through
   }
+
+  // 2. Any module exposing transitionTo, found at call time.
+  let scanned: any;
   try {
-    const m = find(
+    scanned = find(
       (x: any) => typeof x?.transitionTo === "function" && typeof x?.__halcyon_probe__ === "undefined"
     );
-    if (typeof m?.transitionTo === "function") {
-      m.transitionTo(path);
+    if (typeof scanned?.transitionTo === "function") {
+      scanned.transitionTo(path);
       return true;
+    }
+  } catch {
+    // fall through
+  }
+
+  // 3. The underlying history object (`getHistory().push`) — Discord's router
+  //    is a thin wrapper over this, so pushing here navigates even when the
+  //    wrapper's own transitionTo can't be reached. Try the resolved router,
+  //    the scanned module, then any module carrying getHistory.
+  try {
+    const candidates: any[] = [NavigationRouter, scanned];
+    try {
+      candidates.push(
+        find((x: any) => typeof x?.getHistory === "function" && typeof x?.__halcyon_probe__ === "undefined")
+      );
+    } catch {
+      // ignore
+    }
+    for (const c of candidates) {
+      try {
+        const history = c?.getHistory?.();
+        if (history && typeof history.push === "function") {
+          history.push(path);
+          return true;
+        }
+      } catch {
+        // try the next candidate
+      }
     }
   } catch {
     // give up quietly; caller decides what to do
   }
+
   return false;
 }
 
