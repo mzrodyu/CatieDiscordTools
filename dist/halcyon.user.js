@@ -405,7 +405,7 @@ var Halcyon = (() => {
     return ready;
   }
   function isFluxDispatcher(exp) {
-    return exp != null && typeof exp.dispatch === "function" && typeof exp.subscribe === "function" && (typeof exp._actionHandlers !== "undefined" || typeof exp._subscriptions !== "undefined" || typeof exp._waitQueue !== "undefined" || typeof exp.isDispatching === "function" || typeof exp.wait === "function");
+    return exp != null && typeof exp.__halcyon_probe__ === "undefined" && typeof exp.dispatch === "function" && typeof exp.subscribe === "function" && (typeof exp._actionHandlers !== "undefined" || typeof exp._subscriptions !== "undefined" || typeof exp._waitQueue !== "undefined" || typeof exp.isDispatching === "function" || typeof exp.wait === "function");
   }
   function dumpFactorySource(needle, radius = 300) {
     const factories = wpRequire?.m;
@@ -742,7 +742,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-12 12:26:02" : "dev";
+      const build = true ? "2026-08-12 12:46:32" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -5363,28 +5363,39 @@ ${components_default}`;
      * to well over the quota, mostly embeds. Shedding weight, loudly, beats losing
      * the lot: embeds go first (they only enrich a revived row), then the oldest
      * entries.
+     *
+     * Sizes are measured ONCE per entry and then tracked arithmetically. The
+     * obvious implementation — re-stringify the whole log to test each candidate
+     * trim — is O(n²) and froze the client outright: 10k entries took 107 SECONDS
+     * of blocking main-thread work on every save.
      */
     withinBudget() {
-      let deleted = this.deleted;
       const edited = this.edited;
-      const size = (d) => JSON.stringify({ deleted: d, edited }).length;
-      if (size(deleted) <= SIZE_BUDGET) {
+      const overhead = JSON.stringify({ deleted: [], edited }).length;
+      const sizes = this.deleted.map((d) => JSON.stringify(d).length + 1);
+      let total = overhead + sizes.reduce((a, b) => a + b, 0);
+      if (total <= SIZE_BUDGET) {
         this.lastPruneNote = "";
-        return { deleted, edited };
+        return { deleted: this.deleted, edited };
       }
+      const deleted = this.deleted.slice();
       let strippedEmbeds = 0;
-      deleted = deleted.map((d) => d);
-      for (let i = deleted.length - 1; i >= 0 && size(deleted) > SIZE_BUDGET; i--) {
+      for (let i = deleted.length - 1; i >= 0 && total > SIZE_BUDGET; i--) {
         const d = deleted[i];
         if (!d.embeds?.length) continue;
-        deleted[i] = { ...d, embeds: void 0 };
+        const lean = { ...d, embeds: void 0 };
+        const leanSize = JSON.stringify(lean).length + 1;
+        total -= sizes[i] - leanSize;
+        sizes[i] = leanSize;
+        deleted[i] = lean;
         strippedEmbeds++;
       }
       let droppedEntries = 0;
-      while (deleted.length > 1 && size(deleted) > SIZE_BUDGET) {
-        const chop = Math.max(1, Math.floor(deleted.length * 0.1));
-        deleted = deleted.slice(0, deleted.length - chop);
-        droppedEntries += chop;
+      while (deleted.length > 1 && total > SIZE_BUDGET) {
+        total -= sizes[sizes.length - 1];
+        sizes.pop();
+        deleted.pop();
+        droppedEntries++;
       }
       const note = `${strippedEmbeds}/${droppedEntries}`;
       if (note !== this.lastPruneNote) {
@@ -6485,14 +6496,25 @@ ${components_default}`;
     log13.info(`recorder on dispatcher ${tag}: seams [${seams.join(", ") || "none"}]`);
     return () => undo.forEach((u) => u());
   }
+  var MAX_DISPATCHERS = 6;
   function attachRecorderEverywhere() {
     const hooked = /* @__PURE__ */ new Set();
     const undo = [];
+    let capReported = false;
     const sweep = () => {
-      const candidates = [...findAll(isFluxDispatcher), getDispatcher()].filter(Boolean);
+      const candidates = [getDispatcher(), ...findAll(isFluxDispatcher)].filter(Boolean);
       let added = 0;
       for (const d of candidates) {
         if (hooked.has(d)) continue;
+        if (hooked.size >= MAX_DISPATCHERS) {
+          if (!capReported) {
+            capReported = true;
+            log13.warn(
+              `dispatcher \u5019\u9009\u8D85\u8FC7 ${MAX_DISPATCHERS} \u4E2A\uFF0C\u5DF2\u505C\u6B62\u7EE7\u7EED\u6302\u63A5\u3002\u591A\u51FA\u6765\u7684\u901A\u5E38\u662F shape \u76F8\u4F3C\u7684\u5047\u6A21\u5757\uFF1B\u5982\u679C\u5F55\u5236\u6CA1\u751F\u6548\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002`
+            );
+          }
+          break;
+        }
         hooked.add(d);
         undo.push(attachRecorder(d, `#${hooked.size}`));
         added++;
@@ -6502,6 +6524,10 @@ ${components_default}`;
     const first = sweep();
     log13.info(`recorder attached to ${first} dispatcher instance(s)`);
     const timer3 = setInterval(() => {
+      if (hooked.size >= MAX_DISPATCHERS) {
+        clearInterval(timer3);
+        return;
+      }
       const added = sweep();
       if (added > 0) log13.info(`recorder attached to ${added} late dispatcher instance(s)`);
     }, 5e3);
@@ -11378,7 +11404,7 @@ ${components_default}`;
     }
     const out = {
       version: true ? "0.6.2" : "dev",
-      build: true ? "2026-08-12 12:26:02" : "dev",
+      build: true ? "2026-08-12 12:46:32" : "dev",
       href: (() => {
         try {
           return location.pathname;

@@ -640,10 +640,22 @@ export function isReady(): boolean {
  * Whether an export looks like Discord's Flux dispatcher. Deliberately lenient:
  * `dispatch` + `subscribe` plus any one of the dispatcher's internals, so it
  * keeps matching across the shape changes Discord makes between releases.
+ *
+ * The `__halcyon_probe__` guard is load-bearing, exactly as it is on the store
+ * handles in core/common/discord.ts. Discord's intl module is an
+ * answer-everything proxy: every property access returns a truthy (callable)
+ * message value, so it satisfies every branch of the shape check AND logs
+ * "Requested message <name> does not have a value in the requested locale" for
+ * each access. Without the guard, `findAll(isFluxDispatcher)` matched dozens of
+ * those lookalikes — the recorder attached three seams to each, re-swept every
+ * 5s for a minute, and the resulting console flood (thousands of warnings, each
+ * with a full stack) is what made the client crawl. A real module returns
+ * undefined for a name it does not export; the proxy does not.
  */
 export function isFluxDispatcher(exp: any): boolean {
   return (
     exp != null &&
+    typeof exp.__halcyon_probe__ === "undefined" &&
     typeof exp.dispatch === "function" &&
     typeof exp.subscribe === "function" &&
     (typeof exp._actionHandlers !== "undefined" ||

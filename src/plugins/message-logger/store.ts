@@ -324,35 +324,46 @@ class MessageLogStore {
    * to well over the quota, mostly embeds. Shedding weight, loudly, beats losing
    * the lot: embeds go first (they only enrich a revived row), then the oldest
    * entries.
+   *
+   * Sizes are measured ONCE per entry and then tracked arithmetically. The
+   * obvious implementation — re-stringify the whole log to test each candidate
+   * trim — is O(n²) and froze the client outright: 10k entries took 107 SECONDS
+   * of blocking main-thread work on every save.
    */
   private withinBudget(): Persisted {
-    let deleted = this.deleted;
     const edited = this.edited;
-    const size = (d: DeletedEntry[]): number => JSON.stringify({ deleted: d, edited }).length;
+    // Envelope + the edited half, which is capped at 300 entries elsewhere.
+    const overhead = JSON.stringify({ deleted: [], edited }).length;
+    const sizes = this.deleted.map((d) => JSON.stringify(d).length + 1); // +1 for the comma
+    let total = overhead + sizes.reduce((a, b) => a + b, 0);
 
-    if (size(deleted) <= SIZE_BUDGET) {
+    if (total <= SIZE_BUDGET) {
       this.lastPruneNote = "";
-      return { deleted, edited };
+      return { deleted: this.deleted, edited };
     }
 
-    // 1. Drop embeds from the oldest entries first (kept newest-first, so walk
-    //    backwards). Attachments stay: they're what a revived row shows.
+    // 1. Drop embeds from the oldest entries first (the array is newest-first,
+    //    so walk backwards). Attachments stay: they're what a revived row shows.
+    const deleted = this.deleted.slice();
     let strippedEmbeds = 0;
-    deleted = deleted.map((d) => d);
-    for (let i = deleted.length - 1; i >= 0 && size(deleted) > SIZE_BUDGET; i--) {
+    for (let i = deleted.length - 1; i >= 0 && total > SIZE_BUDGET; i--) {
       const d = deleted[i];
       if (!d.embeds?.length) continue;
-      deleted[i] = { ...d, embeds: undefined };
+      const lean: DeletedEntry = { ...d, embeds: undefined };
+      const leanSize = JSON.stringify(lean).length + 1;
+      total -= sizes[i] - leanSize;
+      sizes[i] = leanSize;
+      deleted[i] = lean;
       strippedEmbeds++;
     }
 
-    // 2. Still too big: drop the oldest entries outright.
+    // 2. Still too big: drop the oldest entries outright, cheapest first.
     let droppedEntries = 0;
-    while (deleted.length > 1 && size(deleted) > SIZE_BUDGET) {
-      // Chop in chunks; re-serializing per entry on a huge log is far too slow.
-      const chop = Math.max(1, Math.floor(deleted.length * 0.1));
-      deleted = deleted.slice(0, deleted.length - chop);
-      droppedEntries += chop;
+    while (deleted.length > 1 && total > SIZE_BUDGET) {
+      total -= sizes[sizes.length - 1];
+      sizes.pop();
+      deleted.pop();
+      droppedEntries++;
     }
 
     const note = `${strippedEmbeds}/${droppedEntries}`;

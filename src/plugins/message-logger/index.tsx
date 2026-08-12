@@ -1116,15 +1116,35 @@ function attachRecorder(dispatcher: any, tag: string): Unpatch {
  * how the recorder ends up attached where no gateway event ever flows.
  * Re-scans shortly after boot to catch instances created late.
  */
+// Discord runs a handful of dispatchers (app, popout, overlay). A scan that
+// yields dozens is a scan that matched lookalikes, and attaching three seams to
+// each — plus a re-sweep every 5s — is what wedged the client. Cap it: the real
+// one is found first (getDispatcher resolves it via a core store), so a cap can
+// only ever exclude lookalikes.
+const MAX_DISPATCHERS = 6;
+
 function attachRecorderEverywhere(): Unpatch {
   const hooked = new Set<any>();
   const undo: Unpatch[] = [];
+  let capReported = false;
 
   const sweep = (): number => {
-    const candidates = [...findAll(isFluxDispatcher), getDispatcher()].filter(Boolean);
+    // The store-resolved dispatcher first: it is by definition the one Discord's
+    // own stores react on, so it gets a slot even if the scan is noisy.
+    const candidates = [getDispatcher(), ...findAll(isFluxDispatcher)].filter(Boolean);
     let added = 0;
     for (const d of candidates) {
       if (hooked.has(d)) continue;
+      if (hooked.size >= MAX_DISPATCHERS) {
+        if (!capReported) {
+          capReported = true;
+          log.warn(
+            `dispatcher 候选超过 ${MAX_DISPATCHERS} 个，已停止继续挂接。` +
+              "多出来的通常是 shape 相似的假模块；如果录制没生效请反馈这条日志。"
+          );
+        }
+        break;
+      }
       hooked.add(d);
       undo.push(attachRecorder(d, `#${hooked.size}`));
       added++;
@@ -1137,6 +1157,11 @@ function attachRecorderEverywhere(): Unpatch {
 
   // Instances created after boot (or modules that load late) get picked up here.
   const timer = setInterval(() => {
+    // Nothing left to find once the cap is reached; stop burning a scan every 5s.
+    if (hooked.size >= MAX_DISPATCHERS) {
+      clearInterval(timer);
+      return;
+    }
     const added = sweep();
     if (added > 0) log.info(`recorder attached to ${added} late dispatcher instance(s)`);
   }, 5000);
