@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.1
+// @version      0.6.2
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -742,7 +742,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-07-28 06:19:35" : "dev";
+      const build = true ? "2026-08-12 12:26:02" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -4030,7 +4030,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.1" : "dev";
+    return true ? "0.6.2" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4108,7 +4108,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.1" : "dev";
+    const version2 = true ? "0.6.2" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5155,20 +5155,43 @@ ${components_default}`;
   // src/plugins/message-logger/store.ts
   var log10 = logger("message-logger");
   var DATA_NS = "message-logger.log";
+  var SAVE_DEBOUNCE = 500;
+  var MAX_SAVE_WAIT = 3e3;
+  var SIZE_BUDGET = 3e6;
   var MessageLogStore = class {
     deleted = [];
     edited = [];
-    retention = 50;
+    /**
+     * Per-channel cap; 0 means unlimited. Starts UNLIMITED on purpose. `load()`
+     * used to trim with whatever this default was, i.e. BEFORE the plugin had
+     * applied the user's setting — so a user who set 500 (precisely because of a
+     * 冲水) still had the log cut to the default on every launch, and the next
+     * save wrote that truncation back to disk permanently. It can now only ever
+     * narrow from setRetention(), i.e. from a value the user actually chose.
+     */
+    retention = 0;
     listeners = /* @__PURE__ */ new Set();
     saveTimer;
     /** `${channelId}:${id}` of every deleted entry — for per-render lookups. */
     deletedIndex = /* @__PURE__ */ new Set();
+    /**
+     * Deleted-entry count per channel. Lets an insert know whether a trim is even
+     * possible without scanning the whole log: a 200-message flush used to pay a
+     * full filter + Set rebuild per delete, inside Discord's dispatch.
+     */
+    channelCounts = /* @__PURE__ */ new Map();
+    /** When the oldest still-unwritten change happened (max-wait accounting). */
+    deferredSince;
+    /** Set by clear(): the only case where persisting an empty log is intended. */
+    userCleared = false;
+    /** Last prune summary, so a repeated oversized save doesn't repeat the warning. */
+    lastPruneNote = "";
     /** Load persisted history. Safe to call before the first record. */
     load() {
       const raw = loadNamespace(DATA_NS);
       this.deleted = Array.isArray(raw.deleted) ? raw.deleted : [];
       this.edited = Array.isArray(raw.edited) ? raw.edited : [];
-      this.trimDeleted();
+      this.userCleared = false;
       this.reindex();
     }
     /** O(1) "was this message deleted" — cheap enough for render paths. */
@@ -5181,17 +5204,21 @@ ${components_default}`;
       return this.deleted.find((d) => d.channelId === channelId && d.id === id);
     }
     setRetention(n) {
-      this.retention = Math.max(0, n | 0);
-      this.trimDeleted();
-      this.reindex();
+      const next = Math.max(0, n | 0);
+      if (next === this.retention) return;
+      this.retention = next;
+      if (this.trimDeleted()) this.reindex();
       this.scheduleSave();
       this.emit();
     }
     recordDeleted(entry) {
-      if (this.deleted.some((d) => d.id === entry.id)) return;
+      if (this.deletedIndex.has(`${entry.channelId}:${entry.id}`)) return;
       this.deleted.unshift(entry);
-      this.trimDeleted();
-      this.reindex();
+      this.deletedIndex.add(`${entry.channelId}:${entry.id}`);
+      this.channelCounts.set(entry.channelId, (this.channelCounts.get(entry.channelId) ?? 0) + 1);
+      if (this.retention > 0 && (this.channelCounts.get(entry.channelId) ?? 0) > this.retention) {
+        if (this.trimDeleted()) this.reindex();
+      }
       this.scheduleSave();
       this.emit();
     }
@@ -5220,9 +5247,16 @@ ${components_default}`;
     counts() {
       return { deleted: this.deleted.length, edited: this.edited.length };
     }
-    clear() {
-      this.deleted = [];
-      this.edited = [];
+    /**
+     * Empty the log. `what` scopes it to one list — the page's 清空 button sits in
+     * a shared tab bar, so an unscoped clear from the 已编辑 tab used to destroy
+     * every recorded deletion too, which reads exactly like the plugin eating
+     * messages.
+     */
+    clear(what = "all") {
+      if (what !== "edited") this.deleted = [];
+      if (what !== "deleted") this.edited = [];
+      this.userCleared = this.deleted.length === 0 && this.edited.length === 0;
       this.reindex();
       this.scheduleSave();
       this.emit();
@@ -5234,7 +5268,7 @@ ${components_default}`;
       this.listeners.add(listener);
       return () => void this.listeners.delete(listener);
     }
-    /** Flush any pending save immediately (used on plugin stop). */
+    /** Flush any pending save immediately (plugin stop, and page unload). */
     flush() {
       if (this.saveTimer !== void 0) {
         clearTimeout(this.saveTimer);
@@ -5243,18 +5277,45 @@ ${components_default}`;
       this.save();
     }
     // --- internals -----------------------------------------------------------
+    /**
+     * Drop entries beyond the per-channel cap, newest kept. Returns whether
+     * anything was actually removed, so callers can skip the index rebuild.
+     *
+     * Trims by RECENCY, not array position: `deleted` is maintained newest-first
+     * by unshift, but a bulk delete whose ids arrive newest-first (or a record
+     * spliced in out of order) could otherwise evict a NEWER entry than the one it
+     * kept. Sorting the per-channel view by deletedAt makes the cap mean what the
+     * setting says: keep the most recent N for this channel.
+     */
     trimDeleted() {
-      if (this.retention <= 0) return;
-      const perChannel = /* @__PURE__ */ new Map();
-      this.deleted = this.deleted.filter((d) => {
-        const seen = perChannel.get(d.channelId) ?? 0;
-        if (seen >= this.retention) return false;
-        perChannel.set(d.channelId, seen + 1);
-        return true;
-      });
+      if (this.retention <= 0) return false;
+      const byChannel = /* @__PURE__ */ new Map();
+      for (const d of this.deleted) {
+        let list = byChannel.get(d.channelId);
+        if (!list) byChannel.set(d.channelId, list = []);
+        list.push(d);
+      }
+      const doomed = /* @__PURE__ */ new Set();
+      for (const list of byChannel.values()) {
+        if (list.length <= this.retention) continue;
+        const ranked = list.slice().sort((a, b) => b.deletedAt - a.deletedAt || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+        for (const d of ranked.slice(this.retention)) doomed.add(d);
+      }
+      if (doomed.size === 0) return false;
+      this.deleted = this.deleted.filter((d) => !doomed.has(d));
+      this.recount();
+      return true;
+    }
+    /** Rebuild the per-channel counters from `deleted`. */
+    recount() {
+      this.channelCounts.clear();
+      for (const d of this.deleted) {
+        this.channelCounts.set(d.channelId, (this.channelCounts.get(d.channelId) ?? 0) + 1);
+      }
     }
     reindex() {
       this.deletedIndex = new Set(this.deleted.map((d) => `${d.channelId}:${d.id}`));
+      this.recount();
     }
     emit() {
       for (const fn of this.listeners) {
@@ -5265,15 +5326,74 @@ ${components_default}`;
       }
     }
     scheduleSave() {
+      if (this.deferredSince === void 0) this.deferredSince = Date.now();
+      if (Date.now() - this.deferredSince >= MAX_SAVE_WAIT) {
+        this.flush();
+        return;
+      }
       if (this.saveTimer !== void 0) clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => this.save(), 500);
+      this.saveTimer = setTimeout(() => this.save(), SAVE_DEBOUNCE);
     }
     save() {
+      this.saveTimer = void 0;
+      this.deferredSince = void 0;
       try {
-        saveNamespace(DATA_NS, { deleted: this.deleted, edited: this.edited });
+        if (this.deleted.length === 0 && this.edited.length === 0 && !this.userCleared) {
+          const stored = loadNamespace(DATA_NS);
+          const hadData = Array.isArray(stored.deleted) && stored.deleted.length > 0 || Array.isArray(stored.edited) && stored.edited.length > 0;
+          if (hadData) {
+            log10.warn("\u8DF3\u8FC7\u4E00\u6B21\u4FDD\u5B58\uFF1A\u5185\u5B58\u4E2D\u7684\u8BB0\u5F55\u4E3A\u7A7A\uFF0C\u4F46\u78C1\u76D8\u4E0A\u6709\u8BB0\u5F55\uFF0C\u62D2\u7EDD\u8986\u76D6\uFF08\u5B58\u50A8\u5C1A\u672A\u5C31\u7EEA\uFF1F\uFF09");
+            return;
+          }
+        }
+        const payload = this.withinBudget();
+        saveNamespace(DATA_NS, { deleted: payload.deleted, edited: payload.edited });
       } catch (err) {
         log10.error("failed to persist message log", err);
       }
+    }
+    /**
+     * The payload to persist, shrunk to fit `SIZE_BUDGET`.
+     *
+     * Neither backend survives an oversized write, and neither reports it usefully:
+     * localStorage throws QuotaExceededError (caught and logged, then every
+     * subsequent save fails too), and the extension's chrome.storage bridge writes
+     * without reading `runtime.lastError` at all — so the log looks perfect all
+     * session and silently reverts on the next launch. A heavy account serializes
+     * to well over the quota, mostly embeds. Shedding weight, loudly, beats losing
+     * the lot: embeds go first (they only enrich a revived row), then the oldest
+     * entries.
+     */
+    withinBudget() {
+      let deleted = this.deleted;
+      const edited = this.edited;
+      const size = (d) => JSON.stringify({ deleted: d, edited }).length;
+      if (size(deleted) <= SIZE_BUDGET) {
+        this.lastPruneNote = "";
+        return { deleted, edited };
+      }
+      let strippedEmbeds = 0;
+      deleted = deleted.map((d) => d);
+      for (let i = deleted.length - 1; i >= 0 && size(deleted) > SIZE_BUDGET; i--) {
+        const d = deleted[i];
+        if (!d.embeds?.length) continue;
+        deleted[i] = { ...d, embeds: void 0 };
+        strippedEmbeds++;
+      }
+      let droppedEntries = 0;
+      while (deleted.length > 1 && size(deleted) > SIZE_BUDGET) {
+        const chop = Math.max(1, Math.floor(deleted.length * 0.1));
+        deleted = deleted.slice(0, deleted.length - chop);
+        droppedEntries += chop;
+      }
+      const note = `${strippedEmbeds}/${droppedEntries}`;
+      if (note !== this.lastPruneNote) {
+        this.lastPruneNote = note;
+        log10.warn(
+          `\u6D88\u606F\u8BB0\u5F55\u8D85\u51FA\u5B58\u50A8\u9884\u7B97\uFF08${Math.round(SIZE_BUDGET / 1024)}KB\uFF09\uFF0C\u5DF2\u88C1\u526A\u540E\u4FDD\u5B58\uFF1A\u4E22\u5F03 ${strippedEmbeds} \u6761\u65E7\u8BB0\u5F55\u7684 embed\uFF0C\u5220\u9664 ${droppedEntries} \u6761\u6700\u65E7\u8BB0\u5F55\u3002\u5185\u5B58\u4E2D\u4ECD\u4FDD\u7559 ${this.deleted.length} \u6761\uFF1B\u5982\u9700\u957F\u671F\u4FDD\u7559\u8BF7\u8C03\u4F4E\u300C\u6BCF\u9891\u9053\u4FDD\u7559\u6761\u6570\u300D\u6216\u5B9A\u671F\u5BFC\u51FA\u3002`
+        );
+      }
+      return { deleted, edited };
     }
   };
   var messageLog = new MessageLogStore();
@@ -5389,10 +5509,12 @@ ${components_default}`;
       {
         size: "sm",
         variant: "destructive",
-        onClick: () => messageLog.clear(),
-        disabled: all.length === 0
+        onClick: () => messageLog.clear(tab),
+        disabled: all.length === 0,
+        title: tab === "deleted" ? "\u6E05\u7A7A\u300C\u5DF2\u5220\u9664\u300D\u8BB0\u5F55" : "\u6E05\u7A7A\u300C\u5DF2\u7F16\u8F91\u300D\u8BB0\u5F55"
       },
-      "\u6E05\u7A7A"
+      "\u6E05\u7A7A",
+      tab === "deleted" ? "\u5DF2\u5220\u9664" : "\u5DF2\u7F16\u8F91"
     )), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-search" }, /* @__PURE__ */ React.createElement(SearchIcon, { size: 18 }), /* @__PURE__ */ React.createElement(
       "input",
       {
@@ -5710,6 +5832,7 @@ ${components_default}`;
   var unpatchDispatch;
   var unsubscribeRetention;
   var unsubscribeDeleteStyle;
+  var flushOnUnload;
   function toMillis(value) {
     if (typeof value === "number") return value;
     if (typeof value === "string") {
@@ -5764,6 +5887,37 @@ ${components_default}`;
       name: String(s.name ?? "\u8D34\u7EB8"),
       format_type: typeof s.format_type === "number" ? s.format_type : s.formatType
     })).slice(0, 4);
+  }
+  function recoverBodyText(message) {
+    if (!message) return void 0;
+    const snapshots = message.message_snapshots ?? message.messageSnapshots;
+    if (Array.isArray(snapshots) && snapshots.length) {
+      const inner = snapshots[0]?.message ?? snapshots[0];
+      const text = typeof inner?.content === "string" ? inner.content.trim() : "";
+      if (text) return `\u21AA\uFE0F \u8F6C\u53D1\uFF1A${text}`;
+      if (Array.isArray(inner?.attachments) && inner.attachments.length) return "\u21AA\uFE0F \u8F6C\u53D1\uFF08\u9644\u4EF6\uFF09";
+      if (Array.isArray(inner?.embeds) && inner.embeds.length) return "\u21AA\uFE0F \u8F6C\u53D1\uFF08\u5D4C\u5165\u5185\u5BB9\uFF09";
+      return "\u21AA\uFE0F \u8F6C\u53D1\u6D88\u606F";
+    }
+    const poll = message.poll;
+    if (poll) {
+      const question = typeof poll.question?.text === "string" ? poll.question.text : typeof poll.question === "string" ? poll.question : "";
+      const options = Array.isArray(poll.answers) ? poll.answers.map((a) => typeof a?.poll_media?.text === "string" ? a.poll_media.text : void 0).filter(Boolean) : [];
+      return `\u{1F4CA} \u6295\u7968\uFF1A${question || "\uFF08\u65E0\u9898\u76EE\uFF09"}${options.length ? `\uFF08${options.join(" / ")}\uFF09` : ""}`;
+    }
+    if (Array.isArray(message.components) && message.components.length) {
+      const texts = [];
+      const walk = (nodes, depth) => {
+        if (depth > 4) return;
+        for (const n of nodes) {
+          if (typeof n?.content === "string" && n.content.trim()) texts.push(n.content.trim());
+          if (Array.isArray(n?.components)) walk(n.components, depth + 1);
+        }
+      };
+      walk(message.components, 0);
+      if (texts.length) return texts.join("\n");
+    }
+    return void 0;
   }
   function currentUserId() {
     try {
@@ -6025,7 +6179,7 @@ ${components_default}`;
     }
     const author = message?.author ?? snap?.author ?? {};
     if (isIgnored(channelId, author)) return;
-    const content = typeof message?.content === "string" && message.content !== "" ? message.content : snap?.content ?? "";
+    const liveContent = typeof message?.content === "string" && message.content !== "" ? message.content : snap?.content ?? "";
     const attachments = message ? attachmentsOf(message) : snap?.attachments ?? [];
     const liveRich = message ? richAttachmentsOf(message) : [];
     const attachmentsRich = liveRich.length ? liveRich : snap?.attachmentsRich ?? [];
@@ -6033,7 +6187,8 @@ ${components_default}`;
     const embeds = liveEmbeds.length ? liveEmbeds : snap?.embeds ?? [];
     const liveStickers = message ? stickersOf(message) : [];
     const stickers = liveStickers.length ? liveStickers : snap?.stickers ?? [];
-    if (!content && attachments.length === 0 && attachmentsRich.length === 0 && embeds.length === 0 && stickers.length === 0) return;
+    const recovered = recoverBodyText(message) ?? recoverBodyText(snap);
+    const content = liveContent || recovered || "";
     messageLog.recordDeleted({
       id: String(id),
       channelId: String(channelId),
@@ -6118,6 +6273,11 @@ ${components_default}`;
       size: a.size ?? 0,
       spoiler: false
     }));
+    const timestamp = () => {
+      const at = typeof entry.sentAt === "number" && Number.isFinite(entry.sentAt) ? entry.sentAt : snowflakeTime(entry.id);
+      const d = new Date(at);
+      return Number.isNaN(d.getTime()) ? (/* @__PURE__ */ new Date()).toISOString() : d.toISOString();
+    };
     return {
       id: entry.id,
       type: 0,
@@ -6128,7 +6288,8 @@ ${components_default}`;
       // Echo the real user so resurrecting a deleted message on reload can't null
       // that user's avatar across the client (the "吞头像" bug).
       author: rawAuthorFor(entry.author.id, entry.author.name, entry.author.bot),
-      timestamp: new Date(entry.sentAt).toISOString(),
+      timestamp: timestamp(),
+      edited_timestamp: null,
       attachments,
       embeds: entry.embeds ?? [],
       mentions: [],
@@ -6138,6 +6299,13 @@ ${components_default}`;
       tts: false,
       flags: 0
     };
+  }
+  function snowflakeTime(id) {
+    try {
+      return Number((BigInt(id) >> 22n) + 1420070400000n);
+    } catch {
+      return Date.now();
+    }
   }
   function compareIds(a, b) {
     try {
@@ -6149,6 +6317,13 @@ ${components_default}`;
     }
   }
   var injectedActions = /* @__PURE__ */ new WeakSet();
+  var MAX_REVIVED_PER_PAGE = 50;
+  function pageReachesPresent(action) {
+    if (action.hasMoreAfter === true) return false;
+    if (action.hasMoreAfter === false) return true;
+    const jumped = action.jump?.messageId != null || action.jumpTargetId != null;
+    return !jumped && action.isBefore !== true && action.isAfter !== true;
+  }
   function resurrectIntoLoad(action) {
     if (!settings.store.keepDeletedInChat) return;
     if (injectedActions.has(action)) return;
@@ -6160,23 +6335,35 @@ ${components_default}`;
     if (!mine.length) return;
     const present = new Set(msgs.map((m) => String(m?.id)));
     let minId;
+    let maxId;
     for (const m of msgs) {
       const id = m?.id != null ? String(m.id) : void 0;
-      if (id && (minId === void 0 || compareIds(id, minId) < 0)) minId = id;
+      if (!id) continue;
+      if (minId === void 0 || compareIds(id, minId) < 0) minId = id;
+      if (maxId === void 0 || compareIds(id, maxId) > 0) maxId = id;
     }
-    const revived = mine.filter(
-      (d) => !present.has(d.id) && (minId === void 0 || compareIds(d.id, minId) >= 0) && // Respect the ignore rules at revive time too, so toggling "屏蔽机器人"
-      // or "屏蔽自己" takes effect for already-recorded messages on reload.
-      !isIgnored(channelId, d.author)
-    );
+    if (minId === void 0 && !pageReachesPresent(action)) return;
+    const openEnded = pageReachesPresent(action);
+    const revived = mine.filter((d) => {
+      if (present.has(d.id)) return false;
+      if (isIgnored(channelId, d.author)) return false;
+      if (minId !== void 0 && compareIds(d.id, minId) < 0) return false;
+      if (!openEnded && maxId !== void 0 && compareIds(d.id, maxId) > 0) return false;
+      return true;
+    });
     if (!revived.length) return;
+    revived.sort((a, b) => -compareIds(a.id, b.id));
+    const dropped = Math.max(0, revived.length - MAX_REVIVED_PER_PAGE);
+    const chosen = dropped ? revived.slice(0, MAX_REVIVED_PER_PAGE) : revived;
     const descending = msgs.length >= 2 ? compareIds(String(msgs[0].id), String(msgs[msgs.length - 1].id)) > 0 : true;
-    msgs.push(...revived.map(entryToRaw));
+    msgs.push(...chosen.map(entryToRaw));
     msgs.sort((a, b) => {
       const c = compareIds(String(a?.id ?? "0"), String(b?.id ?? "0"));
       return descending ? -c : c;
     });
-    log13.info(`revived ${revived.length} deleted message(s) into ${channelId}`);
+    log13.info(
+      `revived ${chosen.length} deleted message(s) into ${channelId}` + (dropped ? `\uFF08\u53E6\u6709 ${dropped} \u6761\u5728\u7A97\u53E3\u5185\u4F46\u8D85\u51FA\u5355\u9875\u4E0A\u9650\uFF0C\u4EC5\u5728\u6D88\u606F\u8BB0\u5F55\u9875\u53EF\u89C1\uFF09` : "")
+    );
   }
   function reflagLoaded(action) {
     if (!settings.store.keepDeletedInChat) return;
@@ -6669,6 +6856,12 @@ ${components_default}`;
       syncDeleteStyleClass();
       unsubscribeDeleteStyle = settings.subscribe("deleteStyle", syncDeleteStyleClass);
       unpatchDispatch = attachRecorderEverywhere();
+      flushOnUnload = () => messageLog.flush();
+      try {
+        window.addEventListener("pagehide", flushOnUnload);
+        window.addEventListener("beforeunload", flushOnUnload);
+      } catch {
+      }
       startDomTinter();
       startToolbarButton();
       setTimeout(reportPatches, 4e3);
@@ -6691,6 +6884,14 @@ ${components_default}`;
       unsubscribeDeleteStyle = void 0;
       stopDomTinter();
       stopToolbarButton();
+      if (flushOnUnload) {
+        try {
+          window.removeEventListener("pagehide", flushOnUnload);
+          window.removeEventListener("beforeunload", flushOnUnload);
+        } catch {
+        }
+        flushOnUnload = void 0;
+      }
       try {
         for (const s of DELETE_STYLE_CLASSES) document.documentElement?.classList.remove(`hc-mlog-${s}`);
       } catch {
@@ -11176,8 +11377,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.1" : "dev",
-      build: true ? "2026-07-28 06:19:35" : "dev",
+      version: true ? "0.6.2" : "dev",
+      build: true ? "2026-08-12 12:26:02" : "dev",
       href: (() => {
         try {
           return location.pathname;

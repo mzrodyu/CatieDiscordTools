@@ -146,10 +146,13 @@ export function LogPage(): React.ReactElement {
         <Button
           size="sm"
           variant="destructive"
-          onClick={() => messageLog.clear()}
+          // Scoped to the tab you're looking at. It used to wipe BOTH lists, so
+          // tidying up edit history also destroyed every recorded deletion.
+          onClick={() => messageLog.clear(tab)}
           disabled={all.length === 0}
+          title={tab === "deleted" ? "清空「已删除」记录" : "清空「已编辑」记录"}
         >
-          清空
+          清空{tab === "deleted" ? "已删除" : "已编辑"}
         </Button>
       </div>
 

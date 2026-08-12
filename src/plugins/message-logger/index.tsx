@@ -35,6 +35,7 @@ const log = logger("message-logger");
 let unpatchDispatch: Unpatch | undefined;
 let unsubscribeRetention: (() => void) | undefined;
 let unsubscribeDeleteStyle: (() => void) | undefined;
+let flushOnUnload: (() => void) | undefined;
 
 // --- reading Discord's message shapes ------------------------------------
 // Message records mix camelCase and snake_case across versions, and timestamps
@@ -122,6 +123,62 @@ function stickersOf(message: any): Array<{ id: string; name: string; format_type
       format_type: typeof s.format_type === "number" ? s.format_type : s.formatType
     }))
     .slice(0, 4);
+}
+
+/**
+ * Text for a message whose visible body isn't in `content`.
+ *
+ * Several ordinary message kinds carry empty top-level `content`:
+ *   - forwarded messages (转发) — the real payload sits in `message_snapshots`
+ *     / `messageSnapshots`, a nested partial message,
+ *   - polls (投票) — in `poll`,
+ *   - components-v2 bot messages — in `components`.
+ * Nothing else in the plugin reads these, so a deleted forward used to leave no
+ * trace at all. Returns undefined when there is genuinely nothing to recover.
+ */
+function recoverBodyText(message: any): string | undefined {
+  if (!message) return undefined;
+
+  const snapshots = message.message_snapshots ?? message.messageSnapshots;
+  if (Array.isArray(snapshots) && snapshots.length) {
+    const inner = snapshots[0]?.message ?? snapshots[0];
+    const text = typeof inner?.content === "string" ? inner.content.trim() : "";
+    if (text) return `↪️ 转发：${text}`;
+    if (Array.isArray(inner?.attachments) && inner.attachments.length) return "↪️ 转发（附件）";
+    if (Array.isArray(inner?.embeds) && inner.embeds.length) return "↪️ 转发（嵌入内容）";
+    return "↪️ 转发消息";
+  }
+
+  const poll = message.poll;
+  if (poll) {
+    const question =
+      typeof poll.question?.text === "string"
+        ? poll.question.text
+        : typeof poll.question === "string"
+          ? poll.question
+          : "";
+    const options = Array.isArray(poll.answers)
+      ? poll.answers
+          .map((a: any) => (typeof a?.poll_media?.text === "string" ? a.poll_media.text : undefined))
+          .filter(Boolean)
+      : [];
+    return `📊 投票：${question || "（无题目）"}${options.length ? `（${options.join(" / ")}）` : ""}`;
+  }
+
+  if (Array.isArray(message.components) && message.components.length) {
+    const texts: string[] = [];
+    const walk = (nodes: any[], depth: number): void => {
+      if (depth > 4) return;
+      for (const n of nodes) {
+        if (typeof n?.content === "string" && n.content.trim()) texts.push(n.content.trim());
+        if (Array.isArray(n?.components)) walk(n.components, depth + 1);
+      }
+    };
+    walk(message.components, 0);
+    if (texts.length) return texts.join("\n");
+  }
+
+  return undefined;
 }
 
 function currentUserId(): string | undefined {
@@ -570,7 +627,7 @@ function captureDelete(channelId: string, id: string): void {
   const author = message?.author ?? snap?.author ?? {};
   if (isIgnored(channelId, author)) return;
 
-  const content =
+  const liveContent =
     typeof message?.content === "string" && message.content !== ""
       ? message.content
       : snap?.content ?? "";
@@ -581,7 +638,16 @@ function captureDelete(channelId: string, id: string): void {
   const embeds = liveEmbeds.length ? liveEmbeds : snap?.embeds ?? [];
   const liveStickers = message ? stickersOf(message) : [];
   const stickers = liveStickers.length ? liveStickers : snap?.stickers ?? [];
-  if (!content && attachments.length === 0 && attachmentsRich.length === 0 && embeds.length === 0 && stickers.length === 0) return;
+
+  // A message with no text, no attachments, no embeds and no stickers is NOT
+  // necessarily empty: forwarded messages carry their whole payload in
+  // `message_snapshots`, polls in `poll`, components-v2 bot messages in
+  // `components`. Returning here (the old behaviour) meant every deleted
+  // forward, poll and components-v2 message was dropped from the log outright.
+  // Recover what text we can, and keep the record either way — the author,
+  // channel and time are worth having even when the body can't be shown.
+  const recovered = recoverBodyText(message) ?? recoverBodyText(snap as any);
+  const content = liveContent || recovered || "";
 
   messageLog.recordDeleted({
     id: String(id),
@@ -716,6 +782,18 @@ function entryToRaw(entry: DeletedEntry): any {
     spoiler: false
   }));
 
+  // A record written by an older plugin version (or a partial capture) can hold
+  // a missing / NaN sentAt, and `new Date(NaN).toISOString()` throws RangeError.
+  // That throw would land INSIDE Discord's own store while it ingests the batch
+  // — i.e. outside our guard — and take the whole history page down with it, so
+  // the channel would render empty. Derive the time from the snowflake instead,
+  // which is always available because it IS the message id.
+  const timestamp = (): string => {
+    const at = typeof entry.sentAt === "number" && Number.isFinite(entry.sentAt) ? entry.sentAt : snowflakeTime(entry.id);
+    const d = new Date(at);
+    return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  };
+
   return {
     id: entry.id,
     type: 0,
@@ -728,7 +806,8 @@ function entryToRaw(entry: DeletedEntry): any {
     // Echo the real user so resurrecting a deleted message on reload can't null
     // that user's avatar across the client (the "吞头像" bug).
     author: rawAuthorFor(entry.author.id, entry.author.name, entry.author.bot),
-    timestamp: new Date(entry.sentAt).toISOString(),
+    timestamp: timestamp(),
+    edited_timestamp: null,
     attachments,
     embeds: entry.embeds ?? [],
     mentions: [],
@@ -738,6 +817,15 @@ function entryToRaw(entry: DeletedEntry): any {
     tts: false,
     flags: 0
   };
+}
+
+/** Milliseconds encoded in a snowflake id; Discord's epoch is 2015-01-01. */
+function snowflakeTime(id: string): number {
+  try {
+    return Number((BigInt(id) >> 22n) + 1420070400000n);
+  } catch {
+    return Date.now();
+  }
 }
 
 /** Snowflake-safe id comparison (numeric, ids exceed Number precision). */
@@ -754,6 +842,38 @@ function compareIds(a: string, b: string): number {
 // Each LOAD_MESSAGES_SUCCESS is seen once per seam; inject only once.
 const injectedActions = new WeakSet<object>();
 
+/**
+ * Never let revived records outnumber the page they're spliced into by much.
+ * Discord sizes a channel's loaded window off this array and truncates it
+ * (~200 entries) — so a page swamped by synthetic messages loses its REAL ones
+ * to that truncation. A cap keeps the failure mode "some red rows missing"
+ * instead of "the channel looks empty".
+ */
+const MAX_REVIVED_PER_PAGE = 50;
+
+/**
+ * Is this history page the channel's present end — i.e. is there nothing newer
+ * than its newest message?
+ *
+ * This decides whether records NEWER than the page may be appended. On the
+ * newest page they must be (a message deleted a second ago is newer than every
+ * surviving one, and revive is the only way it shows red after a reload). On any
+ * other page they must NOT be: that was the bug where jumping into old history
+ * spliced months of newer records into the 50-message window around the target,
+ * and Discord's own window truncation then evicted the real messages — the
+ * "跳转到了但是没消息" report.
+ *
+ * `hasMoreAfter` is the client's own statement about this; when the action
+ * doesn't carry it, fall back to "no jump target and not an explicit paging
+ * request", which is the plain open-a-channel case.
+ */
+function pageReachesPresent(action: any): boolean {
+  if (action.hasMoreAfter === true) return false;
+  if (action.hasMoreAfter === false) return true;
+  const jumped = action.jump?.messageId != null || action.jumpTargetId != null;
+  return !jumped && action.isBefore !== true && action.isAfter !== true;
+}
+
 function resurrectIntoLoad(action: any): void {
   if (!settings.store.keepDeletedInChat) return;
   if (injectedActions.has(action)) return;
@@ -767,34 +887,56 @@ function resurrectIntoLoad(action: any): void {
   if (!mine.length) return;
 
   const present = new Set(msgs.map((m: any) => String(m?.id)));
-  // Only resurrect records at or above the batch's oldest id: anything older
-  // belongs to history pages not yet loaded and would render out of place.
+  // The page's id window. Records are only placed INSIDE it — bounded at both
+  // ends, not just below. `minId` alone (the old rule) meant "everything newer
+  // than this page", which for any page but the newest is the entire log.
   let minId: string | undefined;
+  let maxId: string | undefined;
   for (const m of msgs) {
     const id = m?.id != null ? String(m.id) : undefined;
-    if (id && (minId === undefined || compareIds(id, minId) < 0)) minId = id;
+    if (!id) continue;
+    if (minId === undefined || compareIds(id, minId) < 0) minId = id;
+    if (maxId === undefined || compareIds(id, maxId) > 0) maxId = id;
   }
 
-  const revived = mine.filter(
-    (d) =>
-      !present.has(d.id) &&
-      (minId === undefined || compareIds(d.id, minId) >= 0) &&
-      // Respect the ignore rules at revive time too, so toggling "屏蔽机器人"
-      // or "屏蔽自己" takes effect for already-recorded messages on reload.
-      !isIgnored(channelId, d.author)
-  );
+  // An empty page carries no window to place anything in. Splicing the whole
+  // channel log into it is exactly how "jump to a message the server no longer
+  // has" ended up showing a wall of old records and no real messages. Only the
+  // genuinely-at-present case (an empty channel) may seed rows.
+  if (minId === undefined && !pageReachesPresent(action)) return;
+
+  const openEnded = pageReachesPresent(action);
+  const revived = mine.filter((d) => {
+    if (present.has(d.id)) return false;
+    // Respect the ignore rules at revive time too, so toggling "屏蔽机器人"
+    // or "屏蔽自己" takes effect for already-recorded messages on reload.
+    if (isIgnored(channelId, d.author)) return false;
+    if (minId !== undefined && compareIds(d.id, minId) < 0) return false;
+    // Above the page's newest id: only allowed when the page reaches the present.
+    if (!openEnded && maxId !== undefined && compareIds(d.id, maxId) > 0) return false;
+    return true;
+  });
   if (!revived.length) return;
+
+  // Newest-first, then capped: if the log has more in-window records than the
+  // page can absorb, the recent ones are the ones worth showing.
+  revived.sort((a, b) => -compareIds(a.id, b.id));
+  const dropped = Math.max(0, revived.length - MAX_REVIVED_PER_PAGE);
+  const chosen = dropped ? revived.slice(0, MAX_REVIVED_PER_PAGE) : revived;
 
   // Match the batch's existing order (the API sends newest first).
   const descending =
     msgs.length >= 2 ? compareIds(String(msgs[0].id), String(msgs[msgs.length - 1].id)) > 0 : true;
-  msgs.push(...revived.map(entryToRaw));
+  msgs.push(...chosen.map(entryToRaw));
   msgs.sort((a: any, b: any) => {
     const c = compareIds(String(a?.id ?? "0"), String(b?.id ?? "0"));
     return descending ? -c : c;
   });
 
-  log.info(`revived ${revived.length} deleted message(s) into ${channelId}`);
+  log.info(
+    `revived ${chosen.length} deleted message(s) into ${channelId}` +
+      (dropped ? `（另有 ${dropped} 条在窗口内但超出单页上限，仅在消息记录页可见）` : "")
+  );
 }
 
 /**
@@ -1490,6 +1632,19 @@ export default definePlugin({
 
     unpatchDispatch = attachRecorderEverywhere();
 
+    // Persist before the page goes away. The save is debounced, so a reload or
+    // a client close moments after a delete would otherwise lose it — and during
+    // a flood (deletes arriving faster than the debounce) that was every record
+    // since the last write. `pagehide` is the reliable one in Chromium; keep
+    // `beforeunload` too for the Electron path.
+    flushOnUnload = () => messageLog.flush();
+    try {
+      window.addEventListener("pagehide", flushOnUnload);
+      window.addEventListener("beforeunload", flushOnUnload);
+    } catch {
+      // no window (shouldn't happen in the client); the stop() flush still runs
+    }
+
     // Keep the red tint on deleted rows no matter how Discord repaints them.
     // The render patch adds it on first render, but a later repaint (our forced
     // MESSAGE_UPDATE, a hover, an embed unfurl) recomputes the row className and
@@ -1527,6 +1682,15 @@ export default definePlugin({
     unsubscribeDeleteStyle = undefined;
     stopDomTinter();
     stopToolbarButton();
+    if (flushOnUnload) {
+      try {
+        window.removeEventListener("pagehide", flushOnUnload);
+        window.removeEventListener("beforeunload", flushOnUnload);
+      } catch {
+        // no window; nothing to detach
+      }
+      flushOnUnload = undefined;
+    }
     try {
       for (const s of DELETE_STYLE_CLASSES) document.documentElement?.classList.remove(`hc-mlog-${s}`);
     } catch {
