@@ -8,6 +8,8 @@
 // Shared by the log page and the in-chat edit-history renderer so the two paths
 // never drift — one parser, one `.hc-emoji` style.
 
+import { emojiCdnUrl } from "../../core/common/cdn";
+
 const EMOJI_TOKEN = /<(a)?:([A-Za-z0-9_]+):(\d+)>/g;
 
 export function renderContent(content: string): React.ReactNode {
@@ -25,7 +27,7 @@ export function renderContent(content: string): React.ReactNode {
       <img
         key={key++}
         className="hc-emoji"
-        src={`https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "webp"}`}
+        src={emojiCdnUrl(id, Boolean(animated), 48)}
         alt={`:${name}:`}
         title={`:${name}:`}
         draggable={false}

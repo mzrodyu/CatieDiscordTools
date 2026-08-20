@@ -24,6 +24,7 @@ import { definePlugin } from "../../core/plugin";
 import { defineSettings } from "../../core/settings";
 import { findByProps, lazy, getSourcePatchReport } from "../../core/modules/webpack";
 import { UserStore, ChannelStore } from "../../core/common/discord";
+import { emojiCdnUrl, stickerCdnUrl, StickerFormat } from "../../core/common/cdn";
 import { patcher, type Unpatch, type PatchContext } from "../../core/patcher";
 import { logger } from "../../core/logger";
 
@@ -98,8 +99,7 @@ const PERM = {
   EMBED_LINKS: 1n << 14n
 };
 
-const STICKER_LOTTIE = 3;
-const STICKER_GIF = 4;
+const STICKER_LOTTIE = StickerFormat.LOTTIE;
 
 // EmojiIntentions enum (from Discord's own module). CHAT and
 // GUILD_STICKER_RELATED_EMOJI are the two intentions we say "always allow"
@@ -156,30 +156,23 @@ function canUseEmote(emoji: any, channelId: string, guildId: string | undefined)
 }
 
 // --- URL construction ------------------------------------------------------
+//
+// Both builders delegate to core/common/cdn, which encodes the one rule that
+// matters here: an animated emoji is `.webp?size=<n>&animated=true`, never
+// `.gif`. The `.gif` form 415s on every animated custom emoji, so what the
+// recipient got was a dead link in plain text instead of an image — the exact
+// bug this replaced. See the note at the top of core/common/cdn.ts.
+
+function emojiSize(): number {
+  return Number(settings.store.emojiSize) || 48;
+}
 
 function emojiUrl(emoji: any): string {
-  const size = Number(settings.store.emojiSize) || 48;
-
-  // The exact shape Discord renders inline, built by hand:
-  //   static   → https://cdn.discordapp.com/emojis/<id>.webp?size=<n>
-  //   animated → https://cdn.discordapp.com/emojis/<id>.gif?size=<n>
-  // Do NOT route this through the client's getEmojiURL — on this build it
-  // returns an OBJECT, so `new URL(...)` coerced it to the literal
-  // ".../[object Object]" (which does NOT throw) and shipped a dead link.
-  // `emoji.id` is a snowflake string, so the template is safe. Animated emojis
-  // use `.gif` (Discord's own canonical form) so they actually animate, instead
-  // of `.webp` which embeds only the first frame.
-  const ext = emoji?.animated ? "gif" : "webp";
-  const url = new URL(`https://cdn.discordapp.com/emojis/${emoji.id}.${ext}`);
-  url.searchParams.set("size", String(size));
-  return url.toString();
+  return emojiCdnUrl(String(emoji?.id), Boolean(emoji?.animated), emojiSize());
 }
 
 function stickerUrl(sticker: any): string {
-  const size = Number(settings.store.stickerSize) || 160;
-  const ext = sticker?.format_type === STICKER_GIF ? "gif" : "png";
-  const url = new URL(`https://media.discordapp.net/stickers/${sticker.id}.${ext}`);
-  url.searchParams.set("size", String(size));
+  const url = new URL(stickerCdnUrl(String(sticker?.id), sticker?.format_type, Number(settings.store.stickerSize) || 160));
   if (sticker?.name) url.searchParams.set("name", String(sticker.name));
   return url.toString();
 }
@@ -307,11 +300,7 @@ function rewriteEmojis(channelId: string, message: any, guildId: string | undefi
  * above can call in without a full emoji record.
  */
 function emojiUrlFromParts(id: string, animated: boolean): string {
-  const size = Number(settings.store.emojiSize) || 48;
-  const ext = animated ? "gif" : "webp";
-  const url = new URL(`https://cdn.discordapp.com/emojis/${id}.${ext}`);
-  url.searchParams.set("size", String(size));
-  return url.toString();
+  return emojiCdnUrl(id, animated, emojiSize());
 }
 
 let unpatchSend: Unpatch | undefined;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.2
+// @version      0.6.3
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -742,7 +742,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-12 12:46:32" : "dev";
+      const build = true ? "2026-08-20 11:09:52" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -4030,7 +4030,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.2" : "dev";
+    return true ? "0.6.3" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4108,7 +4108,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.2" : "dev";
+    const version2 = true ? "0.6.3" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5409,6 +5409,34 @@ ${components_default}`;
   };
   var messageLog = new MessageLogStore();
 
+  // src/core/common/cdn.ts
+  var ALLOWED_SIZES = [16, 32, 48, 56, 64, 80, 96, 128, 160, 256, 300, 512, 600, 1024, 2048, 4096];
+  function normalizeSize(size, fallback) {
+    const n = Number(size);
+    if (!Number.isFinite(n) || n <= 0) return fallback;
+    let best = ALLOWED_SIZES[0];
+    for (const candidate of ALLOWED_SIZES) {
+      if (Math.abs(candidate - n) < Math.abs(best - n)) best = candidate;
+    }
+    return best;
+  }
+  function emojiCdnUrl(id, animated, size) {
+    const px = normalizeSize(size, 48);
+    const query = `size=${px}${animated ? "&animated=true" : ""}`;
+    return `https://cdn.discordapp.com/emojis/${id}.webp?${query}`;
+  }
+  var StickerFormat = {
+    PNG: 1,
+    APNG: 2,
+    LOTTIE: 3,
+    GIF: 4
+  };
+  function stickerCdnUrl(id, formatType, size) {
+    const px = normalizeSize(size, 160);
+    const ext = formatType === StickerFormat.GIF ? "gif" : "png";
+    return `https://media.discordapp.net/stickers/${id}.${ext}?size=${px}`;
+  }
+
   // src/plugins/message-logger/render-content.tsx
   var EMOJI_TOKEN = /<(a)?:([A-Za-z0-9_]+):(\d+)>/g;
   function renderContent(content) {
@@ -5427,7 +5455,7 @@ ${components_default}`;
           {
             key: key++,
             className: "hc-emoji",
-            src: `https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "webp"}`,
+            src: emojiCdnUrl(id, Boolean(animated), 48),
             alt: `:${name}:`,
             title: `:${name}:`,
             draggable: false,
@@ -7952,8 +7980,7 @@ ${components_default}`;
     USE_EXTERNAL_STICKERS: 1n << 37n,
     EMBED_LINKS: 1n << 14n
   };
-  var STICKER_LOTTIE = 3;
-  var STICKER_GIF = 4;
+  var STICKER_LOTTIE = StickerFormat.LOTTIE;
   var INTENT_CHAT = 3;
   var INTENT_STICKER_EMOJI = 4;
   function currentPremiumType() {
@@ -7995,18 +8022,14 @@ ${components_default}`;
     }
     return !emoji?.animated && emoji?.guildId === guildId;
   }
+  function emojiSize() {
+    return Number(settings5.store.emojiSize) || 48;
+  }
   function emojiUrl(emoji) {
-    const size = Number(settings5.store.emojiSize) || 48;
-    const ext = emoji?.animated ? "gif" : "webp";
-    const url = new URL(`https://cdn.discordapp.com/emojis/${emoji.id}.${ext}`);
-    url.searchParams.set("size", String(size));
-    return url.toString();
+    return emojiCdnUrl(String(emoji?.id), Boolean(emoji?.animated), emojiSize());
   }
   function stickerUrl(sticker) {
-    const size = Number(settings5.store.stickerSize) || 160;
-    const ext = sticker?.format_type === STICKER_GIF ? "gif" : "png";
-    const url = new URL(`https://media.discordapp.net/stickers/${sticker.id}.${ext}`);
-    url.searchParams.set("size", String(size));
+    const url = new URL(stickerCdnUrl(String(sticker?.id), sticker?.format_type, Number(settings5.store.stickerSize) || 160));
     if (sticker?.name) url.searchParams.set("name", String(sticker.name));
     return url.toString();
   }
@@ -8085,11 +8108,7 @@ ${components_default}`;
     return changed;
   }
   function emojiUrlFromParts(id, animated) {
-    const size = Number(settings5.store.emojiSize) || 48;
-    const ext = animated ? "gif" : "webp";
-    const url = new URL(`https://cdn.discordapp.com/emojis/${id}.${ext}`);
-    url.searchParams.set("size", String(size));
-    return url.toString();
+    return emojiCdnUrl(id, animated, emojiSize());
   }
   var unpatchSend;
   var unpatchEdit;
@@ -10419,8 +10438,7 @@ ${components_default}`;
 
   // src/plugins/who-reacted/ui/ReactorCard.tsx
   function customEmojiUrl(emoji) {
-    const ext = emoji.animated ? "gif" : "webp";
-    return `https://cdn.discordapp.com/emojis/${emoji.id}.${ext}?size=32`;
+    return emojiCdnUrl(String(emoji.id), Boolean(emoji.animated), 32);
   }
   function EmojiPreview({ emoji }) {
     if (emoji.id) {
@@ -11403,8 +11421,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.2" : "dev",
-      build: true ? "2026-08-12 12:46:32" : "dev",
+      version: true ? "0.6.3" : "dev",
+      build: true ? "2026-08-20 11:09:52" : "dev",
       href: (() => {
         try {
           return location.pathname;

@@ -5,6 +5,7 @@
 // toggle your own reaction.
 
 import { React, useState, useEffect } from "../../../core/common/react";
+import { emojiCdnUrl } from "../../../core/common/cdn";
 import {
   cachedReactors,
   emojiLabel,
@@ -20,8 +21,7 @@ type State =
   | { kind: "error"; message: string };
 
 function customEmojiUrl(emoji: ReactionTarget["emoji"]): string {
-  const ext = emoji.animated ? "gif" : "webp";
-  return `https://cdn.discordapp.com/emojis/${emoji.id}.${ext}?size=32`;
+  return emojiCdnUrl(String(emoji.id), Boolean(emoji.animated), 32);
 }
 
 function EmojiPreview({ emoji }: { emoji: ReactionTarget["emoji"] }): React.ReactElement {
