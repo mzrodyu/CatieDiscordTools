@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.9
+// @version      0.6.10
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -771,8 +771,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 20:17:30" : "dev";
-      const version2 = true ? "0.6.9" : "dev";
+      const build = true ? "2026-08-31 20:23:37" : "dev";
+      const version2 = true ? "0.6.10" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4191,7 +4191,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.9" : "dev";
+    return true ? "0.6.10" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4269,7 +4269,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.9" : "dev";
+    const version2 = true ? "0.6.10" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -8743,32 +8743,55 @@ ${components_default}`;
   var log21 = logger("message-preview");
   var parserChecked = false;
   var parser;
-  var fellBack = false;
+  var parserRejected = false;
+  var announced = false;
+  function isMarkdownParser(m) {
+    return typeof m?.parse === "function" && typeof m?.parseTopic === "function" && // Present on the real markdown module and not something a generic lookalike
+    // carries.
+    typeof m?.reactParserFor === "function" && typeof m?.astParserFor === "function" && // Reject Discord's answer-everything intl proxy. Without this it wins the
+    // probe and its "parse" hands back {locale, ast}. Load-bearing.
+    typeof m?.__halcyon_probe__ === "undefined";
+  }
   function getParser() {
     if (!parserChecked) {
       parserChecked = true;
       try {
-        parser = findByProps("parse", "parseTopic");
+        parser = find(isMarkdownParser);
       } catch {
         parser = void 0;
       }
     }
     return parser;
   }
+  function isRenderable(value) {
+    if (value == null || typeof value === "string" || typeof value === "number") return true;
+    if (Array.isArray(value)) return value.every(isRenderable);
+    if (typeof value === "object") return typeof value.$$typeof === "symbol";
+    return false;
+  }
+  function announce(message, err) {
+    if (announced) return;
+    announced = true;
+    if (err) log21.debug(message, err);
+    else log21.debug(message);
+  }
   function renderMessageContent(content, channelId) {
-    const p = getParser();
-    if (typeof p?.parse === "function") {
-      try {
-        return p.parse(content, true, { channelId, allowLinks: true, allowEmojiLinks: true });
-      } catch (err) {
-        if (!fellBack) {
-          fellBack = true;
-          log21.debug("Discord \u89E3\u6790\u5668\u629B\u9519\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3", err);
+    if (!parserRejected) {
+      const p = getParser();
+      if (typeof p?.parse === "function") {
+        try {
+          const parsed = p.parse(content, true, { channelId, allowLinks: true, allowEmojiLinks: true });
+          if (isRenderable(parsed)) return parsed;
+          parserRejected = true;
+          announce("Discord \u89E3\u6790\u5668\u8FD4\u56DE\u4E86\u4E0D\u80FD\u6E32\u67D3\u7684\u4E1C\u897F\uFF08\u5F88\u53EF\u80FD\u649E\u4E0A\u4E86 intl \u4EE3\u7406\uFF09\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3");
+        } catch (err) {
+          parserRejected = true;
+          announce("Discord \u89E3\u6790\u5668\u629B\u9519\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3", err);
         }
+      } else {
+        parserRejected = true;
+        announce("\u672A\u627E\u5230 Discord \u7684 markdown \u89E3\u6790\u5668\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3\uFF08\u8868\u60C5\u53EF\u89C1\uFF0Cmarkdown / @\u63D0\u53CA \u4E0D\u89E3\u6790\uFF09");
       }
-    } else if (!fellBack) {
-      fellBack = true;
-      log21.debug("\u672A\u627E\u5230 Discord \u7684 markdown \u89E3\u6790\u5668\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3\uFF08\u8868\u60C5\u53EF\u89C1\uFF0Cmarkdown / @\u63D0\u53CA \u4E0D\u89E3\u6790\uFF09");
     }
     return renderContent(content);
   }
@@ -12023,8 +12046,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.9" : "dev",
-      build: true ? "2026-08-31 20:17:30" : "dev",
+      version: true ? "0.6.10" : "dev",
+      build: true ? "2026-08-31 20:23:37" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12055,8 +12078,8 @@ ${components_default}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.9" : "dev",
-        build: true ? "2026-08-31 20:17:30" : "dev",
+        version: true ? "0.6.10" : "dev",
+        build: true ? "2026-08-31 20:23:37" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
