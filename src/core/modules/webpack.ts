@@ -522,9 +522,22 @@ export function findAll(filter: ModuleFilter): any[] {
   return out;
 }
 
-/** Find a module exporting all of the named properties. */
+/**
+ * Find a module exporting all of the named properties.
+ *
+ * The `__halcyon_probe__` guard is not optional. Discord ships an intl object
+ * that answers EVERY property access with a message record, so it satisfies any
+ * name-based probe and — loading early — wins the scan. Patching it is silent:
+ * `patcher.before(proxy, "sendMessage", …)` succeeds and hooks nothing, which is
+ * exactly how message-tail appended no tail and fake-nitro's runtime fallback
+ * quietly did nothing for months while only its source patch worked. A real
+ * module answers `undefined` for a name it does not export; the proxy answers a
+ * (truthy) message, so this one check separates them.
+ */
 export function findByProps(...props: string[]): any {
-  return find((exp) => props.every((p) => exp[p] !== undefined));
+  return find(
+    (exp) => typeof exp?.__halcyon_probe__ === "undefined" && props.every((p) => exp[p] !== undefined)
+  );
 }
 
 /**

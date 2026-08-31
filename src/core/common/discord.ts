@@ -51,9 +51,21 @@ export const MessageStore = lazy<any>(
       typeof m?.__halcyon_probe__ === "undefined")
 );
 
-/** Imperative message operations (send / edit / delete / receive). */
+/**
+ * Imperative message operations (send / edit / delete / receive).
+ *
+ * Guarded against the intl `t` proxy like every other lookup here: it answers
+ * every property, so a bare editMessage/deleteMessage shape matched it, and
+ * anything patching the result hooked nothing at all — silently, since the
+ * assignment itself succeeds. Requiring real functions AND rejecting the proxy
+ * is what makes a send hook actually fire.
+ */
 export const MessageActions = lazy<any>(
-  (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
+  (m) =>
+    typeof m?.sendMessage === "function" &&
+    typeof m?.editMessage === "function" &&
+    typeof m?.deleteMessage === "function" &&
+    typeof m?.__halcyon_probe__ === "undefined"
 );
 
 /**

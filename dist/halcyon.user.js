@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.13
+// @version      0.6.14
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -330,7 +330,9 @@ var Halcyon = (() => {
     return out;
   }
   function findByProps(...props) {
-    return find((exp) => props.every((p) => exp[p] !== void 0));
+    return find(
+      (exp) => typeof exp?.__halcyon_probe__ === "undefined" && props.every((p) => exp[p] !== void 0)
+    );
   }
   function findByCode(...needles) {
     return find((exp) => {
@@ -771,8 +773,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 21:01:03" : "dev";
-      const version2 = true ? "0.6.13" : "dev";
+      const build = true ? "2026-08-31 21:10:10" : "dev";
+      const version2 = true ? "0.6.14" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4191,7 +4193,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.13" : "dev";
+    return true ? "0.6.14" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4269,7 +4271,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.13" : "dev";
+    const version2 = true ? "0.6.14" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -4957,7 +4959,7 @@ ${components_default}`;
     (m) => m?.getName?.() === "MessageStore" || typeof m?.getMessage === "function" && typeof m?.getMessages === "function" && typeof m?.__halcyon_probe__ === "undefined"
   );
   var MessageActions = lazy(
-    (m) => typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function"
+    (m) => typeof m?.sendMessage === "function" && typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function" && typeof m?.__halcyon_probe__ === "undefined"
   );
   var UserStore = lazy(
     (m) => m?.getName?.() === "UserStore" || typeof m?.getCurrentUser === "function" && typeof m?.getUser === "function" && typeof m?.__halcyon_probe__ === "undefined"
@@ -9393,13 +9395,16 @@ ${tail}`;
     settings: settings7,
     start() {
       startTypingClock();
-      const messageActions = findByProps("sendMessage", "editMessage", "deleteMessage");
-      if (!messageActions || typeof messageActions.sendMessage !== "function") {
+      const messageActions = find(
+        (m) => typeof m?.sendMessage === "function" && typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function" && typeof m?.__halcyon_probe__ === "undefined"
+      );
+      if (!messageActions) {
         log24.warn("\u672A\u627E\u5230 MessageActions\uFF0C\u5C3E\u5DF4\u65E0\u6CD5\u8FFD\u52A0\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
         return;
       }
       try {
         unpatchSend2 = patcher.before(messageActions, "sendMessage", onSendMessage2);
+        log24.info("\u5DF2\u6302\u63A5 sendMessage\uFF0C\u53D1\u6D88\u606F\u65F6\u4F1A\u8FFD\u52A0\u5C3E\u5DF4");
       } catch (err) {
         log24.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
       }
@@ -12395,8 +12400,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.6.13" : "dev",
-      build: true ? "2026-08-31 21:01:03" : "dev",
+      version: true ? "0.6.14" : "dev",
+      build: true ? "2026-08-31 21:10:10" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12427,8 +12432,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.13" : "dev",
-        build: true ? "2026-08-31 21:01:03" : "dev",
+        version: true ? "0.6.14" : "dev",
+        build: true ? "2026-08-31 21:10:10" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

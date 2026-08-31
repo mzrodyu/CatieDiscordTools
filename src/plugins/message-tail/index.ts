@@ -15,7 +15,7 @@
 
 import { definePlugin } from "../../core/plugin";
 import { defineSettings } from "../../core/settings";
-import { findByProps } from "../../core/modules/webpack";
+import { find } from "../../core/modules/webpack";
 import { patcher, type Unpatch, type PatchContext } from "../../core/patcher";
 import { logger } from "../../core/logger";
 import { appendTail, estimateTokens, jitter, pickModel, renderTail } from "./template";
@@ -152,13 +152,24 @@ export default definePlugin({
 
   start() {
     startTypingClock();
-    const messageActions = findByProps("sendMessage", "editMessage", "deleteMessage");
-    if (!messageActions || typeof messageActions.sendMessage !== "function") {
+    // Resolved with an explicit filter rather than findByProps: all three names
+    // must be real FUNCTIONS, and Discord's answer-everything intl proxy must be
+    // rejected. Match the proxy and `patcher.before` still succeeds — it just
+    // hooks nothing, and the tail never appears with no error to show for it.
+    const messageActions = find(
+      (m: any) =>
+        typeof m?.sendMessage === "function" &&
+        typeof m?.editMessage === "function" &&
+        typeof m?.deleteMessage === "function" &&
+        typeof m?.__halcyon_probe__ === "undefined"
+    );
+    if (!messageActions) {
       log.warn("未找到 MessageActions，尾巴无法追加。重启客户端后再试。");
       return;
     }
     try {
       unpatchSend = patcher.before(messageActions, "sendMessage", onSendMessage);
+      log.info("已挂接 sendMessage，发消息时会追加尾巴");
     } catch (err) {
       log.error("挂接 sendMessage 失败", err);
     }
