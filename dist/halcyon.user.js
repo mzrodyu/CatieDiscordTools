@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.4
+// @version      0.6.5
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -77,14 +77,15 @@ var Halcyon = (() => {
     globalThis.__halcyon_self__ = (id) => selfResolver(id);
   }
   function registerSourcePatch(patch) {
-    sourcePatches.push({ index: 1, count: 1, optional: false, ...patch, applied: false, hits: 0 });
+    sourcePatches.push({ index: 1, count: 1, optional: false, ...patch, applied: false, hits: 0, seen: 0 });
   }
   function getSourcePatchReport() {
-    return sourcePatches.map(({ pluginId, label, applied, hits, index, count: count2, optional }) => ({
+    return sourcePatches.map(({ pluginId, label, applied, hits, seen, index, count: count2, optional }) => ({
       pluginId,
       label,
       applied,
       hits,
+      seen,
       index,
       count: count2,
       optional
@@ -192,7 +193,8 @@ var Halcyon = (() => {
     const wrapped = function(module, exports, require2) {
       if (!effective) {
         const applicable = sourcePatches.filter((p) => sourceMatches(p.find, original));
-        effective = applicable.length ? applyPatches(id, original, applicable) : original;
+        for (const p of applicable) p.seen++;
+        effective = applicable.length ? applyPatches(id, original, applicable, wrapped) : original;
       }
       effective.call(this, module, exports, require2);
       try {
@@ -205,8 +207,9 @@ var Halcyon = (() => {
     wrapped.__halcyon__ = true;
     return wrapped;
   }
-  function applyPatches(id, original, patches) {
+  function applyPatches(id, original, patches, wrapper) {
     let code = String(original);
+    let changed = false;
     for (const patch of patches) {
       const before = code;
       const replacement = bindSelf(patch.replace, patch.pluginId);
@@ -219,7 +222,14 @@ var Halcyon = (() => {
       }
       patch.applied = true;
       patch.hits++;
+      changed = true;
       log.debug(`applied patch "${patch.label}" (${patch.pluginId}) to module ${id}`);
+    }
+    if (changed && wrapper) {
+      try {
+        wrapper.__halcyon_patched_source__ = code;
+      } catch {
+      }
     }
     try {
       const rebuilt = (0, eval)(`(${toFunctionExpression(code)})`);
@@ -423,8 +433,15 @@ var Halcyon = (() => {
     const blocks = [];
     for (const id of Object.keys(factories)) {
       let src;
+      let patched = false;
       try {
-        src = String(factories[id]);
+        const rewritten = factories[id]?.__halcyon_patched_source__;
+        if (typeof rewritten === "string") {
+          src = rewritten;
+          patched = true;
+        } else {
+          src = String(factories[id]);
+        }
       } catch {
         continue;
       }
@@ -437,8 +454,10 @@ var Halcyon = (() => {
         idx = src.indexOf(needle, idx + needle.length);
         hits++;
       }
-      blocks.push(`===== module ${id} (${hits} hit${hits === 1 ? "" : "s"}) =====
-${slices.join("\n  ...  \n")}`);
+      blocks.push(
+        `===== module ${id} (${hits} hit${hits === 1 ? "" : "s"}${patched ? ", PATCHED source" : ""}) =====
+${slices.join("\n  ...  \n")}`
+      );
     }
     return blocks.length ? blocks.join("\n\n") : `<no loaded factory contains "${needle}">`;
   }
@@ -752,7 +771,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 11:55:58" : "dev";
+      const build = true ? "2026-08-31 14:26:25" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -4046,7 +4065,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.4" : "dev";
+    return true ? "0.6.5" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4124,7 +4143,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.4" : "dev";
+    const version2 = true ? "0.6.5" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -8167,16 +8186,30 @@ ${components_default}`;
   }
   function reportPatches2() {
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "fake-nitro");
-    if (!mine.length) return;
+    if (!mine.length) {
+      log20.warn(
+        "\u672C\u63D2\u4EF6\u6CA1\u6709\u6CE8\u518C\u4EFB\u4F55\u6E90\u7801 patch \u2014\u2014 \u542F\u52A8\u65F6\u5B83\u5904\u4E8E\u5173\u95ED\u72B6\u6001\u3002\u5728\u8BBE\u7F6E\u91CC\u6253\u5F00\u201C\u5047 Nitro\u201D\u540E\u5FC5\u987B\u5237\u65B0\u9875\u9762\uFF1A\u6E90\u7801 patch \u53EA\u5728\u6A21\u5757\u52A0\u8F7D\u90A3\u4E00\u523B\u751F\u6548\uFF0C\u4E2D\u9014\u5F00\u542F\u4E0D\u4F1A\u8865\u4E0A\u3002"
+      );
+      return;
+    }
     const name = (p) => p.count > 1 ? `\u201C${p.label}\u201D \u7B2C ${p.index}/${p.count} \u5904` : `\u201C${p.label}\u201D`;
     const missed = mine.filter((p) => !p.applied && !p.optional);
     const degraded = mine.filter((p) => !p.applied && p.optional);
     if (missed.length === 0) {
       log20.info(`\u8868\u60C5 / \u8D34\u7EB8\u89E3\u9501\u7684\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548\uFF08\u5171 ${mine.length} \u5904\u66FF\u6362\uFF09`);
     } else {
-      log20.warn(
-        "\u90E8\u5206\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF1B\u9009\u62E9\u5668\u89E3\u9501\u6216\u53D1\u9001\u6539\u5199\u53EF\u80FD\u4E0D\u5B8C\u6574\u3002\u672A\u5339\u914D\uFF1A" + missed.map(name).join("\u3001")
-      );
+      const stale = missed.filter((p) => p.seen > 0);
+      const unseen = missed.filter((p) => p.seen === 0);
+      if (stale.length > 0) {
+        log20.warn(
+          "\u4EE5\u4E0B patch \u627E\u5230\u4E86\u76EE\u6807\u6A21\u5757\uFF0C\u4F46\u66FF\u6362\u6B63\u5219\u5DF2\u5BF9\u4E0D\u4E0A\u5F53\u524D Discord \u7248\u672C\uFF08\u9700\u8981\u91CD\u951A\uFF09\uFF1A" + stale.map(name).join("\u3001")
+        );
+      }
+      if (unseen.length > 0) {
+        log20.warn(
+          "\u4EE5\u4E0B patch \u4ECE\u672A\u62FF\u5230\u76EE\u6807\u6A21\u5757 \u2014\u2014 \u6A21\u5757\u8FD8\u6CA1\u52A0\u8F7D\uFF0C\u6216 find \u5DF2\u5931\u6548\uFF1A" + unseen.map(name).join("\u3001") + "\u3002\u82E5\u76F8\u5173\u754C\u9762\uFF08\u8868\u60C5\u9009\u62E9\u5668\u7B49\uFF09\u5DF2\u7ECF\u6253\u5F00\u8FC7\u4ECD\u662F\u8FD9\u6837\uFF0C\u5C31\u662F find \u9700\u8981\u66F4\u65B0\u3002"
+        );
+      }
     }
     if (degraded.length > 0) {
       log20.info("\u4EE5\u4E0B\u53EF\u9009 patch \u672A\u5339\u914D\uFF08\u4EC5\u5F71\u54CD\u9644\u5E26\u529F\u80FD\uFF0C\u4E0D\u5F71\u54CD\u8868\u60C5 / \u8D34\u7EB8\uFF09\uFF1A" + degraded.map(name).join("\u3001"));
@@ -11468,8 +11501,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.4" : "dev",
-      build: true ? "2026-08-31 11:55:58" : "dev",
+      version: true ? "0.6.5" : "dev",
+      build: true ? "2026-08-31 14:26:25" : "dev",
       href: (() => {
         try {
           return location.pathname;

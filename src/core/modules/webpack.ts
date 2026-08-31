@@ -54,6 +54,15 @@ interface SourcePatch {
   optional: boolean;
   applied: boolean;
   hits: number;
+  /**
+   * How many executed module factories this patch's `find` matched, whether or
+   * not the `match` regex then landed. Without it, `applied:false` conflates
+   * three very different failures: the module never loaded, `find` no longer
+   * selects it, or `find` hit but `match` is stale. Only the last one is a
+   * regex to re-anchor — the others are a load-order or plugin-disabled
+   * problem, and guessing between them costs a round trip every time.
+   */
+  seen: number;
 }
 
 interface Waiter {
@@ -82,20 +91,21 @@ export function setSelfResolver(fn: (pluginId: string) => unknown): void {
 
 /** Register a source-level patch. Must happen before the target module loads. */
 export function registerSourcePatch(
-  patch: Omit<SourcePatch, "applied" | "hits" | "index" | "count" | "optional"> &
+  patch: Omit<SourcePatch, "applied" | "hits" | "seen" | "index" | "count" | "optional"> &
     Partial<Pick<SourcePatch, "index" | "count" | "optional">>
 ): void {
-  sourcePatches.push({ index: 1, count: 1, optional: false, ...patch, applied: false, hits: 0 });
+  sourcePatches.push({ index: 1, count: 1, optional: false, ...patch, applied: false, hits: 0, seen: 0 });
 }
 
 export function getSourcePatchReport(): ReadonlyArray<
-  Pick<SourcePatch, "pluginId" | "label" | "applied" | "hits" | "index" | "count" | "optional">
+  Pick<SourcePatch, "pluginId" | "label" | "applied" | "hits" | "seen" | "index" | "count" | "optional">
 > {
-  return sourcePatches.map(({ pluginId, label, applied, hits, index, count, optional }) => ({
+  return sourcePatches.map(({ pluginId, label, applied, hits, seen, index, count, optional }) => ({
     pluginId,
     label,
     applied,
     hits,
+    seen,
     index,
     count,
     optional
@@ -296,7 +306,12 @@ function wrapFactory(id: string, original: ModuleFactory): ModuleFactory {
   const wrapped: ModuleFactory = function (this: any, module, exports, require) {
     if (!effective) {
       const applicable = sourcePatches.filter((p) => sourceMatches(p.find, original));
-      effective = applicable.length ? applyPatches(id, original, applicable) : original;
+      // Count the sighting before patching: a patch whose `find` selected this
+      // module but whose `match` then missed is a stale regex, while one that
+      // was never even offered a module is a load-order or disabled-plugin
+      // problem. The boot report can only tell those apart if we record both.
+      for (const p of applicable) p.seen++;
+      effective = applicable.length ? applyPatches(id, original, applicable, wrapped) : original;
     }
     effective.call(this, module, exports, require);
     // After the factory runs, `module.exports` is settled. Let waiters inspect.
@@ -313,8 +328,14 @@ function wrapFactory(id: string, original: ModuleFactory): ModuleFactory {
   return wrapped;
 }
 
-function applyPatches(id: string, original: ModuleFactory, patches: SourcePatch[]): ModuleFactory {
+function applyPatches(
+  id: string,
+  original: ModuleFactory,
+  patches: SourcePatch[],
+  wrapper?: ModuleFactory
+): ModuleFactory {
   let code = String(original);
+  let changed = false;
 
   for (const patch of patches) {
     const before = code;
@@ -332,7 +353,20 @@ function applyPatches(id: string, original: ModuleFactory, patches: SourcePatch[
     }
     patch.applied = true;
     patch.hits++;
+    changed = true;
     log.debug(`applied patch "${patch.label}" (${patch.pluginId}) to module ${id}`);
+  }
+
+  // Keep the rewritten text reachable for diagnostics. `toString()` has to keep
+  // answering with the ORIGINAL source (find / findBySource match against it),
+  // so without this there is no way to confirm from a console that a patch
+  // actually reached a module's body.
+  if (changed && wrapper) {
+    try {
+      (wrapper as any).__halcyon_patched_source__ = code;
+    } catch {
+      // frozen wrapper is not fatal; we just lose the diagnostic
+    }
   }
 
   try {
@@ -706,8 +740,17 @@ export function dumpFactorySource(needle: string, radius = 300): string {
   const blocks: string[] = [];
   for (const id of Object.keys(factories)) {
     let src: string;
+    let patched = false;
     try {
-      src = String(factories[id]);
+      // Prefer the post-patch text when this module was rewritten, so the dump
+      // answers "did the patch land?" and not just "what does Discord ship?".
+      const rewritten = (factories[id] as any)?.__halcyon_patched_source__;
+      if (typeof rewritten === "string") {
+        src = rewritten;
+        patched = true;
+      } else {
+        src = String(factories[id]);
+      }
     } catch {
       continue;
     }
@@ -721,7 +764,9 @@ export function dumpFactorySource(needle: string, radius = 300): string {
       idx = src.indexOf(needle, idx + needle.length);
       hits++;
     }
-    blocks.push(`===== module ${id} (${hits} hit${hits === 1 ? "" : "s"}) =====\n${slices.join("\n  ...  \n")}`);
+    blocks.push(
+      `===== module ${id} (${hits} hit${hits === 1 ? "" : "s"}${patched ? ", PATCHED source" : ""}) =====\n${slices.join("\n  ...  \n")}`
+    );
   }
 
   return blocks.length ? blocks.join("\n\n") : `<no loaded factory contains "${needle}">`;

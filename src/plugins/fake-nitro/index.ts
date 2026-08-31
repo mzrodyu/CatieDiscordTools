@@ -369,7 +369,13 @@ function onEditMessage(ctx: PatchContext): void {
  */
 function reportPatches(): void {
   const mine = getSourcePatchReport().filter((p) => p.pluginId === "fake-nitro");
-  if (!mine.length) return;
+  if (!mine.length) {
+    log.warn(
+      "本插件没有注册任何源码 patch —— 启动时它处于关闭状态。在设置里打开“假 Nitro”后" +
+        "必须刷新页面：源码 patch 只在模块加载那一刻生效，中途开启不会补上。"
+    );
+    return;
+  }
   const name = (p: (typeof mine)[number]): string =>
     p.count > 1 ? `“${p.label}” 第 ${p.index}/${p.count} 处` : `“${p.label}”`;
   const missed = mine.filter((p) => !p.applied && !p.optional);
@@ -377,10 +383,26 @@ function reportPatches(): void {
   if (missed.length === 0) {
     log.info(`表情 / 贴纸解锁的源码 patch 均已在当前 Discord 版本生效（共 ${mine.length} 处替换）`);
   } else {
-    log.warn(
-      "部分源码 patch 未匹配当前 Discord 版本；选择器解锁或发送改写可能不完整。未匹配：" +
-        missed.map(name).join("、")
-    );
+    // Two very different failures hide behind "未匹配". `seen > 0` means the
+    // module was handed to this patch and only the match regex is stale — that
+    // is the one worth re-anchoring. `seen === 0` means the module never
+    // arrived (not loaded yet, or `find` itself no longer selects it), where a
+    // new regex would change nothing.
+    const stale = missed.filter((p) => p.seen > 0);
+    const unseen = missed.filter((p) => p.seen === 0);
+    if (stale.length > 0) {
+      log.warn(
+        "以下 patch 找到了目标模块，但替换正则已对不上当前 Discord 版本（需要重锚）：" +
+          stale.map(name).join("、")
+      );
+    }
+    if (unseen.length > 0) {
+      log.warn(
+        "以下 patch 从未拿到目标模块 —— 模块还没加载，或 find 已失效：" +
+          unseen.map(name).join("、") +
+          "。若相关界面（表情选择器等）已经打开过仍是这样，就是 find 需要更新。"
+      );
+    }
   }
   if (degraded.length > 0) {
     log.info("以下可选 patch 未匹配（仅影响附带功能，不影响表情 / 贴纸）：" + degraded.map(name).join("、"));
