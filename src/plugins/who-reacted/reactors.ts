@@ -12,6 +12,7 @@
 // over a row of reactions costs one request, not twenty.
 
 import { RestAPI } from "../../core/common/discord";
+import { avatarCdnUrl } from "../../core/common/cdn";
 import { getFiberPropsChain } from "../../core/common/react";
 import { logger } from "../../core/logger";
 
@@ -83,24 +84,10 @@ export function emojiLabel(emoji: ReactionTarget["emoji"]): string {
   return emoji.name ?? "";
 }
 
-function defaultAvatar(userId: string): string {
-  // Modern Discord picks the default avatar from the account's snowflake.
-  let index = 0;
-  try {
-    index = Number((BigInt(userId) >> 22n) % 6n);
-  } catch {
-    index = 0;
-  }
-  return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
-}
-
 function avatarUrl(user: any): string | null {
   const id = user?.id ? String(user.id) : null;
   if (!id) return null;
-  const hash = user?.avatar;
-  if (typeof hash !== "string" || hash.length === 0) return defaultAvatar(id);
-  const ext = hash.startsWith("a_") ? "gif" : "webp";
-  return `https://cdn.discordapp.com/avatars/${id}/${hash}.${ext}?size=32`;
+  return avatarCdnUrl(id, user?.avatar, 32);
 }
 
 function toReactor(user: any): Reactor | null {

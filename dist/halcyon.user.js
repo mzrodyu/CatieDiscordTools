@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.7
+// @version      0.6.8
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -771,8 +771,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 15:28:44" : "dev";
-      const version2 = true ? "0.6.7" : "dev";
+      const build = true ? "2026-08-31 19:52:37" : "dev";
+      const version2 = true ? "0.6.8" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3244,6 +3244,128 @@ ${slices.join("\n  ...  \n")}`
   background: var(--hc-label-tertiary);
   background-clip: padding-box;
 }
+
+
+/* --- Send preview -------------------------------------------------------- */
+/* One composer button plus a floating panel above the input. The panel is
+ * body-mounted and positioned from JS, so only the box styling lives here. */
+.hc-preview-btn-host {
+  display: inline-flex;
+  align-items: center;
+}
+.hc-preview-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 4px;
+  padding: 0;
+  border: none;
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--interactive-normal, #b5bac1);
+  cursor: pointer;
+  transition: color var(--hc-duration-fast) var(--hc-ease);
+}
+.hc-preview-btn:hover {
+  color: var(--interactive-hover, #dbdee1);
+}
+.hc-preview-btn:active {
+  color: var(--interactive-active, #fff);
+}
+
+.hc-preview-host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 4000;
+}
+.hc-preview {
+  padding: var(--hc-space-3);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-bg-elevated);
+  box-shadow: var(--hc-elev-2);
+  font-size: var(--hc-text-subhead);
+  line-height: var(--hc-lh-subhead);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.hc-preview__empty {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-preview__row {
+  display: flex;
+  gap: var(--hc-space-3);
+  align-items: flex-start;
+}
+.hc-preview__avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--hc-radius-pill);
+  object-fit: cover;
+}
+.hc-preview__avatar--blank {
+  background: var(--hc-fill-secondary);
+}
+.hc-preview__main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.hc-preview__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hc-space-2);
+}
+.hc-preview__name {
+  color: var(--hc-label-primary);
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  font-weight: 600;
+}
+.hc-preview__time {
+  color: var(--hc-label-quaternary);
+  font-size: var(--hc-text-caption2);
+  line-height: var(--hc-lh-caption);
+}
+.hc-preview__body {
+  margin-top: 2px;
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Custom emoji inside the rendered body, whether Discord's parser produced it
+ * or message-logger's fallback did. */
+.hc-preview__body img,
+.hc-preview__body .hc-emoji {
+  vertical-align: -0.3em;
+  width: 1.375em;
+  height: 1.375em;
+  object-fit: contain;
+}
+.hc-preview__raw {
+  margin-top: var(--hc-space-3);
+  padding-top: var(--hc-space-3);
+  border-top: 1px solid var(--hc-separator);
+}
+.hc-preview__raw-title {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+  margin-bottom: var(--hc-space-1);
+}
+.hc-preview__raw-text {
+  display: block;
+  color: var(--hc-label-secondary);
+  font-family: var(--hc-font-mono);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+  word-break: break-all;
+  white-space: pre-wrap;
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -3377,6 +3499,9 @@ ${components_default}`;
   }
   function GamepadIcon(props) {
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M7.5 7.5h9a5 5 0 014.9 6l-.5 2.6A2.5 2.5 0 0118.45 18c-.9 0-1.73-.48-2.17-1.26L15.5 15.5h-7l-.78 1.24A2.5 2.5 0 015.55 18a2.5 2.5 0 01-2.45-1.9l-.5-2.6a5 5 0 014.9-6z" }), /* @__PURE__ */ React.createElement("path", { d: "M8.25 10.5v2.25M7.12 11.6h2.26" }), /* @__PURE__ */ React.createElement("path", { d: "M15.25 11h.01M17 12.75h.01" }));
+  }
+  function EyeIcon(props) {
+    return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M2.75 12s3.4-5.75 9.25-5.75S21.25 12 21.25 12s-3.4 5.75-9.25 5.75S2.75 12 2.75 12z" }), /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "2.75" }));
   }
 
   // src/ui/components/Toggle.tsx
@@ -3544,7 +3669,7 @@ ${components_default}`;
       setOpen(false);
       if (next !== value) onChange(next);
     };
-    const onKeyDown3 = (e) => {
+    const onKeyDown4 = (e) => {
       if (!open) {
         if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
           e.preventDefault();
@@ -3568,7 +3693,7 @@ ${components_default}`;
         setOpen(false);
       }
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-select", ref: rootRef, onKeyDown: onKeyDown3 }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-select", ref: rootRef, onKeyDown: onKeyDown4 }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -3603,7 +3728,7 @@ ${components_default}`;
           className: "halcyon",
           ref: menuRef,
           style: { position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 1e4 },
-          onKeyDown: onKeyDown3
+          onKeyDown: onKeyDown4
         },
         /* @__PURE__ */ React.createElement("div", { className: "hc-select__menu", role: "listbox", style: { minWidth: menuPos.width } }, options.map((opt, index) => /* @__PURE__ */ React.createElement(
           "button",
@@ -3717,17 +3842,17 @@ ${components_default}`;
     }, []);
     return list;
   }
-  function useSettingsSnapshot(settings11) {
+  function useSettingsSnapshot(settings12) {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubscribes3 = Object.keys(settings11.schema).map(
-        (key) => settings11.subscribe(key, () => bump((n) => n + 1))
+      const unsubscribes3 = Object.keys(settings12.schema).map(
+        (key) => settings12.subscribe(key, () => bump((n) => n + 1))
       );
       return () => {
         for (const off of unsubscribes3) off();
       };
-    }, [settings11]);
-    return settings11.store;
+    }, [settings12]);
+    return settings12.store;
   }
 
   // src/ui/settings/SettingsForm.tsx
@@ -3743,16 +3868,16 @@ ${components_default}`;
       return false;
     }
   }
-  function SettingsForm({ settings: settings11 }) {
-    const store = useSettingsSnapshot(settings11);
+  function SettingsForm({ settings: settings12 }) {
+    const store = useSettingsSnapshot(settings12);
     const keys = useMemo(
-      () => Object.keys(settings11.schema).filter((key) => !settings11.schema[key].hidden),
-      [settings11]
+      () => Object.keys(settings12.schema).filter((key) => !settings12.schema[key].hidden),
+      [settings12]
     );
     const [draft, setDraft] = useState(() => seed(store, keys));
     useEffect(() => {
       setDraft(seed(store, keys));
-    }, [settings11]);
+    }, [settings12]);
     if (keys.length === 0) return null;
     const dirty = keys.filter((key) => !equal(draft[key], store[key]));
     const save = () => {
@@ -3761,7 +3886,7 @@ ${components_default}`;
     const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
-      const title = settings11.schema[key].group ?? "\u8BBE\u7F6E";
+      const title = settings12.schema[key].group ?? "\u8BBE\u7F6E";
       const last = sections[sections.length - 1];
       if (last && last.title === title) last.keys.push(key);
       else sections.push({ title, keys: [key] });
@@ -3770,7 +3895,7 @@ ${components_default}`;
       SettingField,
       {
         key,
-        def: settings11.schema[key],
+        def: settings12.schema[key],
         value: draft[key],
         onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
@@ -4066,7 +4191,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.7" : "dev";
+    return true ? "0.6.8" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4144,7 +4269,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.7" : "dev";
+    const version2 = true ? "0.6.8" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5500,6 +5625,21 @@ ${components_default}`;
     const px = normalizeSize(size, 160);
     const ext = formatType === StickerFormat.GIF ? "gif" : "png";
     return `https://media.discordapp.net/stickers/${id}.${ext}?size=${px}`;
+  }
+  function defaultAvatarUrl(userId) {
+    let index = 0;
+    try {
+      index = Number((BigInt(userId) >> 22n) % 6n);
+    } catch {
+      index = 0;
+    }
+    return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+  }
+  function avatarCdnUrl(userId, hash, size) {
+    if (typeof hash !== "string" || hash.length === 0) return defaultAvatarUrl(userId);
+    const px = normalizeSize(size, 32);
+    const ext = hash.startsWith("a_") ? "gif" : "webp";
+    return `https://cdn.discordapp.com/avatars/${userId}/${hash}.${ext}?size=${px}`;
   }
 
   // src/plugins/message-logger/render-content.tsx
@@ -8539,12 +8679,475 @@ ${components_default}`;
         log20.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
       }
       return false;
+    },
+    /**
+     * Dry run of the emoji rewrite, for message-preview's "what actually goes on
+     * the wire" block. Same code path the send takes, on a throwaway object, so
+     * the preview can never disagree with reality by construction.
+     *
+     * Stickers are deliberately out of scope: they never live in the draft text —
+     * they ride along as `options.stickerIds`, which a preview of the text box has
+     * no view of.
+     *
+     * Returns the input unchanged on any failure. Nothing here is allowed to be
+     * load-bearing for sending; it is a read-only question about it.
+     */
+    previewOutgoing(channelId, content) {
+      try {
+        if (typeof content !== "string" || content.length === 0) return content ?? "";
+        const scratch = { content };
+        rewriteEmojis(channelId, scratch, guildIdOfChannel(channelId));
+        return scratch.content;
+      } catch (err) {
+        log20.debug("previewOutgoing \u5931\u8D25\uFF0C\u6309\u539F\u6587\u8FD4\u56DE", err);
+        return content;
+      }
+    }
+  });
+
+  // src/plugins/message-preview/settings.ts
+  var settings6 = defineSettings({
+    showRawOutgoing: {
+      group: "\u9884\u89C8",
+      type: "boolean",
+      default: true,
+      label: "\u663E\u793A\u5B9E\u9645\u53D1\u51FA\u7684\u539F\u6587",
+      description: "\u5047 Nitro \u4F1A\u628A\u9501\u5B9A\u7684\u8868\u60C5\u6539\u5199\u6210\u56FE\u7247\u94FE\u63A5\uFF0C\u6240\u4EE5\u4F60\u6253\u7684\u548C\u771F\u6B63\u4E0A\u7EBF\u7684\u7ECF\u5E38\u4E0D\u662F\u4E00\u56DE\u4E8B\u3002\u5F00\u542F\u540E\uFF0C\u53EA\u8981\u4E24\u8005\u4E0D\u540C\u5C31\u989D\u5916\u663E\u793A\u4E00\u5757\u771F\u6B63\u4F1A\u53D1\u51FA\u53BB\u7684\u6587\u672C\u3002"
+    },
+    liveUpdate: {
+      group: "\u9884\u89C8",
+      type: "boolean",
+      default: true,
+      label: "\u8DDF\u7740\u6253\u5B57\u5B9E\u65F6\u66F4\u65B0",
+      description: "\u9762\u677F\u5F00\u7740\u65F6\u968F\u8F93\u5165\u5237\u65B0\u9884\u89C8\u3002\u5173\u6389\u5219\u53EA\u5728\u70B9\u5F00\u7684\u90A3\u4E00\u523B\u53D6\u4E00\u6B21\u5FEB\u7167\u3002"
+    }
+  });
+
+  // src/core/dom-probe.ts
+  function describe(el) {
+    let box = "n/a";
+    try {
+      const r = el.getBoundingClientRect();
+      box = `${Math.round(r.width)}x${Math.round(r.height)}@${Math.round(r.left)},${Math.round(r.top)}`;
+    } catch {
+    }
+    return {
+      tag: el.tagName.toLowerCase(),
+      classes: typeof el.className === "string" ? el.className : String(el.className ?? ""),
+      childCount: el.children.length,
+      box
+    };
+  }
+  function probeSelector(selector, limit = 3) {
+    try {
+      const found = document.querySelectorAll(selector);
+      const samples = [];
+      for (let i = 0; i < found.length && i < limit; i++) samples.push(describe(found[i]));
+      return { selector, count: found.length, samples };
+    } catch {
+      return { selector, count: -1, samples: [] };
+    }
+  }
+  function probeSelectors(selectors, limit = 2) {
+    return selectors.map((s) => probeSelector(s, limit));
+  }
+  function classNamesContaining(needle, limit = 24) {
+    const out = /* @__PURE__ */ new Set();
+    try {
+      const nodes = document.querySelectorAll(`[class*="${needle}"]`);
+      for (let i = 0; i < nodes.length && out.size < limit; i++) {
+        const raw = nodes[i].className;
+        if (typeof raw !== "string") continue;
+        for (const name of raw.split(/\s+/)) {
+          if (name.includes(needle)) out.add(name);
+          if (out.size >= limit) break;
+        }
+      }
+    } catch {
+    }
+    return [...out];
+  }
+
+  // src/plugins/message-preview/anchor.ts
+  var log21 = logger("message-preview");
+  var EDITOR_SELECTOR = '[role="textbox"][contenteditable="true"]';
+  var warned = false;
+  function findEditor() {
+    try {
+      const active2 = document.activeElement;
+      if (active2 instanceof HTMLElement && active2.matches(EDITOR_SELECTOR)) return active2;
+      const all = document.querySelectorAll(EDITOR_SELECTOR);
+      for (let i = all.length - 1; i >= 0; i--) {
+        const el = all[i];
+        if (el.offsetParent !== null) return el;
+      }
+      return all.length ? all[all.length - 1] : null;
+    } catch {
+      return null;
+    }
+  }
+  function findButtonRow() {
+    const editor = findEditor();
+    if (!editor) return null;
+    const form = editor.closest("form") ?? editor.parentElement?.parentElement ?? null;
+    if (!form) return null;
+    for (const selector of ['[class*="buttons_"]', '[class*="buttons"]']) {
+      try {
+        const found = Array.from(form.querySelectorAll(selector));
+        let best = null;
+        let bestDepth = -1;
+        for (const el of found) {
+          let depth = 0;
+          for (let p = el.parentElement; p && p !== form; p = p.parentElement) depth++;
+          if (depth > bestDepth) {
+            best = el;
+            bestDepth = depth;
+          }
+        }
+        if (best) return best;
+      } catch {
+      }
+    }
+    return editor.parentElement?.parentElement ?? null;
+  }
+  function reportAnchorMiss() {
+    if (warned) return;
+    warned = true;
+    log21.warn(
+      "\u627E\u4E0D\u5230\u8F93\u5165\u6846\u7684\u6309\u94AE\u884C\uFF0C\u9884\u89C8\u6309\u94AE\u6CA1\u6302\u4E0A\u3002\u5F53\u524D DOM \u60C5\u51B5\uFF1A",
+      probeSelector(EDITOR_SELECTOR),
+      "\u542B buttons \u7684 class \u540D\uFF1A",
+      classNamesContaining("buttons")
+    );
+  }
+  function resetAnchorWarning() {
+    warned = false;
+  }
+
+  // src/plugins/message-preview/render.tsx
+  var log22 = logger("message-preview");
+  var parserChecked = false;
+  var parser;
+  var fellBack = false;
+  function getParser() {
+    if (!parserChecked) {
+      parserChecked = true;
+      try {
+        parser = findByProps("parse", "parseTopic");
+      } catch {
+        parser = void 0;
+      }
+    }
+    return parser;
+  }
+  function renderMessageContent(content, channelId) {
+    const p = getParser();
+    if (typeof p?.parse === "function") {
+      try {
+        return p.parse(content, true, { channelId, allowLinks: true, allowEmojiLinks: true });
+      } catch (err) {
+        if (!fellBack) {
+          fellBack = true;
+          log22.debug("Discord \u89E3\u6790\u5668\u629B\u9519\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3", err);
+        }
+      }
+    } else if (!fellBack) {
+      fellBack = true;
+      log22.debug("\u672A\u627E\u5230 Discord \u7684 markdown \u89E3\u6790\u5668\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3\uFF08\u8868\u60C5\u53EF\u89C1\uFF0Cmarkdown / @\u63D0\u53CA \u4E0D\u89E3\u6790\uFF09");
+    }
+    return renderContent(content);
+  }
+
+  // src/plugins/message-preview/ui/PreviewPanel.tsx
+  function displayName2(user) {
+    return typeof user?.globalName === "string" && user.globalName || typeof user?.global_name === "string" && user.global_name || typeof user?.username === "string" && user.username || "\u4F60";
+  }
+  function outgoingText(channelId, content) {
+    if (!channelId) return content;
+    try {
+      if (!runtime.isEnabled("fake-nitro")) return content;
+      const plugin = runtime.getPlugin("fake-nitro");
+      const preview = plugin?.previewOutgoing?.(channelId, content);
+      return typeof preview === "string" ? preview : content;
+    } catch {
+      return content;
+    }
+  }
+  function PreviewPanel({ content, channelId }) {
+    const user = (() => {
+      try {
+        return UserStore.getCurrentUser?.();
+      } catch {
+        return void 0;
+      }
+    })();
+    const trimmed = content.trim();
+    if (trimmed.length === 0) {
+      return /* @__PURE__ */ React.createElement("div", { className: "hc-preview" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__empty" }, "\u8FD8\u6CA1\u8F93\u5165\u5185\u5BB9"));
+    }
+    const name = displayName2(user);
+    const avatar = user?.id ? avatarCdnUrl(String(user.id), user.avatar, 40) : void 0;
+    const outgoing = settings6.store.showRawOutgoing ? outgoingText(channelId, content) : content;
+    const rewritten = outgoing !== content;
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-preview" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__row" }, avatar ? /* @__PURE__ */ React.createElement("img", { className: "hc-preview__avatar", src: avatar, alt: "", width: 40, height: 40, draggable: false }) : /* @__PURE__ */ React.createElement("div", { className: "hc-preview__avatar hc-preview__avatar--blank" }), /* @__PURE__ */ React.createElement("div", { className: "hc-preview__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-preview__name" }, name), /* @__PURE__ */ React.createElement("span", { className: "hc-preview__time" }, "\u521A\u521A")), /* @__PURE__ */ React.createElement("div", { className: "hc-preview__body" }, renderMessageContent(content, channelId)))), rewritten ? /* @__PURE__ */ React.createElement("div", { className: "hc-preview__raw" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__raw-title" }, "\u5047 Nitro \u4F1A\u628A\u5B83\u6539\u5199\u6210\uFF1A"), /* @__PURE__ */ React.createElement("code", { className: "hc-preview__raw-text" }, outgoing)) : null);
+  }
+
+  // src/plugins/message-preview/draft.ts
+  var DraftStore = lazy((m) => m?.getName?.() === "DraftStore");
+  var DRAFT_CHANNEL_MESSAGE = 0;
+  function currentChannelId() {
+    try {
+      const id = SelectedChannelStore.getChannelId?.();
+      return typeof id === "string" && id.length ? id : void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  function readDraft(channelId) {
+    if (channelId) {
+      try {
+        const draft = DraftStore.getDraft?.(channelId, DRAFT_CHANNEL_MESSAGE);
+        if (typeof draft === "string") return draft;
+      } catch {
+      }
+    }
+    try {
+      return findEditor()?.textContent ?? "";
+    } catch {
+      return "";
+    }
+  }
+  function subscribeToDraft(onChange) {
+    try {
+      const store = DraftStore;
+      if (typeof store?.addChangeListener === "function") {
+        store.addChangeListener(onChange);
+        return {
+          attached: true,
+          off: () => {
+            try {
+              store.removeChangeListener?.(onChange);
+            } catch {
+            }
+          }
+        };
+      }
+    } catch {
+    }
+    return { attached: false, off: () => void 0 };
+  }
+
+  // src/plugins/message-preview/ui/PreviewHost.tsx
+  var DEBOUNCE_MS = 150;
+  var POLL_MS = 250;
+  function PreviewHost({ onEmptied }) {
+    const initialChannel = currentChannelId();
+    const [channelId, setChannelId] = useState(initialChannel);
+    const [content, setContent] = useState(() => readDraft(initialChannel));
+    const hadContent = useRef(readDraft(initialChannel).trim().length > 0);
+    useEffect(() => {
+      if (!settings6.store.liveUpdate) return;
+      let timer3;
+      let poll;
+      let disposed = false;
+      const sample = () => {
+        if (disposed) return;
+        const id = currentChannelId();
+        const next = readDraft(id);
+        setChannelId(id);
+        setContent(next);
+        const has = next.trim().length > 0;
+        if (hadContent.current && !has) onEmptied();
+        hadContent.current = has;
+      };
+      const schedule = () => {
+        if (timer3) clearTimeout(timer3);
+        timer3 = setTimeout(sample, DEBOUNCE_MS);
+      };
+      const { attached, off } = subscribeToDraft(schedule);
+      poll = setInterval(sample, attached ? POLL_MS * 4 : POLL_MS);
+      return () => {
+        disposed = true;
+        if (timer3) clearTimeout(timer3);
+        if (poll) clearInterval(poll);
+        off();
+      };
+    }, [onEmptied]);
+    return /* @__PURE__ */ React.createElement(PreviewPanel, { content, channelId });
+  }
+
+  // src/plugins/message-preview/button.tsx
+  var log23 = logger("message-preview");
+  var ENSURE_MS2 = 1e3;
+  var REPOSITION_MS = 250;
+  var GAP_PX = 8;
+  var buttonHost = null;
+  var unmountButton = null;
+  var ensureTimer;
+  var panelHost = null;
+  var unmountPanel = null;
+  var repositionTimer;
+  function isOpen() {
+    return panelHost !== null;
+  }
+  function reposition() {
+    if (!panelHost) return;
+    const editor = findEditor();
+    const anchor2 = editor?.closest("form") ?? editor;
+    if (!anchor2) return;
+    let rect;
+    try {
+      rect = anchor2.getBoundingClientRect();
+    } catch {
+      return;
+    }
+    const width = Math.min(Math.max(rect.width, 320), 720);
+    const height = panelHost.offsetHeight || 96;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    const top = Math.max(8, rect.top - height - GAP_PX);
+    panelHost.style.width = `${Math.round(width)}px`;
+    panelHost.style.left = `${Math.round(left)}px`;
+    panelHost.style.top = `${Math.round(top)}px`;
+  }
+  function onKeyDown2(event) {
+    if (event.key === "Escape" && isOpen()) {
+      closePanel();
+      event.stopPropagation();
+      event.preventDefault();
+    }
+  }
+  function openPanel() {
+    if (isOpen()) return;
+    injectStyles();
+    const el = document.createElement("div");
+    el.className = "halcyon hc-preview-host";
+    el.setAttribute("data-hc-plugin", "message-preview");
+    document.body.appendChild(el);
+    try {
+      unmountPanel = mountDetached(React.createElement(PreviewHost, { onEmptied: closePanel }), el);
+      panelHost = el;
+    } catch (err) {
+      el.remove();
+      log23.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
+      return;
+    }
+    reposition();
+    repositionTimer = setInterval(reposition, REPOSITION_MS);
+    window.addEventListener("resize", reposition);
+    document.addEventListener("keydown", onKeyDown2, true);
+  }
+  function closePanel() {
+    if (repositionTimer) {
+      clearInterval(repositionTimer);
+      repositionTimer = void 0;
+    }
+    window.removeEventListener("resize", reposition);
+    document.removeEventListener("keydown", onKeyDown2, true);
+    if (unmountPanel) {
+      try {
+        unmountPanel();
+      } catch {
+      }
+      unmountPanel = null;
+    }
+    if (panelHost) {
+      panelHost.remove();
+      panelHost = null;
+    }
+  }
+  function togglePanel() {
+    if (isOpen()) closePanel();
+    else openPanel();
+  }
+  function PreviewButton() {
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-preview-btn",
+        "aria-label": "\u9884\u89C8\u8FD9\u6761\u6D88\u606F",
+        title: "\u9884\u89C8\u53D1\u51FA\u540E\u7684\u6837\u5B50",
+        onClick: (event) => {
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          togglePanel();
+        }
+      },
+      /* @__PURE__ */ React.createElement(EyeIcon, { size: 24 })
+    );
+  }
+  function teardownButton() {
+    if (unmountButton) {
+      try {
+        unmountButton();
+      } catch {
+      }
+      unmountButton = null;
+    }
+    if (buttonHost) {
+      buttonHost.remove();
+      buttonHost = null;
+    }
+  }
+  function ensureMounted2() {
+    if (buttonHost && document.contains(buttonHost)) return;
+    if (buttonHost) teardownButton();
+    const row = findButtonRow();
+    if (!row) {
+      reportAnchorMiss();
+      return;
+    }
+    const el = document.createElement("div");
+    el.className = "hc-preview-btn-host";
+    el.setAttribute("data-hc-plugin", "message-preview");
+    try {
+      row.insertBefore(el, row.firstChild);
+    } catch {
+      return;
+    }
+    try {
+      unmountButton = mountDetached(React.createElement(PreviewButton), el);
+      buttonHost = el;
+    } catch (err) {
+      el.remove();
+      log23.debug("\u9884\u89C8\u6309\u94AE\u6302\u8F7D\u5931\u8D25", err);
+    }
+  }
+  function startPreviewButton() {
+    injectStyles();
+    stopPreviewButton();
+    resetAnchorWarning();
+    ensureMounted2();
+    ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
+  }
+  function stopPreviewButton() {
+    if (ensureTimer) {
+      clearInterval(ensureTimer);
+      ensureTimer = void 0;
+    }
+    closePanel();
+    teardownButton();
+  }
+
+  // src/plugins/message-preview/index.tsx
+  var message_preview_default = definePlugin({
+    id: "message-preview",
+    name: "\u53D1\u9001\u524D\u9884\u89C8",
+    description: "\u5728\u8F93\u5165\u6846\u52A0\u4E00\u4E2A\u6309\u94AE\uFF0C\u70B9\u4E00\u4E0B\u5C31\u80FD\u770B\u5230\u8FD9\u6761\u6D88\u606F\u53D1\u51FA\u53BB\u4E4B\u540E\u957F\u4EC0\u4E48\u6837\uFF1Amarkdown\u3001\u8868\u60C5\u3001@\u63D0\u53CA\u90FD\u6309 Discord \u81EA\u5DF1\u7684\u6E32\u67D3\u663E\u793A\uFF1B\u5982\u679C\u5047 Nitro \u4F1A\u6539\u5199\u5185\u5BB9\uFF08\u8868\u60C5\u53D8\u6210\u56FE\u7247\u94FE\u63A5\uFF09\uFF0C\u8FD8\u4F1A\u4E00\u5E76\u663E\u793A\u771F\u6B63\u53D1\u51FA\u53BB\u7684\u539F\u6587\u3002",
+    authors: [{ name: "caitemm" }],
+    category: "chat",
+    settings: settings6,
+    start() {
+      startPreviewButton();
+    },
+    stop() {
+      stopPreviewButton();
     }
   });
 
   // src/plugins/console-cleaner/index.ts
-  var log21 = logger("console-cleaner");
-  var settings6 = defineSettings({
+  var log24 = logger("console-cleaner");
+  var settings7 = defineSettings({
     hideSelfXss: {
       group: "\u5185\u7F6E\u89C4\u5219",
       type: "boolean",
@@ -8623,7 +9226,7 @@ ${components_default}`;
     if (typeof args[0] === "string" && args[0].startsWith("%cHalcyon")) return false;
     const text = textOf(args);
     if (text === "") return false;
-    const s = settings6.store;
+    const s = settings7.store;
     if (s.hideSelfXss && anyNeedle(text, SELF_XSS_NEEDLES)) return true;
     if (s.hideLocaleSpam && anyNeedle(text, LOCALE_NEEDLES)) return true;
     if (s.hideRiveSpam && anyNeedle(text, RIVE_NEEDLES)) return true;
@@ -8651,11 +9254,11 @@ ${components_default}`;
     description: "\u5C4F\u853D Discord \u5728\u5F00\u53D1\u8005\u63A7\u5236\u53F0\u91CC\u5237\u5C4F\u7684\u65E0\u7528\u4FE1\u606F\uFF08\u81EA\u6211 XSS \u8B66\u544A\u3001Rive \u52A8\u753B\u62A5\u9519\u3001\u672C\u5730\u5316\u7F3A\u5931\u3001\u8D44\u6E90\u9884\u52A0\u8F7D\u8B66\u544A\uFF09\uFF0C\u652F\u6301\u81EA\u5B9A\u4E49\u5173\u952E\u8BCD\u3002\u5173\u95ED\u63D2\u4EF6\u5373\u6062\u590D\u539F\u59CB console\u3002",
     authors: [{ name: "caitemm" }, { name: "catie" }],
     category: "utility",
-    settings: settings6,
+    settings: settings7,
     start() {
       const con = globalThis.console;
       if (!con) {
-        log21.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        log24.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
         return;
       }
       suppressedCount = 0;
@@ -8665,11 +9268,11 @@ ${components_default}`;
           try {
             unpatchers.push(patcher.instead(con, method, hook));
           } catch (err) {
-            log21.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+            log24.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
           }
         }
       }
-      log21.info(
+      log24.info(
         `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
       );
     },
@@ -8681,12 +9284,12 @@ ${components_default}`;
         }
       }
       unpatchers = [];
-      log21.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+      log24.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
     }
   });
 
   // src/plugins/emote-cloner/clone.ts
-  var log22 = logger("emote-cloner");
+  var log25 = logger("emote-cloner");
   var MAX_EMOJI_SIZE_BYTES = 256 * 1024;
   var MAX_STICKER_SIZE_BYTES = 512 * 1024;
   var uploadEmojiAction = null;
@@ -8780,14 +9383,14 @@ ${components_default}`;
         await upload({ guildId, name, image });
         return;
       } catch (err) {
-        log22.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
+        log25.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
         throw new Error(restErrorMessage(err));
       }
     }
     try {
       await RestAPI.post({ url: `/guilds/${guildId}/emojis`, body: { image, name, roles: [] } });
     } catch (err) {
-      log22.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
+      log25.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
   }
@@ -8808,7 +9411,7 @@ ${components_default}`;
       }
       return body;
     } catch (err) {
-      log22.warn("could not fetch sticker info; using fallbacks", err);
+      log25.warn("could not fetch sticker info; using fallbacks", err);
       return null;
     }
   }
@@ -8837,10 +9440,10 @@ ${components_default}`;
       created = resPayload(res);
       if (created && !created.id && created.sticker?.id) created = created.sticker;
     } catch (err) {
-      log22.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
+      log25.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
-    log22.info("sticker uploaded", { id: created?.id, name: created?.name });
+    log25.info("sticker uploaded", { id: created?.id, name: created?.name });
     try {
       getDispatcher()?.dispatch({
         type: "GUILD_STICKERS_CREATE_SUCCESS",
@@ -8852,7 +9455,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/resolve.ts
-  var log23 = logger("emote-cloner");
+  var log26 = logger("emote-cloner");
   var SNOWFLAKE = /^\d{5,25}$/;
   var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
   function emojiName(raw) {
@@ -9119,9 +9722,9 @@ ${components_default}`;
     const record2 = recordFromFiber(target, found.id);
     const resolved = emojiName(record2?.name) ?? emojiNameFromMessages(target, found.id) ?? emojiNameFromStore(found.id) ?? emojiNameFromDom(elements) ?? emojiName(found.domName);
     if (!resolved) {
-      log23.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
+      log26.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
     } else {
-      log23.debug("resolved emoji", { id: found.id, name: resolved });
+      log26.debug("resolved emoji", { id: found.id, name: resolved });
     }
     return {
       kind: "emoji",
@@ -9132,7 +9735,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/picker.tsx
-  var log24 = logger("emote-cloner");
+  var log27 = logger("emote-cloner");
   function iconUrl(g2) {
     const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
     return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
@@ -9178,7 +9781,7 @@ ${components_default}`;
         host3
       );
     } catch (err) {
-      log24.error("could not open guild picker", err);
+      log27.error("could not open guild picker", err);
       closeGuildPicker();
     }
   }
@@ -9198,7 +9801,7 @@ ${components_default}`;
         setStatus({ state: "done", guild: g2.name });
         setTimeout(onClose, 1e3);
       }).catch((err) => {
-        log24.error("clone failed", err);
+        log27.error("clone failed", err);
         setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
       });
     };
@@ -9257,7 +9860,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/index.tsx
-  var log25 = logger("emote-cloner");
+  var log28 = logger("emote-cloner");
   var PERM2 = {
     CREATE_GUILD_EXPRESSIONS: 1n << 43n,
     MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
@@ -9297,7 +9900,7 @@ ${components_default}`;
     if (!hit) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) {
-      log25.warn("MenuItem component not learned yet; skipping clone item this open");
+      log28.warn("MenuItem component not learned yet; skipping clone item this open");
       return;
     }
     const label = hit.kind === "emoji" ? `\u590D\u5236\u8868\u60C5 :${hit.name}: \u5230\u670D\u52A1\u5668` : hit.name ? `\u590D\u5236\u8D34\u7EB8 ${hit.name} \u5230\u670D\u52A1\u5668` : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668";
@@ -9318,7 +9921,7 @@ ${components_default}`;
     category: "utility",
     start() {
       unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
-      log25.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+      log28.info("emote-cloner ready \u2014 right-click an emoji or sticker");
     },
     stop() {
       for (const un of unpatchers2) {
@@ -9332,12 +9935,12 @@ ${components_default}`;
   });
 
   // src/core/flux/index.ts
-  var log26 = logger("flux");
+  var log29 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log26.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log29.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -9349,7 +9952,7 @@ ${components_default}`;
         try {
           listener(action);
         } catch (err) {
-          log26.error(`listener for ${type} threw`, err);
+          log29.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -9358,7 +9961,7 @@ ${components_default}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log26.error(`could not subscribe to ${type}`, err);
+      log29.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -9369,7 +9972,7 @@ ${components_default}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log26.error(`could not unsubscribe from ${type}`, err);
+      log29.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -9400,13 +10003,13 @@ ${components_default}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log26.error("dispatch failed", action?.type, err);
+        log29.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log27 = logger("mark-all-read");
+  var log30 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -9420,7 +10023,7 @@ ${components_default}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log27.warn(`could not read channels for guild ${guildId}`, err);
+        log30.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -9446,16 +10049,16 @@ ${components_default}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log27.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log30.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log27.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log30.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log27.warn("could not describe getChannels shape", err);
+          log30.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -9475,14 +10078,14 @@ ${components_default}`;
           }
         }
       } catch (err) {
-        log27.warn(`could not read joined threads for guild ${guildId}`, err);
+        log30.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log27.info(
+    log30.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -9499,9 +10102,9 @@ ${components_default}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log27.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log30.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log27.info("nothing unread; skipping BULK_ACK");
+      log30.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -9509,12 +10112,12 @@ ${components_default}`;
       context: "APP",
       channels
     });
-    log27.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log30.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log28 = logger("mark-all-read");
+  var log31 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -9539,7 +10142,7 @@ ${components_default}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log28.error("mark all read failed", err);
+        log31.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -9548,7 +10151,7 @@ ${components_default}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log29 = logger("mark-all-read");
+  var log32 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -9559,7 +10162,7 @@ ${components_default}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log29.error("mark all read failed", err);
+      log32.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -9644,7 +10247,7 @@ ${components_default}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log29.info("mark-all-read ready");
+      log32.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -9652,8 +10255,8 @@ ${components_default}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log30 = logger("silent-typing");
-  var settings7 = defineSettings({
+  var log33 = logger("silent-typing");
+  var settings8 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
       type: "select",
@@ -9701,7 +10304,7 @@ ${components_default}`;
   function silenceFor(channelId) {
     if (!active) return false;
     const id = channelId == null ? "" : String(channelId);
-    const s = settings7.store;
+    const s = settings8.store;
     if (id && s.allowChannels.includes(id)) return false;
     if (s.scope === "guilds") return !isPrivateChannel(id);
     if (s.scope === "dms") return isPrivateChannel(id);
@@ -9714,13 +10317,13 @@ ${components_default}`;
         return void 0;
       }
     } catch (err) {
-      log30.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log33.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
   function onStopTyping(ctx) {
     try {
-      if (settings7.store.silenceStop && silenceFor(ctx.args[0])) return void 0;
+      if (settings8.store.silenceStop && silenceFor(ctx.args[0])) return void 0;
     } catch {
     }
     return ctx.callOriginal();
@@ -9738,9 +10341,9 @@ ${components_default}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log30.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log33.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log30.warn(
+      log33.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -9751,7 +10354,7 @@ ${components_default}`;
     description: "\u4E0D\u518D\u5411\u522B\u4EBA\u53D1\u9001\u201C\u6B63\u5728\u8F93\u5165\u2026\u201D\u72B6\u6001\u3002\u53EF\u4EE5\u53EA\u5728\u670D\u52A1\u5668\u6216\u53EA\u5728\u79C1\u804A\u751F\u6548\uFF0C\u4E5F\u80FD\u4E3A\u6307\u5B9A\u9891\u9053\u5F00\u4F8B\u5916\u3002\u522B\u4EBA\u7684\u8F93\u5165\u72B6\u6001\u7167\u5E38\u663E\u793A\uFF0C\u5173\u95ED\u63D2\u4EF6\u7ACB\u5373\u6062\u590D\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "privacy",
-    settings: settings7,
+    settings: settings8,
     patches: [
       {
         // The module that owns Discord's typing actions, identified by the local
@@ -9773,7 +10376,7 @@ ${components_default}`;
       active = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log30.warn(
+        log33.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -9783,17 +10386,17 @@ ${components_default}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log30.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log33.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log30.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log33.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log30.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings7.store.scope}\uFF09`);
+      log33.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings8.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -9803,7 +10406,7 @@ ${components_default}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log30.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log33.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -9829,7 +10432,7 @@ ${components_default}`;
       return {
         active,
         suppressed,
-        scope: settings7.store.scope,
+        scope: settings8.store.scope,
         typingModuleFound: module != null,
         startTypingIsFunction: typeof module?.startTyping === "function",
         /** True once our wrapper is installed on the module. */
@@ -9846,53 +10449,8 @@ ${components_default}`;
     }
   });
 
-  // src/core/dom-probe.ts
-  function describe(el) {
-    let box = "n/a";
-    try {
-      const r = el.getBoundingClientRect();
-      box = `${Math.round(r.width)}x${Math.round(r.height)}@${Math.round(r.left)},${Math.round(r.top)}`;
-    } catch {
-    }
-    return {
-      tag: el.tagName.toLowerCase(),
-      classes: typeof el.className === "string" ? el.className : String(el.className ?? ""),
-      childCount: el.children.length,
-      box
-    };
-  }
-  function probeSelector(selector, limit = 3) {
-    try {
-      const found = document.querySelectorAll(selector);
-      const samples = [];
-      for (let i = 0; i < found.length && i < limit; i++) samples.push(describe(found[i]));
-      return { selector, count: found.length, samples };
-    } catch {
-      return { selector, count: -1, samples: [] };
-    }
-  }
-  function probeSelectors(selectors, limit = 2) {
-    return selectors.map((s) => probeSelector(s, limit));
-  }
-  function classNamesContaining(needle, limit = 24) {
-    const out = /* @__PURE__ */ new Set();
-    try {
-      const nodes = document.querySelectorAll(`[class*="${needle}"]`);
-      for (let i = 0; i < nodes.length && out.size < limit; i++) {
-        const raw = nodes[i].className;
-        if (typeof raw !== "string") continue;
-        for (const name of raw.split(/\s+/)) {
-          if (name.includes(needle)) out.add(name);
-          if (out.size >= limit) break;
-        }
-      }
-    } catch {
-    }
-    return [...out];
-  }
-
   // src/plugins/member-count/settings.ts
-  var settings8 = defineSettings({
+  var settings9 = defineSettings({
     placement: {
       group: "\u4F4D\u7F6E",
       type: "select",
@@ -9943,7 +10501,7 @@ ${components_default}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log31 = logger("member-count");
+  var log34 = logger("member-count");
   function memo(resolve) {
     let cached2;
     return () => cached2 ??= resolve();
@@ -10029,7 +10587,7 @@ ${components_default}`;
   }
   var nudged = /* @__PURE__ */ new Set();
   function nudge(guildId, channelId) {
-    if (!settings8.store.preloadCounts) return;
+    if (!settings9.store.preloadCounts) return;
     if (nudged.has(guildId)) return;
     nudged.add(guildId);
     try {
@@ -10037,9 +10595,9 @@ ${components_default}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log31.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log34.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log31.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log34.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -10138,7 +10696,7 @@ ${components_default}`;
     "GUILD_CREATE",
     "THREAD_MEMBER_LIST_UPDATE"
   ];
-  var POLL_MS = 5e3;
+  var POLL_MS2 = 5e3;
   function sameCounts(a, b) {
     return a.total === b.total && a.online === b.online;
   }
@@ -10158,7 +10716,7 @@ ${components_default}`;
       };
       refresh();
       const unsubscribes3 = WATCHED_ACTIONS.map((type) => flux.subscribe(type, refresh));
-      const timer3 = setInterval(refresh, POLL_MS);
+      const timer3 = setInterval(refresh, POLL_MS2);
       return () => {
         live = false;
         clearInterval(timer3);
@@ -10169,7 +10727,7 @@ ${components_default}`;
   }
   function MemberCountChip({ variant }) {
     const { total, online } = useMemberCounts();
-    const s = settings8.store;
+    const s = settings9.store;
     const showOnline = s.showOnline && online != null;
     const showTotal = s.showTotal && total != null;
     if (!showOnline && !showTotal) return null;
@@ -10191,7 +10749,7 @@ ${components_default}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log32 = logger("member-count");
+  var log35 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -10216,9 +10774,9 @@ ${components_default}`;
       'aside[class*="members"]'
     ]
   };
-  var ENSURE_MS2 = 1e3;
+  var ENSURE_MS3 = 1e3;
   var mounted2 = /* @__PURE__ */ new Map();
-  var ensureTimer;
+  var ensureTimer2;
   var selfCheckTimer;
   var unsubscribePlacement;
   var lastSelector = /* @__PURE__ */ new Map();
@@ -10234,7 +10792,7 @@ ${components_default}`;
     return null;
   }
   function wantedVariants() {
-    const placement = settings8.store.placement;
+    const placement = settings9.store.placement;
     const want = /* @__PURE__ */ new Set();
     if (placement === "header" || placement === "both") want.add("header");
     if (placement === "member-list" || placement === "both") want.add("list");
@@ -10257,7 +10815,7 @@ ${components_default}`;
     try {
       hit.element.insertBefore(host5, hit.element.firstChild);
     } catch (err) {
-      log32.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log35.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
@@ -10265,14 +10823,14 @@ ${components_default}`;
       mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log32.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log35.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
       host5.remove();
-      log32.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      log35.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
-  function ensureMounted2() {
+  function ensureMounted3() {
     const want = wantedVariants();
     for (const [variant, entry] of [...mounted2]) {
       if (!want.has(variant) || !document.contains(entry.host)) teardown2(variant);
@@ -10290,12 +10848,12 @@ ${components_default}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log32.warn(
+      log35.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
   }
-  function currentChannelId() {
+  function currentChannelId2() {
     try {
       return SelectedChannelStore.getChannelId?.() ?? null;
     } catch {
@@ -10303,11 +10861,11 @@ ${components_default}`;
     }
   }
   function selfCheck() {
-    const channelId = currentChannelId();
+    const channelId = currentChannelId2();
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log32.warn(
+    log35.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -10318,25 +10876,25 @@ ${components_default}`;
     description: "\u5728\u9891\u9053\u9876\u680F\u6216\u6210\u5458\u5217\u8868\u9876\u90E8\u663E\u793A\u5F53\u524D\u670D\u52A1\u5668\u7684\u5728\u7EBF\u4EBA\u6570\u4E0E\u603B\u6210\u5458\u6570\u3002\u6570\u5B57\u53D6\u81EA Discord \u81EA\u5DF1\u7684 store\uFF1B\u82E5\u67D0\u670D\u52A1\u5668\u8FD8\u6CA1\u6709\u6210\u5458\u5217\u8868\u6570\u636E\uFF0C\u4F1A\u8C03\u7528\u4E00\u6B21 Discord \u81EA\u8EAB\u7684\u9891\u9053\u9884\u52A0\u8F7D\u6765\u53D6\uFF08\u53EF\u5728\u8BBE\u7F6E\u91CC\u5173\u95ED\uFF09\u3002\u5207\u6362\u670D\u52A1\u5668\u81EA\u52A8\u66F4\u65B0\u3002",
     authors: [{ name: "caitemm" }],
     category: "utility",
-    settings: settings8,
+    settings: settings9,
     start() {
       injectStyles();
       warnedNoAnchor = false;
       lastSelector.clear();
       startCountTracking();
-      ensureMounted2();
-      ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
-      unsubscribePlacement = settings8.subscribe("placement", () => {
+      ensureMounted3();
+      ensureTimer2 = setInterval(ensureMounted3, ENSURE_MS3);
+      unsubscribePlacement = settings9.subscribe("placement", () => {
         warnedNoAnchor = false;
-        ensureMounted2();
+        ensureMounted3();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log32.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings8.store.placement}\uFF09`);
+      log35.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings9.store.placement}\uFF09`);
     },
     stop() {
-      if (ensureTimer) {
-        clearInterval(ensureTimer);
-        ensureTimer = void 0;
+      if (ensureTimer2) {
+        clearInterval(ensureTimer2);
+        ensureTimer2 = void 0;
       }
       if (selfCheckTimer) {
         clearTimeout(selfCheckTimer);
@@ -10347,13 +10905,13 @@ ${components_default}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log32.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log35.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
-      const channelId = currentChannelId();
+      const channelId = currentChannelId2();
       return {
-        placement: settings8.store.placement,
+        placement: settings9.store.placement,
         mounted: [...mounted2.entries()].map(([variant, entry]) => ({
           variant,
           selector: entry.selector,
@@ -10375,7 +10933,7 @@ ${components_default}`;
   });
 
   // src/plugins/who-reacted/settings.ts
-  var settings9 = defineSettings({
+  var settings10 = defineSettings({
     inlineAvatars: {
       group: "\u5E38\u9A7B\u663E\u793A",
       type: "boolean",
@@ -10448,7 +11006,7 @@ ${components_default}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log33 = logger("who-reacted");
+  var log36 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -10480,22 +11038,10 @@ ${components_default}`;
     if (emoji.id) return `:${emoji.name ?? "emoji"}:`;
     return emoji.name ?? "";
   }
-  function defaultAvatar(userId) {
-    let index = 0;
-    try {
-      index = Number((BigInt(userId) >> 22n) % 6n);
-    } catch {
-      index = 0;
-    }
-    return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
-  }
   function avatarUrl(user) {
     const id = user?.id ? String(user.id) : null;
     if (!id) return null;
-    const hash = user?.avatar;
-    if (typeof hash !== "string" || hash.length === 0) return defaultAvatar(id);
-    const ext = hash.startsWith("a_") ? "gif" : "webp";
-    return `https://cdn.discordapp.com/avatars/${id}/${hash}.${ext}?size=32`;
+    return avatarCdnUrl(id, user?.avatar, 32);
   }
   function toReactor(user) {
     const id = user?.id ? String(user.id) : null;
@@ -10543,7 +11089,7 @@ ${components_default}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log33.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log36.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight.set(key, guarded);
@@ -10571,7 +11117,7 @@ ${components_default}`;
     return /* @__PURE__ */ React.createElement("span", { className: "hc-whoreacted__emoji-char" }, emoji.name ?? "");
   }
   function ReactorCard({ target }) {
-    const s = settings9.store;
+    const s = settings10.store;
     const [state, setState] = useState(() => {
       const cached2 = cachedReactors(target);
       return cached2 ? { kind: "ready", reactors: cached2 } : { kind: "loading" };
@@ -10605,7 +11151,7 @@ ${components_default}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log34 = logger("who-reacted");
+  var log37 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
@@ -10618,7 +11164,7 @@ ${components_default}`;
     return host5;
   }
   function fillHost(host5, reactors, totalHint) {
-    const max = Math.max(1, Math.min(6, Math.trunc(settings9.store.inlineAvatarCount) || 3));
+    const max = Math.max(1, Math.min(6, Math.trunc(settings10.store.inlineAvatarCount) || 3));
     const shown = reactors.slice(0, max);
     const total = totalHint ?? reactors.length;
     const overflow = Math.max(0, total - shown.length);
@@ -10660,7 +11206,7 @@ ${components_default}`;
       return;
     }
     try {
-      const wanted = Math.min(12, Math.max(6, (settings9.store.inlineAvatarCount || 3) + 3));
+      const wanted = Math.min(12, Math.max(6, (settings10.store.inlineAvatarCount || 3) + 3));
       const reactors = await fetchReactors(target, wanted);
       if (!host5.isConnected) return;
       if (reactors.length === 0) {
@@ -10674,13 +11220,13 @@ ${components_default}`;
       }
       fillHost(host5, reactors, target.count);
     } catch (err) {
-      log34.debug("inline avatars: fetch failed", err);
+      log37.debug("inline avatars: fetch failed", err);
       host5.remove();
       DECORATED.delete(pill);
     }
   }
   function scan() {
-    if (!settings9.store.inlineAvatars) return;
+    if (!settings10.store.inlineAvatars) return;
     let pills;
     try {
       pills = document.querySelectorAll(REACTION_SELECTOR);
@@ -10694,7 +11240,7 @@ ${components_default}`;
     });
   }
   function startInlineAvatars() {
-    if (!settings9.store.inlineAvatars) return;
+    if (!settings10.store.inlineAvatars) return;
     stopInlineAvatars();
     scan();
     scanTimer = setInterval(scan, 1500);
@@ -10713,7 +11259,7 @@ ${components_default}`;
       } catch {
       }
     }
-    log34.info("inline reactor avatars: enabled");
+    log37.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -10734,7 +11280,7 @@ ${components_default}`;
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log35 = logger("who-reacted");
+  var log38 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
@@ -10751,7 +11297,7 @@ ${components_default}`;
   var inlineCountUnsub;
   var hoverToggleUnsub;
   var hoverListenersAttached = false;
-  function reposition() {
+  function reposition2() {
     if (!host4 || !anchor) return;
     const rect = anchor.getBoundingClientRect();
     const width = host4.offsetWidth || 220;
@@ -10817,24 +11363,24 @@ ${components_default}`;
     try {
       unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
     } catch (err) {
-      log35.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log38.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide();
       return;
     }
-    reposition();
+    reposition2();
     if (typeof ResizeObserver === "function") {
-      observer = new ResizeObserver(() => reposition());
+      observer = new ResizeObserver(() => reposition2());
       observer.observe(host4);
     } else {
-      setTimeout(reposition, 120);
-      setTimeout(reposition, 400);
+      setTimeout(reposition2, 120);
+      setTimeout(reposition2, 400);
     }
     anchorTimer = setInterval(() => {
       if (!anchor || !document.contains(anchor)) hide();
     }, ANCHOR_CHECK_MS);
   }
   function triggerOpen() {
-    return settings9.store.trigger !== "alt-hover" || altDown;
+    return settings10.store.trigger !== "alt-hover" || altDown;
   }
   function tryShow(element) {
     if (!triggerOpen()) return;
@@ -10865,7 +11411,7 @@ ${components_default}`;
     hovered = pill;
     clearShowTimer();
     cancelHide();
-    const delay = Math.max(0, Math.min(2e3, settings9.store.delay));
+    const delay = Math.max(0, Math.min(2e3, settings10.store.delay));
     showTimer = setTimeout(() => {
       showTimer = void 0;
       if (hovered === pill && document.contains(pill)) tryShow(pill);
@@ -10876,17 +11422,17 @@ ${components_default}`;
     clearShowTimer();
     hide();
   }
-  function onKeyDown2(event) {
+  function onKeyDown3(event) {
     if (!event.altKey) return;
     altDown = true;
-    if (settings9.store.trigger === "alt-hover" && hovered && !host4) {
+    if (settings10.store.trigger === "alt-hover" && hovered && !host4) {
       if (document.contains(hovered)) tryShow(hovered);
     }
   }
   function onKeyUp(event) {
     if (event.key === "Alt" || !event.altKey) {
       altDown = false;
-      if (settings9.store.trigger === "alt-hover") hide();
+      if (settings10.store.trigger === "alt-hover") hide();
     }
   }
   function onScrollOrResize() {
@@ -10900,7 +11446,7 @@ ${components_default}`;
     hoverListenersAttached = true;
     document.addEventListener("mouseover", onMouseOver, true);
     document.addEventListener("mouseleave", onMouseLeaveWindow);
-    document.addEventListener("keydown", onKeyDown2, true);
+    document.addEventListener("keydown", onKeyDown3, true);
     document.addEventListener("keyup", onKeyUp, true);
     document.addEventListener("scroll", onScrollOrResize, true);
     window.addEventListener("resize", onScrollOrResize);
@@ -10911,7 +11457,7 @@ ${components_default}`;
     hoverListenersAttached = false;
     document.removeEventListener("mouseover", onMouseOver, true);
     document.removeEventListener("mouseleave", onMouseLeaveWindow);
-    document.removeEventListener("keydown", onKeyDown2, true);
+    document.removeEventListener("keydown", onKeyDown3, true);
     document.removeEventListener("keyup", onKeyUp, true);
     document.removeEventListener("scroll", onScrollOrResize, true);
     window.removeEventListener("resize", onScrollOrResize);
@@ -10927,26 +11473,26 @@ ${components_default}`;
     description: "\u5728\u6BCF\u4E2A\u53CD\u5E94\u56DE\u5E94\u5185\u5D4C\u4E00\u5C0F\u884C\u5934\u50CF\uFF08\u524D\u51E0\u4E2A\u53CD\u5E94\u8005\uFF09\uFF0C\u50CF Discord \u684C\u9762\u8FD1\u7248\u7684 Reaction Preview \u4E00\u6837\uFF0C\u4E0D\u7528\u60AC\u505C\u5C31\u770B\u5F97\u5230\u3002\u540D\u5355\u6309\u9700\u67E5\u8BE2\u3001\u7F13\u5B58 30 \u79D2\u3002\u60AC\u505C\u5B8C\u6574\u540D\u5355\u6D6E\u5C42\u9ED8\u8BA4\u5173\u95ED\uFF0C\u9700\u8981\u65F6\u53EF\u5728\u8BBE\u7F6E\u91CC\u5F00\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "utility",
-    settings: settings9,
+    settings: settings10,
     start() {
       injectStyles();
       clearCache();
       startInlineAvatars();
-      inlineToggleUnsub = settings9.subscribe("inlineAvatars", (on) => {
+      inlineToggleUnsub = settings10.subscribe("inlineAvatars", (on) => {
         if (on) startInlineAvatars();
         else stopInlineAvatars();
       });
-      inlineCountUnsub = settings9.subscribe("inlineAvatarCount", () => {
+      inlineCountUnsub = settings10.subscribe("inlineAvatarCount", () => {
         stopInlineAvatars();
         startInlineAvatars();
       });
-      if (settings9.store.hoverPopout) attachHoverListeners();
-      hoverToggleUnsub = settings9.subscribe("hoverPopout", (on) => {
+      if (settings10.store.hoverPopout) attachHoverListeners();
+      hoverToggleUnsub = settings10.subscribe("hoverPopout", (on) => {
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log35.info(
-        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings9.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings9.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
+      log38.info(
+        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings10.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings10.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
     stop() {
@@ -10963,7 +11509,7 @@ ${components_default}`;
       altDown = false;
       hide();
       clearCache();
-      log35.info("\u5DF2\u505C\u7528");
+      log38.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -10985,7 +11531,7 @@ ${components_default}`;
         } : "fiber props \u91CC\u6CA1\u6709 message + emoji \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A\u7248\u672C\u7684 reaction \u7EC4\u4EF6 props \u53D8\u4E86";
       }
       return {
-        trigger: settings9.store.trigger,
+        trigger: settings10.store.trigger,
         cardShown: host4 != null,
         reactionNodes: nodes?.length ?? -1,
         sample,
@@ -11148,7 +11694,7 @@ ${components_default}`;
   }
 
   // src/plugins/platform-indicators/settings.ts
-  var settings10 = defineSettings({
+  var settings11 = defineSettings({
     inMessages: {
       group: "\u663E\u793A\u4F4D\u7F6E",
       type: "boolean",
@@ -11231,7 +11777,7 @@ ${components_default}`;
     isSelf
   }) {
     usePresenceVersion();
-    const s = settings10.store;
+    const s = settings11.store;
     if (s.ignoreSelf && isSelf) return null;
     if (s.ignoreBots && isBot(userId)) return null;
     const platforms = readPlatforms(userId);
@@ -11254,7 +11800,7 @@ ${components_default}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log36 = logger("platform-indicators");
+  var log39 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -11322,7 +11868,7 @@ ${components_default}`;
       return true;
     } catch (err) {
       host5.remove();
-      log36.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      log39.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -11378,21 +11924,21 @@ ${components_default}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log36.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log39.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
   }
   function scan2() {
     prune();
-    const s = settings10.store;
+    const s = settings11.store;
     const selfId = currentUserId3();
     let anyAnchor = false;
     if (s.inMessages && scanKind("message", MESSAGE_SELECTORS, selfId)) anyAnchor = true;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log36.warn(
+      log39.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -11411,7 +11957,7 @@ ${components_default}`;
     description: "\u5728\u6D88\u606F\u4F5C\u8005\u4E0E\u6210\u5458\u5217\u8868\u65C1\u663E\u793A\u5BF9\u65B9\u5F53\u524D\u6240\u5728\u7684\u5E73\u53F0\uFF08\u684C\u9762\u7AEF / \u624B\u673A / \u7F51\u9875 / \u6E38\u620F\u4E3B\u673A\uFF09\uFF0C\u56FE\u6807\u6309\u5728\u7EBF\u72B6\u6001\u7740\u8272\u3002\u6570\u636E\u53D6\u81EA Discord \u81EA\u5DF1\u7684\u72B6\u6001 store\uFF0C\u4E0D\u53D1\u4EFB\u4F55\u8BF7\u6C42\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "appearance",
-    settings: settings10,
+    settings: settings11,
     start() {
       injectStyles();
       warnedNoAnchor2 = false;
@@ -11420,20 +11966,20 @@ ${components_default}`;
       scanTimer2 = setInterval(scan2, SCAN_MS);
       unsubscribes2 = WATCHED_ACTIONS2.map((type) => flux.subscribe(type, bumpPresence));
       unsubscribes2.push(
-        settings10.subscribe("inMessages", (on) => {
+        settings11.subscribe("inMessages", (on) => {
           if (!on) detachKind("message");
           else scan2();
         }),
-        settings10.subscribe("inMemberList", (on) => {
+        settings11.subscribe("inMemberList", (on) => {
           if (!on) detachKind("member");
           else scan2();
         }),
-        settings10.subscribe("colorize", () => bumpPresence()),
-        settings10.subscribe("iconSize", () => bumpPresence()),
-        settings10.subscribe("ignoreBots", () => bumpPresence()),
-        settings10.subscribe("ignoreSelf", () => bumpPresence())
+        settings11.subscribe("colorize", () => bumpPresence()),
+        settings11.subscribe("iconSize", () => bumpPresence()),
+        settings11.subscribe("ignoreBots", () => bumpPresence()),
+        settings11.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log36.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log39.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -11451,7 +11997,7 @@ ${components_default}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log36.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log39.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -11472,9 +12018,9 @@ ${components_default}`;
       };
       return {
         settings: {
-          inMessages: settings10.store.inMessages,
-          inMemberList: settings10.store.inMemberList,
-          ignoreBots: settings10.store.ignoreBots
+          inMessages: settings11.store.inMessages,
+          inMemberList: settings11.store.inMemberList,
+          ignoreBots: settings11.store.ignoreBots
         },
         mountedCount: mounted3.size,
         selfId,
@@ -11503,6 +12049,7 @@ ${components_default}`;
     guild_monitor_default,
     message_cleaner_default,
     fake_nitro_default,
+    message_preview_default,
     console_cleaner_default,
     emote_cloner_default,
     mark_all_read_default,
@@ -11513,7 +12060,7 @@ ${components_default}`;
   ];
 
   // src/core/probe.ts
-  var log37 = logger("probe");
+  var log40 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -11536,8 +12083,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.7" : "dev",
-      build: true ? "2026-08-31 15:28:44" : "dev",
+      version: true ? "0.6.8" : "dev",
+      build: true ? "2026-08-31 19:52:37" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -11550,14 +12097,14 @@ ${components_default}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log37.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log40.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log38 = logger("userscript");
+  var log41 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -11568,8 +12115,8 @@ ${components_default}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.7" : "dev",
-        build: true ? "2026-08-31 15:28:44" : "dev",
+        version: true ? "0.6.8" : "dev",
+        build: true ? "2026-08-31 19:52:37" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -11580,6 +12127,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log38.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log38.error("userscript boot failed", err));
+    log41.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log41.error("userscript boot failed", err));
 })();

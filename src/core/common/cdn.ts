@@ -93,3 +93,27 @@ export function stickerCdnUrl(id: string, formatType: number | undefined, size: 
   const ext = formatType === StickerFormat.GIF ? "gif" : "png";
   return `https://media.discordapp.net/stickers/${id}.${ext}?size=${px}`;
 }
+
+/** Discord's stock avatar for an account with no uploaded one, keyed by snowflake. */
+export function defaultAvatarUrl(userId: string): string {
+  let index = 0;
+  try {
+    index = Number((BigInt(userId) >> 22n) % 6n);
+  } catch {
+    index = 0;
+  }
+  return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+}
+
+/**
+ * CDN URL for a user avatar. Unlike `/emojis/`, this route DOES still serve
+ * `.gif` — animation is encoded in the hash (`a_` prefix), so the CDN has a real
+ * gif to hand back and returns 200. A static hash asked for as `.gif` 415s,
+ * which is why the prefix check is load-bearing rather than cosmetic.
+ */
+export function avatarCdnUrl(userId: string, hash: unknown, size: number): string {
+  if (typeof hash !== "string" || hash.length === 0) return defaultAvatarUrl(userId);
+  const px = normalizeSize(size, 32);
+  const ext = hash.startsWith("a_") ? "gif" : "webp";
+  return `https://cdn.discordapp.com/avatars/${userId}/${hash}.${ext}?size=${px}`;
+}

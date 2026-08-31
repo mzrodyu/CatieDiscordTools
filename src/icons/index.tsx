@@ -405,3 +405,13 @@ export function KeyboardIcon(props: IconProps) {
     </Glyph>
   );
 }
+
+/** An open eye — "look at this before it goes out". */
+export function EyeIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M2.75 12s3.4-5.75 9.25-5.75S21.25 12 21.25 12s-3.4 5.75-9.25 5.75S2.75 12 2.75 12z" />
+      <circle cx="12" cy="12" r="2.75" />
+    </Glyph>
+  );
+}

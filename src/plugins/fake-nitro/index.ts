@@ -744,5 +744,29 @@ export default definePlugin({
       log.error("pre-send 改写失败，消息按原样发送", err);
     }
     return false;
+  },
+
+  /**
+   * Dry run of the emoji rewrite, for message-preview's "what actually goes on
+   * the wire" block. Same code path the send takes, on a throwaway object, so
+   * the preview can never disagree with reality by construction.
+   *
+   * Stickers are deliberately out of scope: they never live in the draft text —
+   * they ride along as `options.stickerIds`, which a preview of the text box has
+   * no view of.
+   *
+   * Returns the input unchanged on any failure. Nothing here is allowed to be
+   * load-bearing for sending; it is a read-only question about it.
+   */
+  previewOutgoing(channelId: string, content: string): string {
+    try {
+      if (typeof content !== "string" || content.length === 0) return content ?? "";
+      const scratch: { content: string } = { content };
+      rewriteEmojis(channelId, scratch, guildIdOfChannel(channelId));
+      return scratch.content;
+    } catch (err) {
+      log.debug("previewOutgoing 失败，按原文返回", err);
+      return content;
+    }
   }
 });

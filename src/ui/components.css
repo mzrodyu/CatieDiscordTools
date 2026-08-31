@@ -2256,3 +2256,125 @@
   background: var(--hc-label-tertiary);
   background-clip: padding-box;
 }
+
+
+/* --- Send preview -------------------------------------------------------- */
+/* One composer button plus a floating panel above the input. The panel is
+ * body-mounted and positioned from JS, so only the box styling lives here. */
+.hc-preview-btn-host {
+  display: inline-flex;
+  align-items: center;
+}
+.hc-preview-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 4px;
+  padding: 0;
+  border: none;
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--interactive-normal, #b5bac1);
+  cursor: pointer;
+  transition: color var(--hc-duration-fast) var(--hc-ease);
+}
+.hc-preview-btn:hover {
+  color: var(--interactive-hover, #dbdee1);
+}
+.hc-preview-btn:active {
+  color: var(--interactive-active, #fff);
+}
+
+.hc-preview-host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 4000;
+}
+.hc-preview {
+  padding: var(--hc-space-3);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-bg-elevated);
+  box-shadow: var(--hc-elev-2);
+  font-size: var(--hc-text-subhead);
+  line-height: var(--hc-lh-subhead);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.hc-preview__empty {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-preview__row {
+  display: flex;
+  gap: var(--hc-space-3);
+  align-items: flex-start;
+}
+.hc-preview__avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--hc-radius-pill);
+  object-fit: cover;
+}
+.hc-preview__avatar--blank {
+  background: var(--hc-fill-secondary);
+}
+.hc-preview__main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.hc-preview__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hc-space-2);
+}
+.hc-preview__name {
+  color: var(--hc-label-primary);
+  font-size: var(--hc-text-callout);
+  line-height: var(--hc-lh-callout);
+  font-weight: 600;
+}
+.hc-preview__time {
+  color: var(--hc-label-quaternary);
+  font-size: var(--hc-text-caption2);
+  line-height: var(--hc-lh-caption);
+}
+.hc-preview__body {
+  margin-top: 2px;
+  color: var(--hc-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Custom emoji inside the rendered body, whether Discord's parser produced it
+ * or message-logger's fallback did. */
+.hc-preview__body img,
+.hc-preview__body .hc-emoji {
+  vertical-align: -0.3em;
+  width: 1.375em;
+  height: 1.375em;
+  object-fit: contain;
+}
+.hc-preview__raw {
+  margin-top: var(--hc-space-3);
+  padding-top: var(--hc-space-3);
+  border-top: 1px solid var(--hc-separator);
+}
+.hc-preview__raw-title {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+  margin-bottom: var(--hc-space-1);
+}
+.hc-preview__raw-text {
+  display: block;
+  color: var(--hc-label-secondary);
+  font-family: var(--hc-font-mono);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+  word-break: break-all;
+  white-space: pre-wrap;
+}
