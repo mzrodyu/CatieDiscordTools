@@ -72,11 +72,17 @@ export default definePlugin({
    * Called from the patch with the composer's live button array, on every
    * render. Guarded end-to-end: this executes inside Discord's render path, so a
    * throw here would blank the composer rather than just lose the button.
+   *
+   * `unshift`, not `push`: the array is built gift → GIF → sticker → emoji →
+   * appLauncher → submit and rendered straight into a flex row, so pushing put
+   * the eye on the far right, past the submit button. Front of the array is the
+   * left edge of the cluster, which is where it belongs — and it also keeps the
+   * emoji button, the one people hit by muscle memory, where it has always been.
    */
   injectButton(buttons: unknown): void {
     try {
       if (!isActive() || !Array.isArray(buttons)) return;
-      buttons.push(React.createElement(PreviewButton, { key: "halcyon-preview" }));
+      buttons.unshift(React.createElement(PreviewButton, { key: "halcyon-preview" }));
     } catch {
       // A missing button is a nuisance; a thrown one costs the user their
       // composer. Swallow it.

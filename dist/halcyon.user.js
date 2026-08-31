@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.10
+// @version      0.6.11
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -771,8 +771,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 20:23:37" : "dev";
-      const version2 = true ? "0.6.10" : "dev";
+      const build = true ? "2026-08-31 20:33:22" : "dev";
+      const version2 = true ? "0.6.11" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4191,7 +4191,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.10" : "dev";
+    return true ? "0.6.11" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4269,7 +4269,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.10" : "dev";
+    const version2 = true ? "0.6.11" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -8779,15 +8779,48 @@ ${components_default}`;
     if (!parserRejected) {
       const p = getParser();
       if (typeof p?.parse === "function") {
-        try {
-          const parsed = p.parse(content, true, { channelId, allowLinks: true, allowEmojiLinks: true });
-          if (isRenderable(parsed)) return parsed;
-          parserRejected = true;
-          announce("Discord \u89E3\u6790\u5668\u8FD4\u56DE\u4E86\u4E0D\u80FD\u6E32\u67D3\u7684\u4E1C\u897F\uFF08\u5F88\u53EF\u80FD\u649E\u4E0A\u4E86 intl \u4EE3\u7406\uFF09\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3");
-        } catch (err) {
-          parserRejected = true;
-          announce("Discord \u89E3\u6790\u5668\u629B\u9519\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3", err);
+        const state = {
+          channelId,
+          // Block-level syntax: # / ## / ###, -# subtext, - and 1. lists, > quotes
+          allowHeading: true,
+          allowList: true,
+          allowSubtext: true,
+          allowBlockQuotePrefix: true,
+          // Links, mentions and timestamps
+          allowLinks: true,
+          allowEmojiLinks: true,
+          allowDevLinks: true,
+          allowGameMentions: true,
+          allowTimeMentionInput: true,
+          allowRoles: true,
+          allowUsers: true,
+          allowMentioning: true,
+          // Inline escapes (\*not bold\*) and the emoji-ish inline objects
+          allowEscape: true,
+          allowNewLines: true,
+          allowAnimatedEmoji: true,
+          allowSoundmoji: true,
+          allowStickers: true,
+          // A full message body, fully styled — not a one-line preview of one,
+          // and not the forum-post variant (which suppresses some rules).
+          formatInline: false,
+          noStyleAndInteraction: false,
+          isForumPost: false
+        };
+        for (const inline of [false, true]) {
+          try {
+            const parsed = p.parse(content, inline, state);
+            if (isRenderable(parsed)) return parsed;
+          } catch (err) {
+            if (inline) {
+              parserRejected = true;
+              announce("Discord \u89E3\u6790\u5668\u629B\u9519\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3", err);
+            }
+            continue;
+          }
         }
+        parserRejected = true;
+        announce("Discord \u89E3\u6790\u5668\u8FD4\u56DE\u4E86\u4E0D\u80FD\u6E32\u67D3\u7684\u4E1C\u897F\uFF08\u5F88\u53EF\u80FD\u649E\u4E0A\u4E86 intl \u4EE3\u7406\uFF09\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3");
       } else {
         parserRejected = true;
         announce("\u672A\u627E\u5230 Discord \u7684 markdown \u89E3\u6790\u5668\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3\uFF08\u8868\u60C5\u53EF\u89C1\uFF0Cmarkdown / @\u63D0\u53CA \u4E0D\u89E3\u6790\uFF09");
@@ -9053,11 +9086,17 @@ ${components_default}`;
      * Called from the patch with the composer's live button array, on every
      * render. Guarded end-to-end: this executes inside Discord's render path, so a
      * throw here would blank the composer rather than just lose the button.
+     *
+     * `unshift`, not `push`: the array is built gift → GIF → sticker → emoji →
+     * appLauncher → submit and rendered straight into a flex row, so pushing put
+     * the eye on the far right, past the submit button. Front of the array is the
+     * left edge of the cluster, which is where it belongs — and it also keeps the
+     * emoji button, the one people hit by muscle memory, where it has always been.
      */
     injectButton(buttons) {
       try {
         if (!isActive() || !Array.isArray(buttons)) return;
-        buttons.push(React.createElement(PreviewButton, { key: "halcyon-preview" }));
+        buttons.unshift(React.createElement(PreviewButton, { key: "halcyon-preview" }));
       } catch {
       }
     }
@@ -12046,8 +12085,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.10" : "dev",
-      build: true ? "2026-08-31 20:23:37" : "dev",
+      version: true ? "0.6.11" : "dev",
+      build: true ? "2026-08-31 20:33:22" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12078,8 +12117,8 @@ ${components_default}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.10" : "dev",
-        build: true ? "2026-08-31 20:23:37" : "dev",
+        version: true ? "0.6.11" : "dev",
+        build: true ? "2026-08-31 20:33:22" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

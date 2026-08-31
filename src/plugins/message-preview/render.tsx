@@ -88,17 +88,72 @@ export function renderMessageContent(content: string, channelId: string | undefi
   if (!parserRejected) {
     const p = getParser();
     if (typeof p?.parse === "function") {
-      try {
-        // (content, inline, state) — `inline: true` is the shape used for a
-        // message body; channelId lets mentions resolve against this channel.
-        const parsed = p.parse(content, true, { channelId, allowLinks: true, allowEmojiLinks: true });
-        if (isRenderable(parsed)) return parsed;
-        parserRejected = true;
-        announce("Discord 解析器返回了不能渲染的东西（很可能撞上了 intl 代理），降级为内置渲染");
-      } catch (err) {
-        parserRejected = true;
-        announce("Discord 解析器抛错，降级为内置渲染", err);
+      // The rules are gated on STATE flags, not on the inline argument. The
+      // heading rule in this build reads:
+      //
+      //   match:(e,t,n)=>t.allowHeading&&…anyScopeRegex(/^ *(#{1,3})…/)
+      //
+      // so with no `allowHeading` in the state, `# 标题` is simply left as
+      // literal text — which is exactly how the first version rendered it, and
+      // it had nothing to do with block vs inline.
+      //
+      // Every markdown feature Discord has must work here, so the list is not
+      // guessed: it is every `allow*` / gating flag read near a rule definition
+      // (`order:` / `requiredFirstCharacters` / `anyScopeRegex`) in the live
+      // bundle. Verified gates: allowHeading, allowList, allowSubtext,
+      // allowLinks, allowEscape, allowGameMentions, allowDevLinks,
+      // allowTimeMentionInput, plus formatInline / isForumPost. The rest are
+      // read by the react side or by rule options; passing them costs nothing
+      // and a rule that does not read a flag simply ignores it.
+      //
+      // For reference, Discord's own message-content renderer passes the same
+      // shape: {formatInline,noStyleAndInteraction,allowHeading:!0,allowList:!0,
+      // allowGameMentions:!0,textColor,disablePressableChannelMention:!0}.
+      const state = {
+        channelId,
+        // Block-level syntax: # / ## / ###, -# subtext, - and 1. lists, > quotes
+        allowHeading: true,
+        allowList: true,
+        allowSubtext: true,
+        allowBlockQuotePrefix: true,
+        // Links, mentions and timestamps
+        allowLinks: true,
+        allowEmojiLinks: true,
+        allowDevLinks: true,
+        allowGameMentions: true,
+        allowTimeMentionInput: true,
+        allowRoles: true,
+        allowUsers: true,
+        allowMentioning: true,
+        // Inline escapes (\*not bold\*) and the emoji-ish inline objects
+        allowEscape: true,
+        allowNewLines: true,
+        allowAnimatedEmoji: true,
+        allowSoundmoji: true,
+        allowStickers: true,
+        // A full message body, fully styled — not a one-line preview of one,
+        // and not the forum-post variant (which suppresses some rules).
+        formatInline: false,
+        noStyleAndInteraction: false,
+        isForumPost: false
+      };
+      // `parse(source, inline, state)`. Block scope first, inline as fallback:
+      // the heading rule is anyScope so both can work, and whichever renders
+      // first is the better answer than plain text.
+      for (const inline of [false, true]) {
+        try {
+          const parsed = p.parse(content, inline, state);
+          if (isRenderable(parsed)) return parsed;
+        } catch (err) {
+          if (inline) {
+            parserRejected = true;
+            announce("Discord 解析器抛错，降级为内置渲染", err);
+          }
+          continue;
+        }
       }
+      parserRejected = true;
+      announce("Discord 解析器返回了不能渲染的东西（很可能撞上了 intl 代理），降级为内置渲染");
     } else {
       parserRejected = true;
       announce("未找到 Discord 的 markdown 解析器，降级为内置渲染（表情可见，markdown / @提及 不解析）");
