@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.3
+// @version      0.6.4
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -77,10 +77,18 @@ var Halcyon = (() => {
     globalThis.__halcyon_self__ = (id) => selfResolver(id);
   }
   function registerSourcePatch(patch) {
-    sourcePatches.push({ ...patch, applied: false, hits: 0 });
+    sourcePatches.push({ index: 1, count: 1, optional: false, ...patch, applied: false, hits: 0 });
   }
   function getSourcePatchReport() {
-    return sourcePatches.map(({ pluginId, label, applied, hits }) => ({ pluginId, label, applied, hits }));
+    return sourcePatches.map(({ pluginId, label, applied, hits, index, count: count2, optional }) => ({
+      pluginId,
+      label,
+      applied,
+      hits,
+      index,
+      count: count2,
+      optional
+    }));
   }
   function installChunkInterceptor() {
     if (interceptorInstalled) return;
@@ -204,7 +212,9 @@ var Halcyon = (() => {
       const replacement = bindSelf(patch.replace, patch.pluginId);
       code = patch.all ? code.replace(new RegExp(patch.match.source, ensureGlobal(patch.match.flags)), replacement) : code.replace(patch.match, replacement);
       if (code === before) {
-        log.warn(`patch "${patch.label}" (${patch.pluginId}) matched module ${id} but changed nothing`);
+        log.warn(
+          `patch "${patch.label}"${patch.count > 1 ? ` \u7B2C ${patch.index}/${patch.count} \u5904` : ""} (${patch.pluginId}) matched module ${id} but changed nothing`
+        );
         continue;
       }
       patch.applied = true;
@@ -742,7 +752,7 @@ ${slices.join("\n  ...  \n")}`);
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-20 11:09:52" : "dev";
+      const build = true ? "2026-08-31 11:55:58" : "dev";
       log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
     }
     isEnabled(id) {
@@ -845,16 +855,22 @@ ${slices.join("\n  ...  \n")}`);
     registerPatches(plugin) {
       for (const spec of plugin.patches ?? []) {
         const replacements = Array.isArray(spec.replacement) ? spec.replacement : [spec.replacement];
-        for (const r of replacements) {
+        replacements.forEach((r, i) => {
           registerSourcePatch({
             pluginId: plugin.id,
             label: spec.label,
             find: spec.find,
             match: r.match,
             replace: r.replace,
-            all: spec.all ?? false
+            all: spec.all ?? false,
+            // 1-based position within the spec, so the boot report can name the
+            // exact replacement that missed instead of reporting the whole spec
+            // as applied because a sibling landed.
+            index: i + 1,
+            count: replacements.length,
+            optional: spec.optional ?? false
           });
-        }
+        });
       }
     }
     startPlugin(id) {
@@ -4030,7 +4046,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.3" : "dev";
+    return true ? "0.6.4" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4108,7 +4124,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.3" : "dev";
+    const version2 = true ? "0.6.4" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -8152,13 +8168,18 @@ ${components_default}`;
   function reportPatches2() {
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "fake-nitro");
     if (!mine.length) return;
-    const missed = mine.filter((p) => !p.applied);
+    const name = (p) => p.count > 1 ? `\u201C${p.label}\u201D \u7B2C ${p.index}/${p.count} \u5904` : `\u201C${p.label}\u201D`;
+    const missed = mine.filter((p) => !p.applied && !p.optional);
+    const degraded = mine.filter((p) => !p.applied && p.optional);
     if (missed.length === 0) {
-      log20.info("\u6240\u6709\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548");
+      log20.info(`\u8868\u60C5 / \u8D34\u7EB8\u89E3\u9501\u7684\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548\uFF08\u5171 ${mine.length} \u5904\u66FF\u6362\uFF09`);
     } else {
       log20.warn(
-        "\u90E8\u5206\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF1B\u9009\u62E9\u5668\u89E3\u9501\u6216\u53D1\u9001\u6539\u5199\u53EF\u80FD\u4E0D\u5B8C\u6574\u3002\u672A\u5339\u914D\uFF1A" + missed.map((p) => `\u201C${p.label}\u201D`).join("\u3001")
+        "\u90E8\u5206\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF1B\u9009\u62E9\u5668\u89E3\u9501\u6216\u53D1\u9001\u6539\u5199\u53EF\u80FD\u4E0D\u5B8C\u6574\u3002\u672A\u5339\u914D\uFF1A" + missed.map(name).join("\u3001")
       );
+    }
+    if (degraded.length > 0) {
+      log20.info("\u4EE5\u4E0B\u53EF\u9009 patch \u672A\u5339\u914D\uFF08\u4EC5\u5F71\u54CD\u9644\u5E26\u529F\u80FD\uFF0C\u4E0D\u5F71\u54CD\u8868\u60C5 / \u8D34\u7EB8\uFF09\uFF1A" + degraded.map(name).join("\u3001"));
     }
   }
   var IS_BYPASSEABLE_INTENTION = `[${INTENT_CHAT},${INTENT_STICKER_EMOJI}].includes(fakeNitroIntention)`;
@@ -8192,6 +8213,15 @@ ${components_default}`;
       //    Hooking MessageActions.sendMessage (the old approach) fired AFTER that
       //    block already killed the send — which is why the emoji came back
       //    "无法使用" no matter what.
+      //
+      //    NOTE (verified against the current bundle): this patch is no longer
+      //    load-bearing. Discord's `_sendMessage` does NOT abort on locked
+      //    emoji — it posts a local Clyde notice and sends anyway — and once the
+      //    picker patch below lands, `isEmojiPremiumLocked` returns false for
+      //    CHAT, so `parse()` files these emoji under validNonShortcutEmojis and
+      //    `invalidEmojis` comes back empty. The runtime sendMessage hook is
+      //    therefore enough on its own; this patch just gets the rewrite in
+      //    earlier. If the boot report says it missed, sending still works.
       {
         label: "message pre-send rewrite",
         find: /handleSendMessage[\s\S]{0,200}onResize|getSendMessageOptions[\s\S]{0,500}handleSendMessage/,
@@ -8281,10 +8311,25 @@ ${components_default}`;
             match: /![\w$]+\.available(?=\)return [\w$]+\.[\w$]+\.GUILD_SUBSCRIPTION_UNAVAILABLE;)/,
             replace: `$&&&!${IS_BYPASSEABLE_INTENTION}`
           },
-          // "You need premium for cross-server emoji": bypass for our intentions.
+          // "You need premium for cross-server emoji". THIS is the one Discord's
+          // update broke, and the one that shows as 跨服务器表情全部上锁 with the
+          // 获取 Nitro banner: the gate used to read
+          //
+          //   if(!X.canUseEmojisEverywhere(user)&&!sameGuild){…PREMIUM_LOCKED}
+          //
+          // and now reads
+          //
+          //   if(!(bypassEntitlement||X.canUseEmojisEverywhere(user))&&!sameGuild)
+          //
+          // so a regex anchored on a `!` sitting directly against the call no
+          // longer matches. Rather than re-pin to the new shape (and break again
+          // on the next reshuffle) match the CALL and widen it in place, keeping
+          // whatever negation wrapper it sits in. `(call||bypassable)` inside
+          // `!(…)` and inside a bare `!…` both collapse to "not locked", so this
+          // holds for either shape.
           {
-            match: /!([\w$]+\.[\w$]+\.canUseEmojisEverywhere\([\w$]+\))/,
-            replace: `(!$1&&!${IS_BYPASSEABLE_INTENTION})`
+            match: /!\(?(?:[\w$]+\|\|)?([\w$]+\.[\w$]+\.canUseEmojisEverywhere\([\w$]+\))/,
+            replace: (m, call) => m.replace(call, `(${call}||${IS_BYPASSEABLE_INTENTION})`)
           },
           // "You need premium for animated emoji": pretend we can, for our intentions.
           {
@@ -8332,6 +8377,7 @@ ${components_default}`;
         label: "stream quality tiers removed",
         find: "STREAM_FPS_OPTION",
         all: true,
+        optional: true,
         replacement: {
           match: /guildPremiumTier:[\w$]+\.[\w$]+\.TIER_\d,?/,
           replace: ""
@@ -8354,6 +8400,7 @@ ${components_default}`;
         label: "custom client themes",
         find: '("custom_themes_editor_footer")',
         all: true,
+        optional: true,
         replacement: {
           match: /\(0,[\w$]+\.[\w$]+\)\([\w$]+\.[\w$]+\.TIER_2\)(?=,|;)/,
           replace: "true"
@@ -11421,8 +11468,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.3" : "dev",
-      build: true ? "2026-08-20 11:09:52" : "dev",
+      version: true ? "0.6.4" : "dev",
+      build: true ? "2026-08-31 11:55:58" : "dev",
       href: (() => {
         try {
           return location.pathname;

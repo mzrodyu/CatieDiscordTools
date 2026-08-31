@@ -268,16 +268,22 @@ class Runtime {
   private registerPatches(plugin: Plugin): void {
     for (const spec of plugin.patches ?? []) {
       const replacements = Array.isArray(spec.replacement) ? spec.replacement : [spec.replacement];
-      for (const r of replacements) {
+      replacements.forEach((r, i) => {
         registerSourcePatch({
           pluginId: plugin.id,
           label: spec.label,
           find: spec.find,
           match: r.match,
           replace: r.replace,
-          all: spec.all ?? false
+          all: spec.all ?? false,
+          // 1-based position within the spec, so the boot report can name the
+          // exact replacement that missed instead of reporting the whole spec
+          // as applied because a sibling landed.
+          index: i + 1,
+          count: replacements.length,
+          optional: spec.optional ?? false
         });
-      }
+      });
     }
   }
 

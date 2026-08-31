@@ -41,6 +41,17 @@ interface SourcePatch {
   match: RegExp;
   replace: string | ((substring: string, ...args: any[]) => string);
   all: boolean;
+  /**
+   * Position of this replacement inside its patch spec (1-based) and how many
+   * the spec declared. A spec with several replacements is registered as one
+   * SourcePatch each, all sharing `label`; without these a report grouped by
+   * label reads "applied" as long as ANY one landed — which is how a dead
+   * replacement hid in plain sight while the picker stayed locked.
+   */
+  index: number;
+  count: number;
+  /** Nice-to-have; a miss is reported as degraded, not as a regression. */
+  optional: boolean;
   applied: boolean;
   hits: number;
 }
@@ -70,12 +81,25 @@ export function setSelfResolver(fn: (pluginId: string) => unknown): void {
 }
 
 /** Register a source-level patch. Must happen before the target module loads. */
-export function registerSourcePatch(patch: Omit<SourcePatch, "applied" | "hits">): void {
-  sourcePatches.push({ ...patch, applied: false, hits: 0 });
+export function registerSourcePatch(
+  patch: Omit<SourcePatch, "applied" | "hits" | "index" | "count" | "optional"> &
+    Partial<Pick<SourcePatch, "index" | "count" | "optional">>
+): void {
+  sourcePatches.push({ index: 1, count: 1, optional: false, ...patch, applied: false, hits: 0 });
 }
 
-export function getSourcePatchReport(): ReadonlyArray<Pick<SourcePatch, "pluginId" | "label" | "applied" | "hits">> {
-  return sourcePatches.map(({ pluginId, label, applied, hits }) => ({ pluginId, label, applied, hits }));
+export function getSourcePatchReport(): ReadonlyArray<
+  Pick<SourcePatch, "pluginId" | "label" | "applied" | "hits" | "index" | "count" | "optional">
+> {
+  return sourcePatches.map(({ pluginId, label, applied, hits, index, count, optional }) => ({
+    pluginId,
+    label,
+    applied,
+    hits,
+    index,
+    count,
+    optional
+  }));
 }
 
 /**
@@ -300,7 +324,10 @@ function applyPatches(id: string, original: ModuleFactory, patches: SourcePatch[
       : code.replace(patch.match, replacement as any);
 
     if (code === before) {
-      log.warn(`patch "${patch.label}" (${patch.pluginId}) matched module ${id} but changed nothing`);
+      log.warn(
+        `patch "${patch.label}"${patch.count > 1 ? ` 第 ${patch.index}/${patch.count} 处` : ""} ` +
+          `(${patch.pluginId}) matched module ${id} but changed nothing`
+      );
       continue;
     }
     patch.applied = true;

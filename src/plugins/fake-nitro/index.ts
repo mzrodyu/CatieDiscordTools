@@ -360,18 +360,30 @@ function onEditMessage(ctx: PatchContext): void {
  * every patch showing "已应用" is a different failure than one where a picker
  * patch never matched. Logged loudly and per-patch so the state is never a
  * guess.
+ *
+ * Reported per REPLACEMENT, not per patch. A spec like "emoji picker unlock"
+ * carries five replacements; when Discord reshaped only the premium-locked gate
+ * the other four still landed, so a spec-level report said 已应用 while
+ * cross-server emoji sat locked. The `第 n/m 处` suffix is what makes that
+ * visible.
  */
 function reportPatches(): void {
   const mine = getSourcePatchReport().filter((p) => p.pluginId === "fake-nitro");
   if (!mine.length) return;
-  const missed = mine.filter((p) => !p.applied);
+  const name = (p: (typeof mine)[number]): string =>
+    p.count > 1 ? `“${p.label}” 第 ${p.index}/${p.count} 处` : `“${p.label}”`;
+  const missed = mine.filter((p) => !p.applied && !p.optional);
+  const degraded = mine.filter((p) => !p.applied && p.optional);
   if (missed.length === 0) {
-    log.info("所有源码 patch 均已在当前 Discord 版本生效");
+    log.info(`表情 / 贴纸解锁的源码 patch 均已在当前 Discord 版本生效（共 ${mine.length} 处替换）`);
   } else {
     log.warn(
       "部分源码 patch 未匹配当前 Discord 版本；选择器解锁或发送改写可能不完整。未匹配：" +
-        missed.map((p) => `“${p.label}”`).join("、")
+        missed.map(name).join("、")
     );
+  }
+  if (degraded.length > 0) {
+    log.info("以下可选 patch 未匹配（仅影响附带功能，不影响表情 / 贴纸）：" + degraded.map(name).join("、"));
   }
 }
 
@@ -416,6 +428,15 @@ export default definePlugin({
     //    Hooking MessageActions.sendMessage (the old approach) fired AFTER that
     //    block already killed the send — which is why the emoji came back
     //    "无法使用" no matter what.
+    //
+    //    NOTE (verified against the current bundle): this patch is no longer
+    //    load-bearing. Discord's `_sendMessage` does NOT abort on locked
+    //    emoji — it posts a local Clyde notice and sends anyway — and once the
+    //    picker patch below lands, `isEmojiPremiumLocked` returns false for
+    //    CHAT, so `parse()` files these emoji under validNonShortcutEmojis and
+    //    `invalidEmojis` comes back empty. The runtime sendMessage hook is
+    //    therefore enough on its own; this patch just gets the rewrite in
+    //    earlier. If the boot report says it missed, sending still works.
     {
       label: "message pre-send rewrite",
       find: /handleSendMessage[\s\S]{0,200}onResize|getSendMessageOptions[\s\S]{0,500}handleSendMessage/,
@@ -510,10 +531,25 @@ export default definePlugin({
           match: /![\w$]+\.available(?=\)return [\w$]+\.[\w$]+\.GUILD_SUBSCRIPTION_UNAVAILABLE;)/,
           replace: `$&&&!${IS_BYPASSEABLE_INTENTION}`
         },
-        // "You need premium for cross-server emoji": bypass for our intentions.
+        // "You need premium for cross-server emoji". THIS is the one Discord's
+        // update broke, and the one that shows as 跨服务器表情全部上锁 with the
+        // 获取 Nitro banner: the gate used to read
+        //
+        //   if(!X.canUseEmojisEverywhere(user)&&!sameGuild){…PREMIUM_LOCKED}
+        //
+        // and now reads
+        //
+        //   if(!(bypassEntitlement||X.canUseEmojisEverywhere(user))&&!sameGuild)
+        //
+        // so a regex anchored on a `!` sitting directly against the call no
+        // longer matches. Rather than re-pin to the new shape (and break again
+        // on the next reshuffle) match the CALL and widen it in place, keeping
+        // whatever negation wrapper it sits in. `(call||bypassable)` inside
+        // `!(…)` and inside a bare `!…` both collapse to "not locked", so this
+        // holds for either shape.
         {
-          match: /!([\w$]+\.[\w$]+\.canUseEmojisEverywhere\([\w$]+\))/,
-          replace: `(!$1&&!${IS_BYPASSEABLE_INTENTION})`
+          match: /!\(?(?:[\w$]+\|\|)?([\w$]+\.[\w$]+\.canUseEmojisEverywhere\([\w$]+\))/,
+          replace: (m: string, call: string) => m.replace(call, `(${call}||${IS_BYPASSEABLE_INTENTION})`)
         },
         // "You need premium for animated emoji": pretend we can, for our intentions.
         {
@@ -564,6 +600,7 @@ export default definePlugin({
       label: "stream quality tiers removed",
       find: "STREAM_FPS_OPTION",
       all: true,
+      optional: true,
       replacement: {
         match: /guildPremiumTier:[\w$]+\.[\w$]+\.TIER_\d,?/,
         replace: ""
@@ -588,6 +625,7 @@ export default definePlugin({
       label: "custom client themes",
       find: '("custom_themes_editor_footer")',
       all: true,
+      optional: true,
       replacement: {
         match: /\(0,[\w$]+\.[\w$]+\)\([\w$]+\.[\w$]+\.TIER_2\)(?=,|;)/,
         replace: "true"

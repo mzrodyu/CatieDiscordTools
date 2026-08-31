@@ -43,6 +43,14 @@ export interface SourcePatchSpec {
   replacement: Replacement | Replacement[];
   /** Apply the match globally rather than once. Default false. */
   all?: boolean;
+  /**
+   * Nice-to-have rather than load-bearing: a miss degrades one extra, and
+   * reports should say so instead of shouting. Set it for patches anchored on
+   * strings this runtime can't reliably see (Discord's `#{intl::…}` macros are
+   * hashed away at build time), so a permanently-unmatchable patch can't drown
+   * out a real regression in the same report.
+   */
+  optional?: boolean;
 }
 
 /** A dedicated page contributed to the settings area by a plugin. */
