@@ -24,6 +24,13 @@ runtime
 
     try {
       (globalThis as any).HalcyonAPI = {
+        // Stamped at build time. Which copy is actually live is the first thing
+        // any bug report needs, and a user-script manager updating on its own
+        // schedule (plus an already-open tab keeping the old code) makes it
+        // genuinely unknowable otherwise — two rounds of "还是不行" were really
+        // an old build still running.
+        version: typeof HALCYON_VERSION !== "undefined" ? HALCYON_VERSION : "dev",
+        build: typeof HALCYON_BUILD !== "undefined" ? HALCYON_BUILD : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

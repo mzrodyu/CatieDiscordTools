@@ -39,6 +39,8 @@ async function start(): Promise<void> {
 
   try {
     (globalThis as any).HalcyonAPI = {
+      version: typeof HALCYON_VERSION !== "undefined" ? HALCYON_VERSION : "dev",
+      build: typeof HALCYON_BUILD !== "undefined" ? HALCYON_BUILD : "dev",
       open: openSettings,
       close: closeSettings,
       runtime,

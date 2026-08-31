@@ -148,7 +148,8 @@ class Runtime {
 
     this.emit();
     const build = typeof HALCYON_BUILD !== "undefined" ? HALCYON_BUILD : "dev";
-    log.info(`runtime up — ${this.runningCount()} plugin(s) active (build ${build})`);
+    const version = typeof HALCYON_VERSION !== "undefined" ? HALCYON_VERSION : "dev";
+    log.info(`runtime up — v${version} (build ${build}), ${this.runningCount()} plugin(s) active`);
   }
 
   isEnabled(id: string): boolean {

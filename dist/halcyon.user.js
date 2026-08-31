@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.5
+// @version      0.6.6
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -771,8 +771,9 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 14:26:25" : "dev";
-      log3.info(`runtime up \u2014 ${this.runningCount()} plugin(s) active (build ${build})`);
+      const build = true ? "2026-08-31 14:44:06" : "dev";
+      const version2 = true ? "0.6.6" : "dev";
+      log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
       const rec = this.records.get(id);
@@ -4065,7 +4066,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.5" : "dev";
+    return true ? "0.6.6" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4143,7 +4144,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.5" : "dev";
+    const version2 = true ? "0.6.6" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -11501,8 +11502,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.5" : "dev",
-      build: true ? "2026-08-31 14:26:25" : "dev",
+      version: true ? "0.6.6" : "dev",
+      build: true ? "2026-08-31 14:44:06" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -11528,6 +11529,13 @@ ${components_default}`;
     injectStyles();
     try {
       globalThis.HalcyonAPI = {
+        // Stamped at build time. Which copy is actually live is the first thing
+        // any bug report needs, and a user-script manager updating on its own
+        // schedule (plus an already-open tab keeping the old code) makes it
+        // genuinely unknowable otherwise — two rounds of "还是不行" were really
+        // an old build still running.
+        version: true ? "0.6.6" : "dev",
+        build: true ? "2026-08-31 14:44:06" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

@@ -33,6 +33,8 @@ export { runtime };
 // A friendlier alias for console discovery.
 try {
   (globalThis as unknown as Record<string, unknown>).HalcyonAPI = {
+    version: typeof HALCYON_VERSION !== "undefined" ? HALCYON_VERSION : "dev",
+    build: typeof HALCYON_BUILD !== "undefined" ? HALCYON_BUILD : "dev",
     open: openSettings,
     close: closeSettings,
     runtime,
