@@ -13,6 +13,7 @@ import guildMonitor from "./guild-monitor";
 import messageCleaner from "./message-cleaner";
 import fakeNitro from "./fake-nitro";
 import messagePreview from "./message-preview";
+import messageTail from "./message-tail";
 import consoleCleaner from "./console-cleaner";
 import emoteCloner from "./emote-cloner";
 import markAllRead from "./mark-all-read";
@@ -30,6 +31,7 @@ export const plugins: Plugin[] = [
   messageCleaner,
   fakeNitro,
   messagePreview,
+  messageTail,
   consoleCleaner,
   emoteCloner,
   markAllRead,
