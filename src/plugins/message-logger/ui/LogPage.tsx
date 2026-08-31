@@ -11,10 +11,19 @@ import { logger } from "../../../core/logger";
 import { getSourcePatchReport } from "../../../core/modules/webpack";
 import { messageLog, type DeletedEntry, type EditedEntry } from "../store";
 import { renderContent } from "../render-content";
+import {
+  DEFAULT_FILTERS,
+  compileMatcher,
+  isFiltering,
+  matchEntry,
+  sortEntries,
+  type SearchFilters,
+  type LogEntry
+} from "../search";
 import { Button } from "../../../ui/components/Button";
 import { EmptyState } from "../../../ui/components/EmptyState";
 import { Badge } from "../../../ui/components/Badge";
-import { TrashIcon, PencilIcon, DownloadIcon, ChevronRightIcon, SearchIcon } from "../../../icons";
+import { TrashIcon, PencilIcon, DownloadIcon, ChevronRightIcon, SearchIcon, SlidersIcon } from "../../../icons";
 
 const log = logger("message-logger");
 
@@ -91,15 +100,27 @@ export function LogPage(): React.ReactElement {
   const [tab, setTab] = useState<Tab>("deleted");
   // Page index per tab, so switching tabs doesn't lose your place.
   const [pages, setPages] = useState<Record<Tab, number>>({ deleted: 0, edited: 0 });
-  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<SearchFilters>(DEFAULT_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const matcher = compileMatcher(filters.query, filters.mode);
+  const narrowing = isFiltering(filters);
+
+  const apply = <T extends LogEntry>(list: readonly T[]): T[] => {
+    const kept = narrowing
+      ? list.filter((e) => matchEntry(e, filters, matcher, resolveLocation(e.channelId, e.guildId)))
+      : list.slice();
+    return sortEntries(kept, filters.sort);
+  };
+
+  // BOTH tabs are filtered, not just the visible one: the counts on the tab
+  // buttons are what tell you the other list also has hits. Searching only the
+  // tab you happen to be on hides half the log every time.
+  const deletedHits = apply(deleted);
+  const editedHits = apply(edited);
 
   const all = tab === "deleted" ? deleted : edited;
-  const needle = query.trim().toLowerCase();
-  // Filter by author, content (incl. every edit version), and guild / channel
-  // names, so "search" means the same thing whichever tab you're on.
-  const entries = needle
-    ? (all as ReadonlyArray<DeletedEntry | EditedEntry>).filter((e) => entryMatches(e, needle))
-    : all;
+  const entries: readonly LogEntry[] = tab === "deleted" ? deletedHits : editedHits;
 
   const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
   // Entries shrink on clear/retention/search; clamp rather than blank-paging.
@@ -109,11 +130,13 @@ export function LogPage(): React.ReactElement {
   const goTo = (next: number) =>
     setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
 
-  // Any query change resets to the first page of results.
-  const onQuery = (value: string): void => {
-    setQuery(value);
-    setPages((prev) => ({ ...prev, [tab]: 0 }));
+  // Any filter change resets to the first page of results, on both tabs — the
+  // old page index means nothing against a different result set.
+  const patch = (next: Partial<SearchFilters>): void => {
+    setFilters((prev) => ({ ...prev, ...next }));
+    setPages({ deleted: 0, edited: 0 });
   };
+  const onQuery = (value: string): void => patch({ query: value });
 
   return (
     <div>
@@ -126,7 +149,9 @@ export function LogPage(): React.ReactElement {
           onClick={() => setTab("deleted")}
         >
           <TrashIcon size={16} /> 已删除
-          {deleted.length > 0 && <Badge tone="red">{deleted.length}</Badge>}
+          {deleted.length > 0 && (
+            <Badge tone="red">{narrowing ? `${deletedHits.length}/${deleted.length}` : deleted.length}</Badge>
+          )}
         </button>
         <button
           type="button"
@@ -135,7 +160,9 @@ export function LogPage(): React.ReactElement {
           onClick={() => setTab("edited")}
         >
           <PencilIcon size={16} /> 已编辑
-          {edited.length > 0 && <Badge tone="orange">{edited.length}</Badge>}
+          {edited.length > 0 && (
+            <Badge tone="orange">{narrowing ? `${editedHits.length}/${edited.length}` : edited.length}</Badge>
+          )}
         </button>
 
         <div className="hc-tabs__spacer" />
@@ -159,12 +186,18 @@ export function LogPage(): React.ReactElement {
       <div className="hc-mlog-search">
         <SearchIcon size={18} />
         <input
-          value={query}
+          value={filters.query}
           onChange={(event) => onQuery(event.currentTarget.value)}
-          placeholder="搜索作者、内容、服务器 / 频道"
+          placeholder={
+            filters.mode === "regex"
+              ? "正则，例如 ^喂|再见$"
+              : filters.mode === "phrase"
+                ? "精确短语，空格也算"
+                : "搜索作者、内容、服务器 / 频道（空格分隔＝都要有）"
+          }
           aria-label="搜索消息记录"
         />
-        {query && (
+        {filters.query && (
           <button
             type="button"
             className="hc-mlog-search__clear"
@@ -174,7 +207,74 @@ export function LogPage(): React.ReactElement {
             ×
           </button>
         )}
+        <button
+          type="button"
+          className="hc-mlog-search__filters"
+          data-active={showFilters || narrowing}
+          aria-label="筛选"
+          title="按作者 / 位置 / 时间筛选"
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          <SlidersIcon size={18} />
+        </button>
       </div>
+
+      {matcher.error && <div className="hc-mlog-filters__error">正则还没写完：{matcher.error}</div>}
+
+      {showFilters && (
+        <div className="hc-mlog-filters">
+          <label className="hc-mlog-filters__field">
+            <span>匹配方式</span>
+            <select
+              value={filters.mode}
+              onChange={(e) => patch({ mode: e.currentTarget.value as SearchFilters["mode"] })}
+            >
+              <option value="contains">包含全部词</option>
+              <option value="phrase">精确短语</option>
+              <option value="regex">正则</option>
+            </select>
+          </label>
+          <label className="hc-mlog-filters__field">
+            <span>作者</span>
+            <input
+              value={filters.author}
+              onChange={(e) => patch({ author: e.currentTarget.value })}
+              placeholder="名字的一部分"
+            />
+          </label>
+          <label className="hc-mlog-filters__field">
+            <span>服务器 / 频道</span>
+            <input
+              value={filters.location}
+              onChange={(e) => patch({ location: e.currentTarget.value })}
+              placeholder="名字的一部分"
+            />
+          </label>
+          <label className="hc-mlog-filters__field">
+            <span>起始日期</span>
+            <input type="date" value={filters.from} onChange={(e) => patch({ from: e.currentTarget.value })} />
+          </label>
+          <label className="hc-mlog-filters__field">
+            <span>结束日期</span>
+            <input type="date" value={filters.to} onChange={(e) => patch({ to: e.currentTarget.value })} />
+          </label>
+          <label className="hc-mlog-filters__field">
+            <span>排序</span>
+            <select
+              value={filters.sort}
+              onChange={(e) => patch({ sort: e.currentTarget.value as SearchFilters["sort"] })}
+            >
+              <option value="newest">最新在前</option>
+              <option value="oldest">最早在前</option>
+            </select>
+          </label>
+          <div className="hc-mlog-filters__actions">
+            <Button size="sm" variant="plain" onClick={() => patch(DEFAULT_FILTERS)} disabled={!narrowing}>
+              重置筛选
+            </Button>
+          </div>
+        </div>
+      )}
 
       {all.length === 0 ? (
         tab === "deleted" ? (
@@ -194,17 +294,31 @@ export function LogPage(): React.ReactElement {
         <EmptyState
           icon={<SearchIcon size={48} />}
           title="没有匹配的记录"
-          subtitle={`没有包含“${query.trim()}”的记录，换个关键词试试。`}
+          subtitle={
+            (tab === "deleted" ? editedHits.length : deletedHits.length) > 0
+              ? `这一栏没有，但「${tab === "deleted" ? "已编辑" : "已删除"}」里有 ${
+                  tab === "deleted" ? editedHits.length : deletedHits.length
+                } 条匹配。`
+              : "换个关键词，或者放宽筛选条件试试。"
+          }
         />
       ) : (
         <>
           <div className="hc-msglist">
             {tab === "deleted"
               ? (visible as readonly DeletedEntry[]).map((entry) => (
-                  <DeletedRow key={`${entry.channelId}-${entry.id}`} entry={entry} />
+                  <DeletedRow
+                    key={`${entry.channelId}-${entry.id}`}
+                    entry={entry}
+                    highlight={matcher.highlight}
+                  />
                 ))
               : (visible as readonly EditedEntry[]).map((entry) => (
-                  <EditedRow key={`${entry.channelId}-${entry.id}`} entry={entry} />
+                  <EditedRow
+                    key={`${entry.channelId}-${entry.id}`}
+                    entry={entry}
+                    highlight={matcher.highlight}
+                  />
                 ))}
           </div>
           {pageCount > 1 && <Pager page={page} pageCount={pageCount} onChange={goTo} />}
@@ -360,7 +474,7 @@ function JumpButton({ entry }: { entry: DeletedEntry | EditedEntry }): React.Rea
   );
 }
 
-function DeletedRow({ entry }: { entry: DeletedEntry }): React.ReactElement {
+function DeletedRow({ entry, highlight }: { entry: DeletedEntry; highlight?: RegExp | null }): React.ReactElement {
   return (
     <div className="hc-msg">
       <div className="hc-msg__head">
@@ -372,7 +486,7 @@ function DeletedRow({ entry }: { entry: DeletedEntry }): React.ReactElement {
       </div>
       <div className="hc-msg__body">
         {entry.content ? (
-          renderContent(entry.content)
+          renderContent(entry.content, highlight)
         ) : entry.stickers?.length ? (
           <span>🏷️ 贴纸：{entry.stickers.map((s) => s.name).join("、")}</span>
         ) : entry.attachmentsRich?.length || entry.embeds?.length ? (
@@ -407,7 +521,7 @@ function DeletedRow({ entry }: { entry: DeletedEntry }): React.ReactElement {
   );
 }
 
-function EditedRow({ entry }: { entry: EditedEntry }): React.ReactElement {
+function EditedRow({ entry, highlight }: { entry: EditedEntry; highlight?: RegExp | null }): React.ReactElement {
   return (
     <div className="hc-msg">
       <div className="hc-msg__head">
@@ -421,7 +535,7 @@ function EditedRow({ entry }: { entry: EditedEntry }): React.ReactElement {
           <div className="hc-msg__version" key={index}>
             <span className="hc-msg__vtag">v{index + 1}</span>
             <span className="hc-msg__vbody">
-              {version.content ? renderContent(version.content) : "（空）"}
+              {version.content ? renderContent(version.content, highlight) : "（空）"}
             </span>
           </div>
         ))}
@@ -473,35 +587,6 @@ function Location({ channelId, guildId }: { channelId: string; guildId?: string 
     </span>
   );
 }
-
-/**
- * Whether a log entry matches a lowercased search needle. Searches the author,
- * the resolved guild / channel names, and the message text — for edited
- * entries that means every captured version, so you can find a message by any
- * of its wordings.
- */
-function entryMatches(entry: DeletedEntry | EditedEntry, needle: string): boolean {
-  try {
-    if (entry.author?.name && entry.author.name.toLowerCase().includes(needle)) return true;
-
-    const loc = resolveLocation(entry.channelId, entry.guildId);
-    if (loc.guild && loc.guild.toLowerCase().includes(needle)) return true;
-    if (loc.channel && loc.channel.toLowerCase().includes(needle)) return true;
-
-    if ("content" in entry && typeof entry.content === "string") {
-      if (entry.content.toLowerCase().includes(needle)) return true;
-    }
-    if ("history" in entry && Array.isArray(entry.history)) {
-      for (const v of entry.history) {
-        if (v?.content && v.content.toLowerCase().includes(needle)) return true;
-      }
-    }
-  } catch {
-    // resolveLocation touching a not-ready store; treat as no match
-  }
-  return false;
-}
-
 function formatTime(time: number): string {
   const date = new Date(time);
   const pad = (n: number) => String(n).padStart(2, "0");

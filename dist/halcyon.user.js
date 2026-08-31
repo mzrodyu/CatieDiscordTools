@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.15
+// @version      0.6.16
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -773,8 +773,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 21:15:56" : "dev";
-      const version2 = true ? "0.6.15" : "dev";
+      const build = true ? "2026-08-31 21:42:06" : "dev";
+      const version2 = true ? "0.6.16" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3368,6 +3368,92 @@ ${slices.join("\n  ...  \n")}`
   word-break: break-all;
   white-space: pre-wrap;
 }
+
+
+/* --- Message-log search: filters + hit highlighting ---------------------- */
+.hc-mlog-search__filters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--hc-label-tertiary);
+  cursor: pointer;
+  transition: color var(--hc-duration-fast) var(--hc-ease),
+    background var(--hc-duration-fast) var(--hc-ease);
+}
+.hc-mlog-search__filters:hover {
+  color: var(--hc-label-secondary);
+  background: var(--hc-fill-secondary);
+}
+.hc-mlog-search__filters[data-active="true"] {
+  color: var(--hc-accent);
+}
+
+.hc-mlog-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--hc-space-3);
+  align-items: end;
+  margin: var(--hc-space-3) 0;
+  padding: var(--hc-space-4);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-bg-secondary);
+}
+.hc-mlog-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-1);
+  min-width: 0;
+}
+.hc-mlog-filters__field > span {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}
+.hc-mlog-filters__field input,
+.hc-mlog-filters__field select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--hc-separator);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-bg-primary);
+  color: var(--hc-label-primary);
+  font-family: var(--hc-font);
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-mlog-filters__field input:focus,
+.hc-mlog-filters__field select:focus {
+  outline: none;
+  border-color: var(--hc-accent);
+}
+.hc-mlog-filters__actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+.hc-mlog-filters__error {
+  margin: var(--hc-space-2) 0;
+  color: var(--hc-orange);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}
+
+/* A search hit inside a rendered message body. Tinted rather than the browser
+ * default yellow, which fights every dark theme. */
+.hc-hit {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
+  color: inherit;
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -4216,7 +4302,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.15" : "dev";
+    return true ? "0.6.16" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4294,7 +4380,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.15" : "dev";
+    const version2 = true ? "0.6.16" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5667,16 +5753,137 @@ ${components_default}`;
     return `https://cdn.discordapp.com/avatars/${userId}/${hash}.${ext}?size=${px}`;
   }
 
+  // src/plugins/message-logger/search.ts
+  var DEFAULT_FILTERS = {
+    query: "",
+    mode: "contains",
+    author: "",
+    location: "",
+    from: "",
+    to: "",
+    sort: "newest"
+  };
+  function isFiltering(f) {
+    return Boolean(f.query.trim() || f.author.trim() || f.location.trim() || f.from || f.to);
+  }
+  function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  var MATCH_ALL = { test: () => true, highlight: null };
+  function compileMatcher(query, mode) {
+    const raw = query.trim();
+    if (!raw) return MATCH_ALL;
+    if (mode === "regex") {
+      try {
+        const re = new RegExp(raw, "i");
+        return {
+          test: (text) => re.test(text),
+          highlight: new RegExp(raw, "gi")
+        };
+      } catch (err) {
+        return { test: () => false, highlight: null, error: err?.message ?? "\u65E0\u6548\u7684\u6B63\u5219" };
+      }
+    }
+    if (mode === "phrase") {
+      const needle = raw.toLowerCase();
+      return {
+        test: (text) => text.toLowerCase().includes(needle),
+        highlight: new RegExp(escapeRegExp(raw), "gi")
+      };
+    }
+    const terms = raw.split(/\s+/).filter(Boolean).map((t) => t.toLowerCase());
+    return {
+      test: (text) => {
+        const haystack = text.toLowerCase();
+        return terms.every((t) => haystack.includes(t));
+      },
+      highlight: new RegExp(terms.map(escapeRegExp).join("|"), "gi")
+    };
+  }
+  function searchableText(entry, guild, channel) {
+    const parts = [entry.author?.name ?? ""];
+    if (guild) parts.push(guild);
+    if (channel) parts.push(channel);
+    if ("content" in entry && typeof entry.content === "string") parts.push(entry.content);
+    if ("history" in entry && Array.isArray(entry.history)) {
+      for (const v of entry.history) if (v?.content) parts.push(v.content);
+    }
+    if ("stickers" in entry && Array.isArray(entry.stickers)) {
+      for (const s of entry.stickers) if (s?.name) parts.push(s.name);
+    }
+    if ("attachments" in entry && Array.isArray(entry.attachments)) parts.push(...entry.attachments);
+    return parts.join("\n");
+  }
+  function entryTime(entry) {
+    const candidate = ("deletedAt" in entry ? entry.deletedAt : void 0) ?? ("updatedAt" in entry ? entry.updatedAt : void 0) ?? ("sentAt" in entry ? entry.sentAt : void 0);
+    return typeof candidate === "number" && Number.isFinite(candidate) ? candidate : 0;
+  }
+  function dayStart(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+    return Number.isNaN(d.getTime()) ? null : d.getTime();
+  }
+  function dayEnd(value) {
+    const start = dayStart(value);
+    return start === null ? null : start + 24 * 60 * 60 * 1e3 - 1;
+  }
+  function matchEntry(entry, filters, matcher, loc) {
+    const author = filters.author.trim().toLowerCase();
+    if (author && !(entry.author?.name ?? "").toLowerCase().includes(author)) return false;
+    const where = filters.location.trim().toLowerCase();
+    if (where) {
+      const hay = `${loc.guild ?? ""}
+${loc.channel ?? ""}`.toLowerCase();
+      if (!hay.includes(where)) return false;
+    }
+    const at = entryTime(entry);
+    const from = filters.from ? dayStart(filters.from) : null;
+    if (from !== null && at < from) return false;
+    const to = filters.to ? dayEnd(filters.to) : null;
+    if (to !== null && at > to) return false;
+    if (!filters.query.trim()) return true;
+    return matcher.test(searchableText(entry, loc.guild, loc.channel));
+  }
+  function sortEntries(entries, sort) {
+    const copy = entries.slice();
+    copy.sort((a, b) => sort === "newest" ? entryTime(b) - entryTime(a) : entryTime(a) - entryTime(b));
+    return copy;
+  }
+  function splitHighlights(text, highlight) {
+    if (!highlight || !text) return [{ text, hit: false }];
+    const re = new RegExp(highlight.source, highlight.flags.includes("g") ? highlight.flags : `${highlight.flags}g`);
+    const out = [];
+    let last = 0;
+    for (let m = re.exec(text); m; m = re.exec(text)) {
+      if (m[0].length === 0) {
+        re.lastIndex++;
+        continue;
+      }
+      if (m.index > last) out.push({ text: text.slice(last, m.index), hit: false });
+      out.push({ text: m[0], hit: true });
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) out.push({ text: text.slice(last), hit: false });
+    return out.length ? out : [{ text, hit: false }];
+  }
+
   // src/plugins/message-logger/render-content.tsx
   var EMOJI_TOKEN = /<(a)?:([A-Za-z0-9_]+):(\d+)>/g;
-  function renderContent(content) {
+  function textRun(text, highlight, keyFrom) {
+    if (!highlight) return [/* @__PURE__ */ React.createElement("span", { key: keyFrom }, text)];
+    return splitHighlights(text, highlight).map(
+      (run, i) => run.hit ? /* @__PURE__ */ React.createElement("mark", { key: `${keyFrom}-${i}`, className: "hc-hit" }, run.text) : /* @__PURE__ */ React.createElement("span", { key: `${keyFrom}-${i}` }, run.text)
+    );
+  }
+  function renderContent(content, highlight) {
     const parts = [];
     let cursor = 0;
     let key = 0;
     EMOJI_TOKEN.lastIndex = 0;
     for (let m = EMOJI_TOKEN.exec(content); m; m = EMOJI_TOKEN.exec(content)) {
       if (m.index > cursor) {
-        parts.push(/* @__PURE__ */ React.createElement("span", { key: key++ }, content.slice(cursor, m.index)));
+        parts.push(...textRun(content.slice(cursor, m.index), highlight, key++));
       }
       const [, animated, name, id] = m;
       parts.push(
@@ -5695,9 +5902,9 @@ ${components_default}`;
       );
       cursor = m.index + m[0].length;
     }
-    if (parts.length === 0) return content;
+    if (parts.length === 0 && !highlight) return content;
     if (cursor < content.length) {
-      parts.push(/* @__PURE__ */ React.createElement("span", { key: key++ }, content.slice(cursor)));
+      parts.push(...textRun(content.slice(cursor), highlight, key++));
     }
     return parts;
   }
@@ -5739,18 +5946,27 @@ ${components_default}`;
     const { deleted, edited } = useLog();
     const [tab, setTab] = useState("deleted");
     const [pages, setPages] = useState({ deleted: 0, edited: 0 });
-    const [query, setQuery] = useState("");
+    const [filters, setFilters] = useState(DEFAULT_FILTERS);
+    const [showFilters, setShowFilters] = useState(false);
+    const matcher = compileMatcher(filters.query, filters.mode);
+    const narrowing = isFiltering(filters);
+    const apply = (list) => {
+      const kept = narrowing ? list.filter((e) => matchEntry(e, filters, matcher, resolveLocation(e.channelId, e.guildId))) : list.slice();
+      return sortEntries(kept, filters.sort);
+    };
+    const deletedHits = apply(deleted);
+    const editedHits = apply(edited);
     const all = tab === "deleted" ? deleted : edited;
-    const needle = query.trim().toLowerCase();
-    const entries = needle ? all.filter((e) => entryMatches(e, needle)) : all;
+    const entries = tab === "deleted" ? deletedHits : editedHits;
     const pageCount = Math.max(1, Math.ceil(entries.length / PAGE_SIZE2));
     const page = Math.min(pages[tab], pageCount - 1);
     const visible = entries.slice(page * PAGE_SIZE2, (page + 1) * PAGE_SIZE2);
     const goTo = (next) => setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
-    const onQuery = (value) => {
-      setQuery(value);
-      setPages((prev) => ({ ...prev, [tab]: 0 }));
+    const patch = (next) => {
+      setFilters((prev) => ({ ...prev, ...next }));
+      setPages({ deleted: 0, edited: 0 });
     };
+    const onQuery = (value) => patch({ query: value });
     return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(InChatStatus, null), /* @__PURE__ */ React.createElement("div", { className: "hc-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -5761,7 +5977,7 @@ ${components_default}`;
       },
       /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }),
       " \u5DF2\u5220\u9664",
-      deleted.length > 0 && /* @__PURE__ */ React.createElement(Badge, { tone: "red" }, deleted.length)
+      deleted.length > 0 && /* @__PURE__ */ React.createElement(Badge, { tone: "red" }, narrowing ? `${deletedHits.length}/${deleted.length}` : deleted.length)
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -5772,7 +5988,7 @@ ${components_default}`;
       },
       /* @__PURE__ */ React.createElement(PencilIcon, { size: 16 }),
       " \u5DF2\u7F16\u8F91",
-      edited.length > 0 && /* @__PURE__ */ React.createElement(Badge, { tone: "orange" }, edited.length)
+      edited.length > 0 && /* @__PURE__ */ React.createElement(Badge, { tone: "orange" }, narrowing ? `${editedHits.length}/${edited.length}` : edited.length)
     ), /* @__PURE__ */ React.createElement("div", { className: "hc-tabs__spacer" }), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", icon: /* @__PURE__ */ React.createElement(DownloadIcon, { size: 16 }), onClick: exportLog }, "\u5BFC\u51FA"), /* @__PURE__ */ React.createElement(
       Button,
       {
@@ -5787,12 +6003,12 @@ ${components_default}`;
     )), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-search" }, /* @__PURE__ */ React.createElement(SearchIcon, { size: 18 }), /* @__PURE__ */ React.createElement(
       "input",
       {
-        value: query,
+        value: filters.query,
         onChange: (event) => onQuery(event.currentTarget.value),
-        placeholder: "\u641C\u7D22\u4F5C\u8005\u3001\u5185\u5BB9\u3001\u670D\u52A1\u5668 / \u9891\u9053",
+        placeholder: filters.mode === "regex" ? "\u6B63\u5219\uFF0C\u4F8B\u5982 ^\u5582|\u518D\u89C1$" : filters.mode === "phrase" ? "\u7CBE\u786E\u77ED\u8BED\uFF0C\u7A7A\u683C\u4E5F\u7B97" : "\u641C\u7D22\u4F5C\u8005\u3001\u5185\u5BB9\u3001\u670D\u52A1\u5668 / \u9891\u9053\uFF08\u7A7A\u683C\u5206\u9694\uFF1D\u90FD\u8981\u6709\uFF09",
         "aria-label": "\u641C\u7D22\u6D88\u606F\u8BB0\u5F55"
       }
-    ), query && /* @__PURE__ */ React.createElement(
+    ), filters.query && /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -5801,7 +6017,49 @@ ${components_default}`;
         onClick: () => onQuery("")
       },
       "\xD7"
-    )), all.length === 0 ? tab === "deleted" ? /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-mlog-search__filters",
+        "data-active": showFilters || narrowing,
+        "aria-label": "\u7B5B\u9009",
+        title: "\u6309\u4F5C\u8005 / \u4F4D\u7F6E / \u65F6\u95F4\u7B5B\u9009",
+        onClick: () => setShowFilters((v) => !v)
+      },
+      /* @__PURE__ */ React.createElement(SlidersIcon, { size: 18 })
+    )), matcher.error && /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-filters__error" }, "\u6B63\u5219\u8FD8\u6CA1\u5199\u5B8C\uFF1A", matcher.error), showFilters && /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-filters" }, /* @__PURE__ */ React.createElement("label", { className: "hc-mlog-filters__field" }, /* @__PURE__ */ React.createElement("span", null, "\u5339\u914D\u65B9\u5F0F"), /* @__PURE__ */ React.createElement(
+      "select",
+      {
+        value: filters.mode,
+        onChange: (e) => patch({ mode: e.currentTarget.value })
+      },
+      /* @__PURE__ */ React.createElement("option", { value: "contains" }, "\u5305\u542B\u5168\u90E8\u8BCD"),
+      /* @__PURE__ */ React.createElement("option", { value: "phrase" }, "\u7CBE\u786E\u77ED\u8BED"),
+      /* @__PURE__ */ React.createElement("option", { value: "regex" }, "\u6B63\u5219")
+    )), /* @__PURE__ */ React.createElement("label", { className: "hc-mlog-filters__field" }, /* @__PURE__ */ React.createElement("span", null, "\u4F5C\u8005"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: filters.author,
+        onChange: (e) => patch({ author: e.currentTarget.value }),
+        placeholder: "\u540D\u5B57\u7684\u4E00\u90E8\u5206"
+      }
+    )), /* @__PURE__ */ React.createElement("label", { className: "hc-mlog-filters__field" }, /* @__PURE__ */ React.createElement("span", null, "\u670D\u52A1\u5668 / \u9891\u9053"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        value: filters.location,
+        onChange: (e) => patch({ location: e.currentTarget.value }),
+        placeholder: "\u540D\u5B57\u7684\u4E00\u90E8\u5206"
+      }
+    )), /* @__PURE__ */ React.createElement("label", { className: "hc-mlog-filters__field" }, /* @__PURE__ */ React.createElement("span", null, "\u8D77\u59CB\u65E5\u671F"), /* @__PURE__ */ React.createElement("input", { type: "date", value: filters.from, onChange: (e) => patch({ from: e.currentTarget.value }) })), /* @__PURE__ */ React.createElement("label", { className: "hc-mlog-filters__field" }, /* @__PURE__ */ React.createElement("span", null, "\u7ED3\u675F\u65E5\u671F"), /* @__PURE__ */ React.createElement("input", { type: "date", value: filters.to, onChange: (e) => patch({ to: e.currentTarget.value }) })), /* @__PURE__ */ React.createElement("label", { className: "hc-mlog-filters__field" }, /* @__PURE__ */ React.createElement("span", null, "\u6392\u5E8F"), /* @__PURE__ */ React.createElement(
+      "select",
+      {
+        value: filters.sort,
+        onChange: (e) => patch({ sort: e.currentTarget.value })
+      },
+      /* @__PURE__ */ React.createElement("option", { value: "newest" }, "\u6700\u65B0\u5728\u524D"),
+      /* @__PURE__ */ React.createElement("option", { value: "oldest" }, "\u6700\u65E9\u5728\u524D")
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-filters__actions" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => patch(DEFAULT_FILTERS), disabled: !narrowing }, "\u91CD\u7F6E\u7B5B\u9009"))), all.length === 0 ? tab === "deleted" ? /* @__PURE__ */ React.createElement(
       EmptyState,
       {
         icon: /* @__PURE__ */ React.createElement(TrashIcon, { size: 48 }),
@@ -5820,9 +6078,23 @@ ${components_default}`;
       {
         icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 48 }),
         title: "\u6CA1\u6709\u5339\u914D\u7684\u8BB0\u5F55",
-        subtitle: `\u6CA1\u6709\u5305\u542B\u201C${query.trim()}\u201D\u7684\u8BB0\u5F55\uFF0C\u6362\u4E2A\u5173\u952E\u8BCD\u8BD5\u8BD5\u3002`
+        subtitle: (tab === "deleted" ? editedHits.length : deletedHits.length) > 0 ? `\u8FD9\u4E00\u680F\u6CA1\u6709\uFF0C\u4F46\u300C${tab === "deleted" ? "\u5DF2\u7F16\u8F91" : "\u5DF2\u5220\u9664"}\u300D\u91CC\u6709 ${tab === "deleted" ? editedHits.length : deletedHits.length} \u6761\u5339\u914D\u3002` : "\u6362\u4E2A\u5173\u952E\u8BCD\uFF0C\u6216\u8005\u653E\u5BBD\u7B5B\u9009\u6761\u4EF6\u8BD5\u8BD5\u3002"
       }
-    ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-msglist" }, tab === "deleted" ? visible.map((entry) => /* @__PURE__ */ React.createElement(DeletedRow, { key: `${entry.channelId}-${entry.id}`, entry })) : visible.map((entry) => /* @__PURE__ */ React.createElement(EditedRow, { key: `${entry.channelId}-${entry.id}`, entry }))), pageCount > 1 && /* @__PURE__ */ React.createElement(Pager, { page, pageCount, onChange: goTo })));
+    ) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-msglist" }, tab === "deleted" ? visible.map((entry) => /* @__PURE__ */ React.createElement(
+      DeletedRow,
+      {
+        key: `${entry.channelId}-${entry.id}`,
+        entry,
+        highlight: matcher.highlight
+      }
+    )) : visible.map((entry) => /* @__PURE__ */ React.createElement(
+      EditedRow,
+      {
+        key: `${entry.channelId}-${entry.id}`,
+        entry,
+        highlight: matcher.highlight
+      }
+    ))), pageCount > 1 && /* @__PURE__ */ React.createElement(Pager, { page, pageCount, onChange: goTo })));
   }
   function Pager(props) {
     const { page, pageCount, onChange: onChange2 } = props;
@@ -5920,8 +6192,8 @@ ${components_default}`;
       "\u8DF3\u8F6C"
     );
   }
-  function DeletedRow({ entry }) {
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? renderContent(entry.content) : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
+  function DeletedRow({ entry, highlight }) {
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? renderContent(entry.content, highlight) : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
       (a, i) => (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? /* @__PURE__ */ React.createElement(
         "img",
         {
@@ -5934,8 +6206,8 @@ ${components_default}`;
       ) : /* @__PURE__ */ React.createElement("a", { key: i, href: a.url, target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", a.filename ?? "\u9644\u4EF6")
     )), !entry.attachmentsRich?.length && entry.attachments.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__meta" }, "\u9644\u4EF6 ", entry.attachments.length, " \u4E2A"));
   }
-  function EditedRow({ entry }) {
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version2, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version2.content ? renderContent(version2.content) : "\uFF08\u7A7A\uFF09")))));
+  function EditedRow({ entry, highlight }) {
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version2, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version2.content ? renderContent(version2.content, highlight) : "\uFF08\u7A7A\uFF09")))));
   }
   function resolveLocation(channelId, guildId) {
     let channelName;
@@ -5964,24 +6236,6 @@ ${components_default}`;
   function Location({ channelId, guildId }) {
     const loc = resolveLocation(channelId, guildId);
     return /* @__PURE__ */ React.createElement("span", { className: "hc-msg__where" }, loc.guild && /* @__PURE__ */ React.createElement("span", { className: "hc-msg__guild" }, loc.guild), loc.guild && /* @__PURE__ */ React.createElement("span", { className: "hc-msg__sep" }, "\u203A"), /* @__PURE__ */ React.createElement("span", null, loc.channel));
-  }
-  function entryMatches(entry, needle) {
-    try {
-      if (entry.author?.name && entry.author.name.toLowerCase().includes(needle)) return true;
-      const loc = resolveLocation(entry.channelId, entry.guildId);
-      if (loc.guild && loc.guild.toLowerCase().includes(needle)) return true;
-      if (loc.channel && loc.channel.toLowerCase().includes(needle)) return true;
-      if ("content" in entry && typeof entry.content === "string") {
-        if (entry.content.toLowerCase().includes(needle)) return true;
-      }
-      if ("history" in entry && Array.isArray(entry.history)) {
-        for (const v of entry.history) {
-          if (v?.content && v.content.toLowerCase().includes(needle)) return true;
-        }
-      }
-    } catch {
-    }
-    return false;
   }
   function formatTime2(time) {
     const date = new Date(time);
@@ -8271,7 +8525,7 @@ ${components_default}`;
   function wordBoundary(str, offset) {
     return !str[offset] || /\s/.test(str[offset]) ? "" : " ";
   }
-  function escapeRegExp(s) {
+  function escapeRegExp2(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
   function findMessageArg(args) {
@@ -8314,7 +8568,7 @@ ${components_default}`;
         if (canUseEmote(emoji, channelId, guildId)) continue;
         const token = `<${emoji.animated ? "a" : ""}:${emoji.originalName || emoji.name}:${emoji.id}>`;
         const url = emojiUrl(emoji);
-        const re = new RegExp(escapeRegExp(token), "g");
+        const re = new RegExp(escapeRegExp2(token), "g");
         message.content = String(message.content ?? "").replace(
           re,
           (match, offset, str) => {
@@ -12423,8 +12677,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.6.15" : "dev",
-      build: true ? "2026-08-31 21:15:56" : "dev",
+      version: true ? "0.6.16" : "dev",
+      build: true ? "2026-08-31 21:42:06" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12455,8 +12709,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.15" : "dev",
-        build: true ? "2026-08-31 21:15:56" : "dev",
+        version: true ? "0.6.16" : "dev",
+        build: true ? "2026-08-31 21:42:06" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

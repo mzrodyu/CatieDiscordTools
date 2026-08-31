@@ -2378,3 +2378,89 @@
   word-break: break-all;
   white-space: pre-wrap;
 }
+
+
+/* --- Message-log search: filters + hit highlighting ---------------------- */
+.hc-mlog-search__filters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--hc-label-tertiary);
+  cursor: pointer;
+  transition: color var(--hc-duration-fast) var(--hc-ease),
+    background var(--hc-duration-fast) var(--hc-ease);
+}
+.hc-mlog-search__filters:hover {
+  color: var(--hc-label-secondary);
+  background: var(--hc-fill-secondary);
+}
+.hc-mlog-search__filters[data-active="true"] {
+  color: var(--hc-accent);
+}
+
+.hc-mlog-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--hc-space-3);
+  align-items: end;
+  margin: var(--hc-space-3) 0;
+  padding: var(--hc-space-4);
+  border-radius: var(--hc-radius-lg);
+  background: var(--hc-bg-secondary);
+}
+.hc-mlog-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-space-1);
+  min-width: 0;
+}
+.hc-mlog-filters__field > span {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}
+.hc-mlog-filters__field input,
+.hc-mlog-filters__field select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--hc-separator);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-bg-primary);
+  color: var(--hc-label-primary);
+  font-family: var(--hc-font);
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-mlog-filters__field input:focus,
+.hc-mlog-filters__field select:focus {
+  outline: none;
+  border-color: var(--hc-accent);
+}
+.hc-mlog-filters__actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+.hc-mlog-filters__error {
+  margin: var(--hc-space-2) 0;
+  color: var(--hc-orange);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}
+
+/* A search hit inside a rendered message body. Tinted rather than the browser
+ * default yellow, which fights every dark theme. */
+.hc-hit {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
+  color: inherit;
+}
