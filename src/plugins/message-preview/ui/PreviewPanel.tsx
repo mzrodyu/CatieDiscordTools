@@ -15,6 +15,8 @@ import { UserStore } from "../../../core/common/discord";
 import { avatarCdnUrl } from "../../../core/common/cdn";
 import { runtime } from "../../../core/runtime";
 import { renderMessageContent } from "../render";
+import { markupClass } from "../classes";
+import { editingMessageId } from "../draft";
 import { settings } from "../settings";
 
 interface Props {
@@ -70,6 +72,12 @@ export function PreviewPanel({ content, channelId }: Props): React.ReactElement 
   const avatar = user?.id ? avatarCdnUrl(String(user.id), user.avatar, 40) : undefined;
   const outgoing = settings.store.showRawOutgoing ? outgoingText(channelId, content) : content;
   const rewritten = outgoing !== content;
+  const editing = editingMessageId(channelId) !== undefined;
+  // Discord scopes every markdown style under this container class — heading
+  // sizes, `-#` subtext, italics, spoiler blocks, blockquotes, code. Without it
+  // the parser's elements are structurally right but visually plain, which is
+  // what made 大字报 / 小字报 / 斜体 all look like ordinary text on one line.
+  const body = `hc-preview__body ${markupClass()}`.trim();
 
   return (
     <div className="hc-preview">
@@ -82,9 +90,9 @@ export function PreviewPanel({ content, channelId }: Props): React.ReactElement 
         <div className="hc-preview__main">
           <div className="hc-preview__head">
             <span className="hc-preview__name">{name}</span>
-            <span className="hc-preview__time">刚刚</span>
+            <span className="hc-preview__time">{editing ? "编辑后" : "刚刚"}</span>
           </div>
-          <div className="hc-preview__body">{renderMessageContent(content, channelId)}</div>
+          <div className={body}>{renderMessageContent(content, channelId)}</div>
         </div>
       </div>
 

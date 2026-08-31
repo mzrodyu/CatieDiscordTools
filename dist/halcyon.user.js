@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.11
+// @version      0.6.12
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -538,8 +538,8 @@ ${slices.join("\n  ...  \n")}`
 
   // src/core/common/react.ts
   function lazyProxy(resolve) {
-    let cached2;
-    const get = () => cached2 ??= resolve();
+    let cached3;
+    const get = () => cached3 ??= resolve();
     return new Proxy(function() {
     }, {
       get: (_t, key) => get()?.[key],
@@ -771,8 +771,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 20:33:22" : "dev";
-      const version2 = true ? "0.6.11" : "dev";
+      const build = true ? "2026-08-31 20:46:57" : "dev";
+      const version2 = true ? "0.6.12" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3337,9 +3337,9 @@ ${slices.join("\n  ...  \n")}`
   white-space: pre-wrap;
   word-break: break-word;
 }
-/* Custom emoji inside the rendered body, whether Discord's parser produced it
- * or message-logger's fallback did. */
-.hc-preview__body img,
+/* Custom emoji from the fallback renderer only. When Discord's own parser is
+ * used, its markup container class styles the emoji it produced \u2014 overriding
+ * those here would fight the very styling we borrow it for. */
 .hc-preview__body .hc-emoji {
   vertical-align: -0.3em;
   width: 1.375em;
@@ -3505,19 +3505,19 @@ ${components_default}`;
   }
 
   // src/ui/components/Toggle.tsx
-  function Toggle({ checked, onChange, disabled, ...rest }) {
+  function Toggle({ checked: checked2, onChange, disabled, ...rest }) {
     return /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
         role: "switch",
-        "aria-checked": checked,
+        "aria-checked": checked2,
         "aria-label": rest["aria-label"],
         className: "hc-toggle",
-        "data-on": checked,
+        "data-on": checked2,
         disabled,
         onClick: () => {
-          if (!disabled) onChange(!checked);
+          if (!disabled) onChange(!checked2);
         }
       },
       /* @__PURE__ */ React.createElement("span", { className: "hc-toggle__knob" })
@@ -4191,7 +4191,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.11" : "dev";
+    return true ? "0.6.12" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4269,7 +4269,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.11" : "dev";
+    const version2 = true ? "0.6.12" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -8306,8 +8306,8 @@ ${components_default}`;
       const rewritten = before.replace(
         EMOJI_TOKEN_RE,
         (tokenStr, animatedFlag, _name, emojiId, offset, str) => {
-          const cached2 = EmojiStore2.getCustomEmojiById?.(emojiId);
-          if (cached2 && canUseEmote(cached2, channelId, guildId)) return tokenStr;
+          const cached3 = EmojiStore2.getCustomEmojiById?.(emojiId);
+          if (cached3 && canUseEmote(cached3, channelId, guildId)) return tokenStr;
           changed = true;
           const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
           return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
@@ -8349,8 +8349,8 @@ ${components_default}`;
       message.content = message.content.replace(
         EMOJI_TOKEN_RE,
         (tokenStr, animatedFlag, _name, emojiId, offset, str) => {
-          const cached2 = EmojiStore2.getCustomEmojiById?.(emojiId);
-          if (cached2 && canUseEmote(cached2, channelId, guildId)) return tokenStr;
+          const cached3 = EmojiStore2.getCustomEmojiById?.(emojiId);
+          if (cached3 && canUseEmote(cached3, channelId, guildId)) return tokenStr;
           const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
           return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
         }
@@ -8829,6 +8829,111 @@ ${components_default}`;
     return renderContent(content);
   }
 
+  // src/plugins/message-preview/classes.ts
+  var log22 = logger("message-preview");
+  var checked = false;
+  var cached2 = "";
+  function looksLikeMarkupClasses(m) {
+    if (typeof m !== "object" || m === null) return false;
+    if (typeof m.__halcyon_probe__ !== "undefined") return false;
+    let markup = false;
+    let inlineFormat = false;
+    for (const value of Object.values(m)) {
+      if (typeof value !== "string") continue;
+      if (/^markup[-_]/.test(value)) markup = true;
+      else if (/^inlineFormat[-_]/.test(value)) inlineFormat = true;
+      if (markup && inlineFormat) return true;
+    }
+    return false;
+  }
+  function pickMarkupClass(m) {
+    for (const value of Object.values(m ?? {})) {
+      if (typeof value === "string" && /^markup[-_]/.test(value)) return value;
+    }
+    return "";
+  }
+  function markupClass() {
+    if (checked) return cached2;
+    checked = true;
+    try {
+      const mod = find(looksLikeMarkupClasses);
+      if (mod) cached2 = pickMarkupClass(mod);
+    } catch {
+      cached2 = "";
+    }
+    if (!cached2) {
+      log22.debug("\u672A\u627E\u5230 Discord \u7684 markup \u5BB9\u5668\u7C7B\uFF0C\u9884\u89C8\u5C06\u663E\u793A\u4E3A\u65E0\u6837\u5F0F\u6587\u672C\uFF08\u7ED3\u6784\u6B63\u786E\u3001\u5B57\u53F7/\u659C\u4F53\u7B49\u4E0D\u751F\u6548\uFF09");
+    }
+    return cached2;
+  }
+
+  // src/plugins/message-preview/draft.ts
+  var DraftStore = lazy((m) => m?.getName?.() === "DraftStore");
+  var EditMessageStore = lazy((m) => m?.getName?.() === "EditMessageStore");
+  var DRAFT_CHANNEL_MESSAGE = 0;
+  function currentChannelId() {
+    try {
+      const id = SelectedChannelStore.getChannelId?.();
+      return typeof id === "string" && id.length ? id : void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  function editingMessageId(channelId) {
+    if (!channelId) return void 0;
+    try {
+      const id = EditMessageStore.getEditingMessageId?.(channelId);
+      return typeof id === "string" && id.length ? id : void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  function readDraft(channelId) {
+    if (channelId) {
+      try {
+        if (EditMessageStore.isEditingAny?.(channelId)) {
+          const editing = EditMessageStore.getEditingTextValue?.(channelId);
+          if (typeof editing === "string") return editing;
+        }
+      } catch {
+      }
+      try {
+        const draft = DraftStore.getDraft?.(channelId, DRAFT_CHANNEL_MESSAGE);
+        if (typeof draft === "string") return draft;
+      } catch {
+      }
+    }
+    try {
+      return findEditor()?.textContent ?? "";
+    } catch {
+      return "";
+    }
+  }
+  function subscribeToDraft(onChange) {
+    const detach2 = [];
+    for (const candidate of [DraftStore, EditMessageStore]) {
+      try {
+        const store = candidate;
+        if (typeof store?.addChangeListener === "function") {
+          store.addChangeListener(onChange);
+          detach2.push(() => {
+            try {
+              store.removeChangeListener?.(onChange);
+            } catch {
+            }
+          });
+        }
+      } catch {
+      }
+    }
+    return {
+      attached: detach2.length > 0,
+      off: () => {
+        for (const off of detach2) off();
+      }
+    };
+  }
+
   // src/plugins/message-preview/ui/PreviewPanel.tsx
   function displayName2(user) {
     return typeof user?.globalName === "string" && user.globalName || typeof user?.global_name === "string" && user.global_name || typeof user?.username === "string" && user.username || "\u4F60";
@@ -8860,52 +8965,9 @@ ${components_default}`;
     const avatar = user?.id ? avatarCdnUrl(String(user.id), user.avatar, 40) : void 0;
     const outgoing = settings6.store.showRawOutgoing ? outgoingText(channelId, content) : content;
     const rewritten = outgoing !== content;
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-preview" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__row" }, avatar ? /* @__PURE__ */ React.createElement("img", { className: "hc-preview__avatar", src: avatar, alt: "", width: 40, height: 40, draggable: false }) : /* @__PURE__ */ React.createElement("div", { className: "hc-preview__avatar hc-preview__avatar--blank" }), /* @__PURE__ */ React.createElement("div", { className: "hc-preview__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-preview__name" }, name), /* @__PURE__ */ React.createElement("span", { className: "hc-preview__time" }, "\u521A\u521A")), /* @__PURE__ */ React.createElement("div", { className: "hc-preview__body" }, renderMessageContent(content, channelId)))), rewritten ? /* @__PURE__ */ React.createElement("div", { className: "hc-preview__raw" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__raw-title" }, "\u5047 Nitro \u4F1A\u628A\u5B83\u6539\u5199\u6210\uFF1A"), /* @__PURE__ */ React.createElement("code", { className: "hc-preview__raw-text" }, outgoing)) : null);
-  }
-
-  // src/plugins/message-preview/draft.ts
-  var DraftStore = lazy((m) => m?.getName?.() === "DraftStore");
-  var DRAFT_CHANNEL_MESSAGE = 0;
-  function currentChannelId() {
-    try {
-      const id = SelectedChannelStore.getChannelId?.();
-      return typeof id === "string" && id.length ? id : void 0;
-    } catch {
-      return void 0;
-    }
-  }
-  function readDraft(channelId) {
-    if (channelId) {
-      try {
-        const draft = DraftStore.getDraft?.(channelId, DRAFT_CHANNEL_MESSAGE);
-        if (typeof draft === "string") return draft;
-      } catch {
-      }
-    }
-    try {
-      return findEditor()?.textContent ?? "";
-    } catch {
-      return "";
-    }
-  }
-  function subscribeToDraft(onChange) {
-    try {
-      const store = DraftStore;
-      if (typeof store?.addChangeListener === "function") {
-        store.addChangeListener(onChange);
-        return {
-          attached: true,
-          off: () => {
-            try {
-              store.removeChangeListener?.(onChange);
-            } catch {
-            }
-          }
-        };
-      }
-    } catch {
-    }
-    return { attached: false, off: () => void 0 };
+    const editing = editingMessageId(channelId) !== void 0;
+    const body = `hc-preview__body ${markupClass()}`.trim();
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-preview" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__row" }, avatar ? /* @__PURE__ */ React.createElement("img", { className: "hc-preview__avatar", src: avatar, alt: "", width: 40, height: 40, draggable: false }) : /* @__PURE__ */ React.createElement("div", { className: "hc-preview__avatar hc-preview__avatar--blank" }), /* @__PURE__ */ React.createElement("div", { className: "hc-preview__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-preview__name" }, name), /* @__PURE__ */ React.createElement("span", { className: "hc-preview__time" }, editing ? "\u7F16\u8F91\u540E" : "\u521A\u521A")), /* @__PURE__ */ React.createElement("div", { className: body }, renderMessageContent(content, channelId)))), rewritten ? /* @__PURE__ */ React.createElement("div", { className: "hc-preview__raw" }, /* @__PURE__ */ React.createElement("div", { className: "hc-preview__raw-title" }, "\u5047 Nitro \u4F1A\u628A\u5B83\u6539\u5199\u6210\uFF1A"), /* @__PURE__ */ React.createElement("code", { className: "hc-preview__raw-text" }, outgoing)) : null);
   }
 
   // src/plugins/message-preview/ui/PreviewHost.tsx
@@ -8948,7 +9010,7 @@ ${components_default}`;
   }
 
   // src/plugins/message-preview/button.tsx
-  var log22 = logger("message-preview");
+  var log23 = logger("message-preview");
   var REPOSITION_MS = 250;
   var GAP_PX = 8;
   var panelHost = null;
@@ -9002,7 +9064,7 @@ ${components_default}`;
       panelHost = el;
     } catch (err) {
       el.remove();
-      log22.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
+      log23.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
       return;
     }
     reposition();
@@ -9103,7 +9165,7 @@ ${components_default}`;
   });
 
   // src/plugins/console-cleaner/index.ts
-  var log23 = logger("console-cleaner");
+  var log24 = logger("console-cleaner");
   var settings7 = defineSettings({
     hideSelfXss: {
       group: "\u5185\u7F6E\u89C4\u5219",
@@ -9215,7 +9277,7 @@ ${components_default}`;
     start() {
       const con = globalThis.console;
       if (!con) {
-        log23.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        log24.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
         return;
       }
       suppressedCount = 0;
@@ -9225,11 +9287,11 @@ ${components_default}`;
           try {
             unpatchers.push(patcher.instead(con, method, hook));
           } catch (err) {
-            log23.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+            log24.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
           }
         }
       }
-      log23.info(
+      log24.info(
         `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
       );
     },
@@ -9241,12 +9303,12 @@ ${components_default}`;
         }
       }
       unpatchers = [];
-      log23.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+      log24.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
     }
   });
 
   // src/plugins/emote-cloner/clone.ts
-  var log24 = logger("emote-cloner");
+  var log25 = logger("emote-cloner");
   var MAX_EMOJI_SIZE_BYTES = 256 * 1024;
   var MAX_STICKER_SIZE_BYTES = 512 * 1024;
   var uploadEmojiAction = null;
@@ -9340,21 +9402,21 @@ ${components_default}`;
         await upload({ guildId, name, image });
         return;
       } catch (err) {
-        log24.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
+        log25.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
         throw new Error(restErrorMessage(err));
       }
     }
     try {
       await RestAPI.post({ url: `/guilds/${guildId}/emojis`, body: { image, name, roles: [] } });
     } catch (err) {
-      log24.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
+      log25.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
   }
   async function fetchStickerInfo(id) {
     try {
-      const cached2 = StickersStore.getStickerById?.(id);
-      if (cached2) return cached2;
+      const cached3 = StickersStore.getStickerById?.(id);
+      if (cached3) return cached3;
     } catch {
     }
     try {
@@ -9368,7 +9430,7 @@ ${components_default}`;
       }
       return body;
     } catch (err) {
-      log24.warn("could not fetch sticker info; using fallbacks", err);
+      log25.warn("could not fetch sticker info; using fallbacks", err);
       return null;
     }
   }
@@ -9397,10 +9459,10 @@ ${components_default}`;
       created = resPayload(res);
       if (created && !created.id && created.sticker?.id) created = created.sticker;
     } catch (err) {
-      log24.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
+      log25.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
-    log24.info("sticker uploaded", { id: created?.id, name: created?.name });
+    log25.info("sticker uploaded", { id: created?.id, name: created?.name });
     try {
       getDispatcher()?.dispatch({
         type: "GUILD_STICKERS_CREATE_SUCCESS",
@@ -9412,7 +9474,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/resolve.ts
-  var log25 = logger("emote-cloner");
+  var log26 = logger("emote-cloner");
   var SNOWFLAKE = /^\d{5,25}$/;
   var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
   function emojiName(raw) {
@@ -9679,9 +9741,9 @@ ${components_default}`;
     const record2 = recordFromFiber(target, found.id);
     const resolved = emojiName(record2?.name) ?? emojiNameFromMessages(target, found.id) ?? emojiNameFromStore(found.id) ?? emojiNameFromDom(elements) ?? emojiName(found.domName);
     if (!resolved) {
-      log25.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
+      log26.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
     } else {
-      log25.debug("resolved emoji", { id: found.id, name: resolved });
+      log26.debug("resolved emoji", { id: found.id, name: resolved });
     }
     return {
       kind: "emoji",
@@ -9692,7 +9754,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/picker.tsx
-  var log26 = logger("emote-cloner");
+  var log27 = logger("emote-cloner");
   function iconUrl(g2) {
     const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
     return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
@@ -9738,7 +9800,7 @@ ${components_default}`;
         host3
       );
     } catch (err) {
-      log26.error("could not open guild picker", err);
+      log27.error("could not open guild picker", err);
       closeGuildPicker();
     }
   }
@@ -9758,7 +9820,7 @@ ${components_default}`;
         setStatus({ state: "done", guild: g2.name });
         setTimeout(onClose, 1e3);
       }).catch((err) => {
-        log26.error("clone failed", err);
+        log27.error("clone failed", err);
         setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
       });
     };
@@ -9817,7 +9879,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/index.tsx
-  var log27 = logger("emote-cloner");
+  var log28 = logger("emote-cloner");
   var PERM2 = {
     CREATE_GUILD_EXPRESSIONS: 1n << 43n,
     MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
@@ -9857,7 +9919,7 @@ ${components_default}`;
     if (!hit) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) {
-      log27.warn("MenuItem component not learned yet; skipping clone item this open");
+      log28.warn("MenuItem component not learned yet; skipping clone item this open");
       return;
     }
     const label = hit.kind === "emoji" ? `\u590D\u5236\u8868\u60C5 :${hit.name}: \u5230\u670D\u52A1\u5668` : hit.name ? `\u590D\u5236\u8D34\u7EB8 ${hit.name} \u5230\u670D\u52A1\u5668` : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668";
@@ -9878,7 +9940,7 @@ ${components_default}`;
     category: "utility",
     start() {
       unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
-      log27.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+      log28.info("emote-cloner ready \u2014 right-click an emoji or sticker");
     },
     stop() {
       for (const un of unpatchers2) {
@@ -9892,12 +9954,12 @@ ${components_default}`;
   });
 
   // src/core/flux/index.ts
-  var log28 = logger("flux");
+  var log29 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log28.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log29.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -9909,7 +9971,7 @@ ${components_default}`;
         try {
           listener(action);
         } catch (err) {
-          log28.error(`listener for ${type} threw`, err);
+          log29.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -9918,7 +9980,7 @@ ${components_default}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log28.error(`could not subscribe to ${type}`, err);
+      log29.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -9929,7 +9991,7 @@ ${components_default}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log28.error(`could not unsubscribe from ${type}`, err);
+      log29.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -9960,13 +10022,13 @@ ${components_default}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log28.error("dispatch failed", action?.type, err);
+        log29.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log29 = logger("mark-all-read");
+  var log30 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -9980,7 +10042,7 @@ ${components_default}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log29.warn(`could not read channels for guild ${guildId}`, err);
+        log30.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -10006,16 +10068,16 @@ ${components_default}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log29.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log30.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log29.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log30.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log29.warn("could not describe getChannels shape", err);
+          log30.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -10035,14 +10097,14 @@ ${components_default}`;
           }
         }
       } catch (err) {
-        log29.warn(`could not read joined threads for guild ${guildId}`, err);
+        log30.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log29.info(
+    log30.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -10059,9 +10121,9 @@ ${components_default}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log29.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log30.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log29.info("nothing unread; skipping BULK_ACK");
+      log30.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -10069,12 +10131,12 @@ ${components_default}`;
       context: "APP",
       channels
     });
-    log29.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log30.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log30 = logger("mark-all-read");
+  var log31 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -10099,7 +10161,7 @@ ${components_default}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log30.error("mark all read failed", err);
+        log31.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -10108,7 +10170,7 @@ ${components_default}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log31 = logger("mark-all-read");
+  var log32 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -10119,7 +10181,7 @@ ${components_default}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log31.error("mark all read failed", err);
+      log32.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -10204,7 +10266,7 @@ ${components_default}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log31.info("mark-all-read ready");
+      log32.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -10212,7 +10274,7 @@ ${components_default}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log32 = logger("silent-typing");
+  var log33 = logger("silent-typing");
   var settings8 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
@@ -10274,7 +10336,7 @@ ${components_default}`;
         return void 0;
       }
     } catch (err) {
-      log32.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log33.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
@@ -10298,9 +10360,9 @@ ${components_default}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log32.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log33.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log32.warn(
+      log33.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -10333,7 +10395,7 @@ ${components_default}`;
       active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log32.warn(
+        log33.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -10343,17 +10405,17 @@ ${components_default}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log32.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log33.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log32.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log33.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log32.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings8.store.scope}\uFF09`);
+      log33.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings8.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -10363,7 +10425,7 @@ ${components_default}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log32.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log33.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -10503,10 +10565,10 @@ ${components_default}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log33 = logger("member-count");
+  var log34 = logger("member-count");
   function memo(resolve) {
-    let cached2;
-    return () => cached2 ??= resolve();
+    let cached3;
+    return () => cached3 ??= resolve();
   }
   var memberCountStore = memo(
     () => findStoreByName("GuildMemberCountStore") ?? findStoreWithMethods("getMemberCount")
@@ -10597,9 +10659,9 @@ ${components_default}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log33.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log34.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log33.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log34.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -10751,7 +10813,7 @@ ${components_default}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log34 = logger("member-count");
+  var log35 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -10817,7 +10879,7 @@ ${components_default}`;
     try {
       hit.element.insertBefore(host5, hit.element.firstChild);
     } catch (err) {
-      log34.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log35.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
@@ -10825,11 +10887,11 @@ ${components_default}`;
       mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log34.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log35.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
       host5.remove();
-      log34.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      log35.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
   function ensureMounted2() {
@@ -10850,7 +10912,7 @@ ${components_default}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log34.warn(
+      log35.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -10867,7 +10929,7 @@ ${components_default}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log34.warn(
+    log35.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -10891,7 +10953,7 @@ ${components_default}`;
         ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log34.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings9.store.placement}\uFF09`);
+      log35.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings9.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -10907,7 +10969,7 @@ ${components_default}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log34.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log35.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -11008,7 +11070,7 @@ ${components_default}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log35 = logger("who-reacted");
+  var log36 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -11091,7 +11153,7 @@ ${components_default}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log35.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log36.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight.set(key, guarded);
@@ -11121,8 +11183,8 @@ ${components_default}`;
   function ReactorCard({ target }) {
     const s = settings10.store;
     const [state, setState] = useState(() => {
-      const cached2 = cachedReactors(target);
-      return cached2 ? { kind: "ready", reactors: cached2 } : { kind: "loading" };
+      const cached3 = cachedReactors(target);
+      return cached3 ? { kind: "ready", reactors: cached3 } : { kind: "loading" };
     });
     useEffect(() => {
       let live = true;
@@ -11153,7 +11215,7 @@ ${components_default}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log36 = logger("who-reacted");
+  var log37 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
@@ -11222,7 +11284,7 @@ ${components_default}`;
       }
       fillHost(host5, reactors, target.count);
     } catch (err) {
-      log36.debug("inline avatars: fetch failed", err);
+      log37.debug("inline avatars: fetch failed", err);
       host5.remove();
       DECORATED.delete(pill);
     }
@@ -11261,7 +11323,7 @@ ${components_default}`;
       } catch {
       }
     }
-    log36.info("inline reactor avatars: enabled");
+    log37.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -11282,7 +11344,7 @@ ${components_default}`;
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log37 = logger("who-reacted");
+  var log38 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
@@ -11365,7 +11427,7 @@ ${components_default}`;
     try {
       unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
     } catch (err) {
-      log37.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log38.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide();
       return;
     }
@@ -11493,7 +11555,7 @@ ${components_default}`;
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log37.info(
+      log38.info(
         `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings10.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings10.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
@@ -11511,7 +11573,7 @@ ${components_default}`;
       altDown = false;
       hide();
       clearCache();
-      log37.info("\u5DF2\u505C\u7528");
+      log38.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -11802,7 +11864,7 @@ ${components_default}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log38 = logger("platform-indicators");
+  var log39 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -11870,7 +11932,7 @@ ${components_default}`;
       return true;
     } catch (err) {
       host5.remove();
-      log38.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      log39.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -11926,7 +11988,7 @@ ${components_default}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log38.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log39.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
@@ -11940,7 +12002,7 @@ ${components_default}`;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log38.warn(
+      log39.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -11981,7 +12043,7 @@ ${components_default}`;
         settings11.subscribe("ignoreBots", () => bumpPresence()),
         settings11.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log38.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log39.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -11999,7 +12061,7 @@ ${components_default}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log38.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log39.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12062,7 +12124,7 @@ ${components_default}`;
   ];
 
   // src/core/probe.ts
-  var log39 = logger("probe");
+  var log40 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -12085,8 +12147,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.11" : "dev",
-      build: true ? "2026-08-31 20:33:22" : "dev",
+      version: true ? "0.6.12" : "dev",
+      build: true ? "2026-08-31 20:46:57" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12099,14 +12161,14 @@ ${components_default}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log39.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log40.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log40 = logger("userscript");
+  var log41 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -12117,8 +12179,8 @@ ${components_default}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.11" : "dev",
-        build: true ? "2026-08-31 20:33:22" : "dev",
+        version: true ? "0.6.12" : "dev",
+        build: true ? "2026-08-31 20:46:57" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -12129,6 +12191,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log40.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log40.error("userscript boot failed", err));
+    log41.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log41.error("userscript boot failed", err));
 })();

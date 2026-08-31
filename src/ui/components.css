@@ -2349,9 +2349,9 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
-/* Custom emoji inside the rendered body, whether Discord's parser produced it
- * or message-logger's fallback did. */
-.hc-preview__body img,
+/* Custom emoji from the fallback renderer only. When Discord's own parser is
+ * used, its markup container class styles the emoji it produced — overriding
+ * those here would fight the very styling we borrow it for. */
 .hc-preview__body .hc-emoji {
   vertical-align: -0.3em;
   width: 1.375em;
