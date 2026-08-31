@@ -36,8 +36,17 @@
 // static emoji is harmless — the CDN returns byte-identical output — so callers
 // that only *suspect* animation can pass `true` safely.
 
-/** Sizes the CDN accepts for the `size` query param. */
-const ALLOWED_SIZES = [16, 32, 48, 56, 64, 80, 96, 128, 160, 256, 300, 512, 600, 1024, 2048, 4096];
+/**
+ * Sizes the CDN accepts for the `size` query param, probed against the live CDN
+ * rather than assumed. It is NOT "any integer" and NOT "powers of two": 16 is a
+ * hard floor (15 and below answer 400), 20 / 22 / 44 / 300 / 600 are fine, and
+ * 17, 18, 19, 33 and 72 are rejected. So an arbitrary number has to be snapped
+ * onto this list — clamping alone would happily ship a 400.
+ */
+const ALLOWED_SIZES = [
+  16, 20, 22, 24, 28, 32, 40, 44, 48, 56, 60, 64, 80, 96, 100, 128, 160, 240, 256, 300, 320, 480,
+  512, 600, 640, 1024, 2048, 4096
+];
 
 /** Snap an arbitrary size to the nearest size the CDN will honour. */
 function normalizeSize(size: number, fallback: number): number {

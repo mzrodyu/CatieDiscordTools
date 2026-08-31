@@ -45,8 +45,12 @@ const settings = defineSettings({
     type: "select",
     default: "48",
     label: "表情图片尺寸",
-    description: "内联表情图片的边长（像素）。越大越清晰、占用越大。",
+    description:
+      "内联表情图片的边长（像素）。越大越清晰、占用越大。16 是 CDN 的下限，再小它只会回 400，所以没有更小的档。",
     options: [
+      { value: "16", label: "16（最小）" },
+      { value: "20", label: "20" },
+      { value: "24", label: "24" },
       { value: "32", label: "32" },
       { value: "48", label: "48（默认）" },
       { value: "64", label: "64" },
@@ -67,8 +71,10 @@ const settings = defineSettings({
     type: "select",
     default: "160",
     label: "贴纸图片尺寸",
-    description: "内联贴纸图片的边长（像素）。",
+    description: "内联贴纸图片的边长（像素）。同样以 16 为下限。",
     options: [
+      { value: "16", label: "16（最小）" },
+      { value: "24", label: "24" },
       { value: "32", label: "32" },
       { value: "64", label: "64" },
       { value: "128", label: "128" },

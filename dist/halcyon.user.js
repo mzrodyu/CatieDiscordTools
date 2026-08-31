@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.6
+// @version      0.6.7
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -771,8 +771,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 14:44:06" : "dev";
-      const version2 = true ? "0.6.6" : "dev";
+      const build = true ? "2026-08-31 15:28:44" : "dev";
+      const version2 = true ? "0.6.7" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4066,7 +4066,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.6" : "dev";
+    return true ? "0.6.7" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4144,7 +4144,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.6" : "dev";
+    const version2 = true ? "0.6.7" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5446,7 +5446,36 @@ ${components_default}`;
   var messageLog = new MessageLogStore();
 
   // src/core/common/cdn.ts
-  var ALLOWED_SIZES = [16, 32, 48, 56, 64, 80, 96, 128, 160, 256, 300, 512, 600, 1024, 2048, 4096];
+  var ALLOWED_SIZES = [
+    16,
+    20,
+    22,
+    24,
+    28,
+    32,
+    40,
+    44,
+    48,
+    56,
+    60,
+    64,
+    80,
+    96,
+    100,
+    128,
+    160,
+    240,
+    256,
+    300,
+    320,
+    480,
+    512,
+    600,
+    640,
+    1024,
+    2048,
+    4096
+  ];
   function normalizeSize(size, fallback) {
     const n = Number(size);
     if (!Number.isFinite(n) || n <= 0) return fallback;
@@ -7967,8 +7996,11 @@ ${components_default}`;
       type: "select",
       default: "48",
       label: "\u8868\u60C5\u56FE\u7247\u5C3A\u5BF8",
-      description: "\u5185\u8054\u8868\u60C5\u56FE\u7247\u7684\u8FB9\u957F\uFF08\u50CF\u7D20\uFF09\u3002\u8D8A\u5927\u8D8A\u6E05\u6670\u3001\u5360\u7528\u8D8A\u5927\u3002",
+      description: "\u5185\u8054\u8868\u60C5\u56FE\u7247\u7684\u8FB9\u957F\uFF08\u50CF\u7D20\uFF09\u3002\u8D8A\u5927\u8D8A\u6E05\u6670\u3001\u5360\u7528\u8D8A\u5927\u300216 \u662F CDN \u7684\u4E0B\u9650\uFF0C\u518D\u5C0F\u5B83\u53EA\u4F1A\u56DE 400\uFF0C\u6240\u4EE5\u6CA1\u6709\u66F4\u5C0F\u7684\u6863\u3002",
       options: [
+        { value: "16", label: "16\uFF08\u6700\u5C0F\uFF09" },
+        { value: "20", label: "20" },
+        { value: "24", label: "24" },
         { value: "32", label: "32" },
         { value: "48", label: "48\uFF08\u9ED8\u8BA4\uFF09" },
         { value: "64", label: "64" },
@@ -7989,8 +8021,10 @@ ${components_default}`;
       type: "select",
       default: "160",
       label: "\u8D34\u7EB8\u56FE\u7247\u5C3A\u5BF8",
-      description: "\u5185\u8054\u8D34\u7EB8\u56FE\u7247\u7684\u8FB9\u957F\uFF08\u50CF\u7D20\uFF09\u3002",
+      description: "\u5185\u8054\u8D34\u7EB8\u56FE\u7247\u7684\u8FB9\u957F\uFF08\u50CF\u7D20\uFF09\u3002\u540C\u6837\u4EE5 16 \u4E3A\u4E0B\u9650\u3002",
       options: [
+        { value: "16", label: "16\uFF08\u6700\u5C0F\uFF09" },
+        { value: "24", label: "24" },
         { value: "32", label: "32" },
         { value: "64", label: "64" },
         { value: "128", label: "128" },
@@ -11502,8 +11536,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.6" : "dev",
-      build: true ? "2026-08-31 14:44:06" : "dev",
+      version: true ? "0.6.7" : "dev",
+      build: true ? "2026-08-31 15:28:44" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -11534,8 +11568,8 @@ ${components_default}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.6" : "dev",
-        build: true ? "2026-08-31 14:44:06" : "dev",
+        version: true ? "0.6.7" : "dev",
+        build: true ? "2026-08-31 15:28:44" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
