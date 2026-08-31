@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.8
+// @version      0.6.9
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -771,8 +771,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 19:52:37" : "dev";
-      const version2 = true ? "0.6.8" : "dev";
+      const build = true ? "2026-08-31 20:17:30" : "dev";
+      const version2 = true ? "0.6.9" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3621,7 +3621,7 @@ ${components_default}`;
   // src/ui/components/Select.tsx
   function Select({ value, options, onChange, ...rest }) {
     const [open, setOpen] = useState(false);
-    const [active2, setActive] = useState(-1);
+    const [active3, setActive2] = useState(-1);
     const rootRef = useRef(null);
     const menuRef = useRef(null);
     const [menuPos, setMenuPos] = useState(null);
@@ -3662,7 +3662,7 @@ ${components_default}`;
           width: rect.width
         });
       }
-      setActive(Math.max(0, options.findIndex((o) => o.value === value)));
+      setActive2(Math.max(0, options.findIndex((o) => o.value === value)));
       setOpen(true);
     };
     const pick = (next) => {
@@ -3682,13 +3682,13 @@ ${components_default}`;
         setOpen(false);
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActive((i) => Math.min(options.length - 1, i + 1));
+        setActive2((i) => Math.min(options.length - 1, i + 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActive((i) => Math.max(0, i - 1));
+        setActive2((i) => Math.max(0, i - 1));
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        if (active2 >= 0 && active2 < options.length) pick(options[active2].value);
+        if (active3 >= 0 && active3 < options.length) pick(options[active3].value);
       } else if (e.key === "Tab") {
         setOpen(false);
       }
@@ -3738,9 +3738,9 @@ ${components_default}`;
             role: "option",
             "aria-selected": opt.value === value,
             className: "hc-select__option",
-            "data-active": index === active2,
+            "data-active": index === active3,
             "data-selected": opt.value === value,
-            onPointerEnter: () => setActive(index),
+            onPointerEnter: () => setActive2(index),
             onClick: () => pick(opt.value)
           },
           /* @__PURE__ */ React.createElement("span", { className: "hc-select__optlabel" }, opt.label),
@@ -4191,7 +4191,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.8" : "dev";
+    return true ? "0.6.9" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4269,7 +4269,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.8" : "dev";
+    const version2 = true ? "0.6.9" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -4324,7 +4324,7 @@ ${components_default}`;
   }) {
     const [tab, setTab] = useState(initial?.tab ?? "plugins");
     const [initialPluginId] = useState(initial?.pluginId);
-    const active2 = TABS.find((t) => t.id === tab) ?? TABS[0];
+    const active3 = TABS.find((t) => t.id === tab) ?? TABS[0];
     return /* @__PURE__ */ React.createElement("div", { className: "halcyon hc-panel" }, /* @__PURE__ */ React.createElement("nav", { className: "hc-panel__sidebar" }, /* @__PURE__ */ React.createElement("div", { className: "hc-panel__brand" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 24 }), /* @__PURE__ */ React.createElement("span", { className: "hc-panel__brand-name" }, "Halcyon")), TABS.map((t) => /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -4336,7 +4336,7 @@ ${components_default}`;
       },
       /* @__PURE__ */ React.createElement(t.Icon, { size: 18 }),
       t.label
-    ))), /* @__PURE__ */ React.createElement("section", { className: "hc-panel__content" }, /* @__PURE__ */ React.createElement("header", { className: "hc-panel__header" }, /* @__PURE__ */ React.createElement("span", { className: "hc-title2" }, active2.title), onClose && /* @__PURE__ */ React.createElement("button", { type: "button", className: "hc-iconbtn", onClick: onClose, "aria-label": "\u5173\u95ED" }, /* @__PURE__ */ React.createElement(XmarkIcon, { size: 20 }))), /* @__PURE__ */ React.createElement("div", { className: "hc-panel__scroll" }, renderView(tab, tab === "plugins" ? initialPluginId : void 0))));
+    ))), /* @__PURE__ */ React.createElement("section", { className: "hc-panel__content" }, /* @__PURE__ */ React.createElement("header", { className: "hc-panel__header" }, /* @__PURE__ */ React.createElement("span", { className: "hc-title2" }, active3.title), onClose && /* @__PURE__ */ React.createElement("button", { type: "button", className: "hc-iconbtn", onClick: onClose, "aria-label": "\u5173\u95ED" }, /* @__PURE__ */ React.createElement(XmarkIcon, { size: 20 }))), /* @__PURE__ */ React.createElement("div", { className: "hc-panel__scroll" }, renderView(tab, tab === "plugins" ? initialPluginId : void 0))));
   }
   function EmbeddedView({ tab }) {
     return /* @__PURE__ */ React.createElement("div", { className: "halcyon hc-embed" }, renderView(tab));
@@ -8723,109 +8723,24 @@ ${components_default}`;
     }
   });
 
-  // src/core/dom-probe.ts
-  function describe(el) {
-    let box = "n/a";
-    try {
-      const r = el.getBoundingClientRect();
-      box = `${Math.round(r.width)}x${Math.round(r.height)}@${Math.round(r.left)},${Math.round(r.top)}`;
-    } catch {
-    }
-    return {
-      tag: el.tagName.toLowerCase(),
-      classes: typeof el.className === "string" ? el.className : String(el.className ?? ""),
-      childCount: el.children.length,
-      box
-    };
-  }
-  function probeSelector(selector, limit = 3) {
-    try {
-      const found = document.querySelectorAll(selector);
-      const samples = [];
-      for (let i = 0; i < found.length && i < limit; i++) samples.push(describe(found[i]));
-      return { selector, count: found.length, samples };
-    } catch {
-      return { selector, count: -1, samples: [] };
-    }
-  }
-  function probeSelectors(selectors, limit = 2) {
-    return selectors.map((s) => probeSelector(s, limit));
-  }
-  function classNamesContaining(needle, limit = 24) {
-    const out = /* @__PURE__ */ new Set();
-    try {
-      const nodes = document.querySelectorAll(`[class*="${needle}"]`);
-      for (let i = 0; i < nodes.length && out.size < limit; i++) {
-        const raw = nodes[i].className;
-        if (typeof raw !== "string") continue;
-        for (const name of raw.split(/\s+/)) {
-          if (name.includes(needle)) out.add(name);
-          if (out.size >= limit) break;
-        }
-      }
-    } catch {
-    }
-    return [...out];
-  }
-
   // src/plugins/message-preview/anchor.ts
-  var log21 = logger("message-preview");
   var EDITOR_SELECTOR = '[role="textbox"][contenteditable="true"]';
-  var warned = false;
   function findEditor() {
     try {
-      const active2 = document.activeElement;
-      if (active2 instanceof HTMLElement && active2.matches(EDITOR_SELECTOR)) return active2;
+      const active3 = document.activeElement;
+      if (active3 instanceof HTMLElement && active3.matches(EDITOR_SELECTOR)) return active3;
       const all = document.querySelectorAll(EDITOR_SELECTOR);
       for (let i = all.length - 1; i >= 0; i--) {
-        const el = all[i];
-        if (el.offsetParent !== null) return el;
+        if (all[i].offsetParent !== null) return all[i];
       }
       return all.length ? all[all.length - 1] : null;
     } catch {
       return null;
     }
   }
-  function findButtonRow() {
-    const editor = findEditor();
-    if (!editor) return null;
-    const form = editor.closest("form") ?? editor.parentElement?.parentElement ?? null;
-    if (!form) return null;
-    for (const selector of ['[class*="buttons_"]', '[class*="buttons"]']) {
-      try {
-        const found = Array.from(form.querySelectorAll(selector));
-        let best = null;
-        let bestDepth = -1;
-        for (const el of found) {
-          let depth = 0;
-          for (let p = el.parentElement; p && p !== form; p = p.parentElement) depth++;
-          if (depth > bestDepth) {
-            best = el;
-            bestDepth = depth;
-          }
-        }
-        if (best) return best;
-      } catch {
-      }
-    }
-    return editor.parentElement?.parentElement ?? null;
-  }
-  function reportAnchorMiss() {
-    if (warned) return;
-    warned = true;
-    log21.warn(
-      "\u627E\u4E0D\u5230\u8F93\u5165\u6846\u7684\u6309\u94AE\u884C\uFF0C\u9884\u89C8\u6309\u94AE\u6CA1\u6302\u4E0A\u3002\u5F53\u524D DOM \u60C5\u51B5\uFF1A",
-      probeSelector(EDITOR_SELECTOR),
-      "\u542B buttons \u7684 class \u540D\uFF1A",
-      classNamesContaining("buttons")
-    );
-  }
-  function resetAnchorWarning() {
-    warned = false;
-  }
 
   // src/plugins/message-preview/render.tsx
-  var log22 = logger("message-preview");
+  var log21 = logger("message-preview");
   var parserChecked = false;
   var parser;
   var fellBack = false;
@@ -8848,12 +8763,12 @@ ${components_default}`;
       } catch (err) {
         if (!fellBack) {
           fellBack = true;
-          log22.debug("Discord \u89E3\u6790\u5668\u629B\u9519\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3", err);
+          log21.debug("Discord \u89E3\u6790\u5668\u629B\u9519\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3", err);
         }
       }
     } else if (!fellBack) {
       fellBack = true;
-      log22.debug("\u672A\u627E\u5230 Discord \u7684 markdown \u89E3\u6790\u5668\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3\uFF08\u8868\u60C5\u53EF\u89C1\uFF0Cmarkdown / @\u63D0\u53CA \u4E0D\u89E3\u6790\uFF09");
+      log21.debug("\u672A\u627E\u5230 Discord \u7684 markdown \u89E3\u6790\u5668\uFF0C\u964D\u7EA7\u4E3A\u5185\u7F6E\u6E32\u67D3\uFF08\u8868\u60C5\u53EF\u89C1\uFF0Cmarkdown / @\u63D0\u53CA \u4E0D\u89E3\u6790\uFF09");
     }
     return renderContent(content);
   }
@@ -8977,16 +8892,19 @@ ${components_default}`;
   }
 
   // src/plugins/message-preview/button.tsx
-  var log23 = logger("message-preview");
-  var ENSURE_MS2 = 1e3;
+  var log22 = logger("message-preview");
   var REPOSITION_MS = 250;
   var GAP_PX = 8;
-  var buttonHost = null;
-  var unmountButton = null;
-  var ensureTimer;
   var panelHost = null;
   var unmountPanel = null;
   var repositionTimer;
+  var active = false;
+  function setActive(next) {
+    active = next;
+  }
+  function isActive() {
+    return active;
+  }
   function isOpen() {
     return panelHost !== null;
   }
@@ -9011,7 +8929,7 @@ ${components_default}`;
   }
   function onKeyDown2(event) {
     if (event.key === "Escape" && isOpen()) {
-      closePanel();
+      closePreviewPanel();
       event.stopPropagation();
       event.preventDefault();
     }
@@ -9024,11 +8942,11 @@ ${components_default}`;
     el.setAttribute("data-hc-plugin", "message-preview");
     document.body.appendChild(el);
     try {
-      unmountPanel = mountDetached(React.createElement(PreviewHost, { onEmptied: closePanel }), el);
+      unmountPanel = mountDetached(React.createElement(PreviewHost, { onEmptied: closePreviewPanel }), el);
       panelHost = el;
     } catch (err) {
       el.remove();
-      log23.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
+      log22.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
       return;
     }
     reposition();
@@ -9036,7 +8954,7 @@ ${components_default}`;
     window.addEventListener("resize", reposition);
     document.addEventListener("keydown", onKeyDown2, true);
   }
-  function closePanel() {
+  function closePreviewPanel() {
     if (repositionTimer) {
       clearInterval(repositionTimer);
       repositionTimer = void 0;
@@ -9056,7 +8974,7 @@ ${components_default}`;
     }
   }
   function togglePanel() {
-    if (isOpen()) closePanel();
+    if (isOpen()) closePreviewPanel();
     else openPanel();
   }
   function PreviewButton() {
@@ -9076,77 +8994,54 @@ ${components_default}`;
       /* @__PURE__ */ React.createElement(EyeIcon, { size: 24 })
     );
   }
-  function teardownButton() {
-    if (unmountButton) {
-      try {
-        unmountButton();
-      } catch {
-      }
-      unmountButton = null;
-    }
-    if (buttonHost) {
-      buttonHost.remove();
-      buttonHost = null;
-    }
-  }
-  function ensureMounted2() {
-    if (buttonHost && document.contains(buttonHost)) return;
-    if (buttonHost) teardownButton();
-    const row = findButtonRow();
-    if (!row) {
-      reportAnchorMiss();
-      return;
-    }
-    const el = document.createElement("div");
-    el.className = "hc-preview-btn-host";
-    el.setAttribute("data-hc-plugin", "message-preview");
-    try {
-      row.insertBefore(el, row.firstChild);
-    } catch {
-      return;
-    }
-    try {
-      unmountButton = mountDetached(React.createElement(PreviewButton), el);
-      buttonHost = el;
-    } catch (err) {
-      el.remove();
-      log23.debug("\u9884\u89C8\u6309\u94AE\u6302\u8F7D\u5931\u8D25", err);
-    }
-  }
-  function startPreviewButton() {
-    injectStyles();
-    stopPreviewButton();
-    resetAnchorWarning();
-    ensureMounted2();
-    ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
-  }
-  function stopPreviewButton() {
-    if (ensureTimer) {
-      clearInterval(ensureTimer);
-      ensureTimer = void 0;
-    }
-    closePanel();
-    teardownButton();
-  }
 
   // src/plugins/message-preview/index.tsx
   var message_preview_default = definePlugin({
     id: "message-preview",
     name: "\u53D1\u9001\u524D\u9884\u89C8",
-    description: "\u5728\u8F93\u5165\u6846\u52A0\u4E00\u4E2A\u6309\u94AE\uFF0C\u70B9\u4E00\u4E0B\u5C31\u80FD\u770B\u5230\u8FD9\u6761\u6D88\u606F\u53D1\u51FA\u53BB\u4E4B\u540E\u957F\u4EC0\u4E48\u6837\uFF1Amarkdown\u3001\u8868\u60C5\u3001@\u63D0\u53CA\u90FD\u6309 Discord \u81EA\u5DF1\u7684\u6E32\u67D3\u663E\u793A\uFF1B\u5982\u679C\u5047 Nitro \u4F1A\u6539\u5199\u5185\u5BB9\uFF08\u8868\u60C5\u53D8\u6210\u56FE\u7247\u94FE\u63A5\uFF09\uFF0C\u8FD8\u4F1A\u4E00\u5E76\u663E\u793A\u771F\u6B63\u53D1\u51FA\u53BB\u7684\u539F\u6587\u3002",
+    description: "\u5728\u8F93\u5165\u6846\u52A0\u4E00\u4E2A\u6309\u94AE\uFF0C\u70B9\u4E00\u4E0B\u5C31\u80FD\u770B\u5230\u8FD9\u6761\u6D88\u606F\u53D1\u51FA\u53BB\u4E4B\u540E\u957F\u4EC0\u4E48\u6837\uFF1Amarkdown\u3001\u8868\u60C5\u3001@\u63D0\u53CA\u90FD\u6309 Discord \u81EA\u5DF1\u7684\u6E32\u67D3\u663E\u793A\uFF1B\u5982\u679C\u5047 Nitro \u4F1A\u6539\u5199\u5185\u5BB9\uFF08\u8868\u60C5\u53D8\u6210\u56FE\u7247\u94FE\u63A5\uFF09\uFF0C\u8FD8\u4F1A\u4E00\u5E76\u663E\u793A\u771F\u6B63\u53D1\u51FA\u53BB\u7684\u539F\u6587\u3002\u6309\u94AE\u662F\u6E90\u7801\u7EA7\u6CE8\u5165\uFF0C\u5F00\u542F\u540E\u9700\u8981\u5237\u65B0\u9875\u9762\u3002",
     authors: [{ name: "caitemm" }],
     category: "chat",
     settings: settings6,
+    patches: [
+      {
+        label: "composer button injection",
+        find: '"sticker")',
+        replacement: {
+          // Anchor on the `0===arr.length` guard, verified to sit directly before
+          // `children:arr` on this build — the lookahead ties the two together so
+          // a same-shaped guard elsewhere in the module can't be hit by mistake.
+          // Nothing is read from `arguments`: the enclosing function is an arrow,
+          // where `arguments` is not the component's props at all (Vencord can
+          // rely on it upstream; here it would silently be the wrong object).
+          match: /0===([\w$]+)\.length(?=.{0,25}?\(0,[\w$]+\.jsxs?\)\(.{0,75}?children:\1)/,
+          replace: "($self.injectButton($1),$&)"
+        }
+      }
+    ],
     start() {
-      startPreviewButton();
+      setActive(true);
     },
     stop() {
-      stopPreviewButton();
+      setActive(false);
+      closePreviewPanel();
+    },
+    /**
+     * Called from the patch with the composer's live button array, on every
+     * render. Guarded end-to-end: this executes inside Discord's render path, so a
+     * throw here would blank the composer rather than just lose the button.
+     */
+    injectButton(buttons) {
+      try {
+        if (!isActive() || !Array.isArray(buttons)) return;
+        buttons.push(React.createElement(PreviewButton, { key: "halcyon-preview" }));
+      } catch {
+      }
     }
   });
 
   // src/plugins/console-cleaner/index.ts
-  var log24 = logger("console-cleaner");
+  var log23 = logger("console-cleaner");
   var settings7 = defineSettings({
     hideSelfXss: {
       group: "\u5185\u7F6E\u89C4\u5219",
@@ -9258,7 +9153,7 @@ ${components_default}`;
     start() {
       const con = globalThis.console;
       if (!con) {
-        log24.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        log23.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
         return;
       }
       suppressedCount = 0;
@@ -9268,11 +9163,11 @@ ${components_default}`;
           try {
             unpatchers.push(patcher.instead(con, method, hook));
           } catch (err) {
-            log24.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+            log23.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
           }
         }
       }
-      log24.info(
+      log23.info(
         `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
       );
     },
@@ -9284,12 +9179,12 @@ ${components_default}`;
         }
       }
       unpatchers = [];
-      log24.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+      log23.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
     }
   });
 
   // src/plugins/emote-cloner/clone.ts
-  var log25 = logger("emote-cloner");
+  var log24 = logger("emote-cloner");
   var MAX_EMOJI_SIZE_BYTES = 256 * 1024;
   var MAX_STICKER_SIZE_BYTES = 512 * 1024;
   var uploadEmojiAction = null;
@@ -9383,14 +9278,14 @@ ${components_default}`;
         await upload({ guildId, name, image });
         return;
       } catch (err) {
-        log25.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
+        log24.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
         throw new Error(restErrorMessage(err));
       }
     }
     try {
       await RestAPI.post({ url: `/guilds/${guildId}/emojis`, body: { image, name, roles: [] } });
     } catch (err) {
-      log25.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
+      log24.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
   }
@@ -9411,7 +9306,7 @@ ${components_default}`;
       }
       return body;
     } catch (err) {
-      log25.warn("could not fetch sticker info; using fallbacks", err);
+      log24.warn("could not fetch sticker info; using fallbacks", err);
       return null;
     }
   }
@@ -9440,10 +9335,10 @@ ${components_default}`;
       created = resPayload(res);
       if (created && !created.id && created.sticker?.id) created = created.sticker;
     } catch (err) {
-      log25.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
+      log24.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
-    log25.info("sticker uploaded", { id: created?.id, name: created?.name });
+    log24.info("sticker uploaded", { id: created?.id, name: created?.name });
     try {
       getDispatcher()?.dispatch({
         type: "GUILD_STICKERS_CREATE_SUCCESS",
@@ -9455,7 +9350,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/resolve.ts
-  var log26 = logger("emote-cloner");
+  var log25 = logger("emote-cloner");
   var SNOWFLAKE = /^\d{5,25}$/;
   var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
   function emojiName(raw) {
@@ -9722,9 +9617,9 @@ ${components_default}`;
     const record2 = recordFromFiber(target, found.id);
     const resolved = emojiName(record2?.name) ?? emojiNameFromMessages(target, found.id) ?? emojiNameFromStore(found.id) ?? emojiNameFromDom(elements) ?? emojiName(found.domName);
     if (!resolved) {
-      log26.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
+      log25.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
     } else {
-      log26.debug("resolved emoji", { id: found.id, name: resolved });
+      log25.debug("resolved emoji", { id: found.id, name: resolved });
     }
     return {
       kind: "emoji",
@@ -9735,7 +9630,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/picker.tsx
-  var log27 = logger("emote-cloner");
+  var log26 = logger("emote-cloner");
   function iconUrl(g2) {
     const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
     return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
@@ -9781,7 +9676,7 @@ ${components_default}`;
         host3
       );
     } catch (err) {
-      log27.error("could not open guild picker", err);
+      log26.error("could not open guild picker", err);
       closeGuildPicker();
     }
   }
@@ -9801,7 +9696,7 @@ ${components_default}`;
         setStatus({ state: "done", guild: g2.name });
         setTimeout(onClose, 1e3);
       }).catch((err) => {
-        log27.error("clone failed", err);
+        log26.error("clone failed", err);
         setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
       });
     };
@@ -9860,7 +9755,7 @@ ${components_default}`;
   }
 
   // src/plugins/emote-cloner/index.tsx
-  var log28 = logger("emote-cloner");
+  var log27 = logger("emote-cloner");
   var PERM2 = {
     CREATE_GUILD_EXPRESSIONS: 1n << 43n,
     MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
@@ -9900,7 +9795,7 @@ ${components_default}`;
     if (!hit) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) {
-      log28.warn("MenuItem component not learned yet; skipping clone item this open");
+      log27.warn("MenuItem component not learned yet; skipping clone item this open");
       return;
     }
     const label = hit.kind === "emoji" ? `\u590D\u5236\u8868\u60C5 :${hit.name}: \u5230\u670D\u52A1\u5668` : hit.name ? `\u590D\u5236\u8D34\u7EB8 ${hit.name} \u5230\u670D\u52A1\u5668` : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668";
@@ -9921,7 +9816,7 @@ ${components_default}`;
     category: "utility",
     start() {
       unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
-      log28.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+      log27.info("emote-cloner ready \u2014 right-click an emoji or sticker");
     },
     stop() {
       for (const un of unpatchers2) {
@@ -9935,12 +9830,12 @@ ${components_default}`;
   });
 
   // src/core/flux/index.ts
-  var log29 = logger("flux");
+  var log28 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log29.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log28.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -9952,7 +9847,7 @@ ${components_default}`;
         try {
           listener(action);
         } catch (err) {
-          log29.error(`listener for ${type} threw`, err);
+          log28.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -9961,7 +9856,7 @@ ${components_default}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log29.error(`could not subscribe to ${type}`, err);
+      log28.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -9972,7 +9867,7 @@ ${components_default}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log29.error(`could not unsubscribe from ${type}`, err);
+      log28.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -10003,13 +9898,13 @@ ${components_default}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log29.error("dispatch failed", action?.type, err);
+        log28.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log30 = logger("mark-all-read");
+  var log29 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -10023,7 +9918,7 @@ ${components_default}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log30.warn(`could not read channels for guild ${guildId}`, err);
+        log29.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -10049,16 +9944,16 @@ ${components_default}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log30.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log29.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log30.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log29.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log30.warn("could not describe getChannels shape", err);
+          log29.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -10078,14 +9973,14 @@ ${components_default}`;
           }
         }
       } catch (err) {
-        log30.warn(`could not read joined threads for guild ${guildId}`, err);
+        log29.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log30.info(
+    log29.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -10102,9 +9997,9 @@ ${components_default}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log30.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log29.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log30.info("nothing unread; skipping BULK_ACK");
+      log29.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -10112,12 +10007,12 @@ ${components_default}`;
       context: "APP",
       channels
     });
-    log30.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log29.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log31 = logger("mark-all-read");
+  var log30 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -10142,7 +10037,7 @@ ${components_default}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log31.error("mark all read failed", err);
+        log30.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -10151,7 +10046,7 @@ ${components_default}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log32 = logger("mark-all-read");
+  var log31 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -10162,7 +10057,7 @@ ${components_default}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log32.error("mark all read failed", err);
+      log31.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -10247,7 +10142,7 @@ ${components_default}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log32.info("mark-all-read ready");
+      log31.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -10255,7 +10150,7 @@ ${components_default}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log33 = logger("silent-typing");
+  var log32 = logger("silent-typing");
   var settings8 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
@@ -10285,7 +10180,7 @@ ${components_default}`;
       description: "\u9ED8\u8BA4\u5173\u95ED\u3002stopTyping \u662F\u7528\u6765\u6E05\u9664\u5DF2\u7ECF\u53D1\u51FA\u53BB\u7684\u8F93\u5165\u72B6\u6001\u7684\uFF0C\u62E6\u622A\u5B83\u53CD\u800C\u53EF\u80FD\u8BA9\u6B8B\u7559\u72B6\u6001\u591A\u6302\u51E0\u79D2\uFF0C\u53EA\u6709\u5728\u4F60\u786E\u8BA4\u4ECE\u4E0D\u53D1\u9001\u65F6\u624D\u9700\u8981\u5F00\u542F\u3002"
     }
   });
-  var active = false;
+  var active2 = false;
   var typingModule;
   var unpatchStart;
   var unpatchStop;
@@ -10302,7 +10197,7 @@ ${components_default}`;
     }
   }
   function silenceFor(channelId) {
-    if (!active) return false;
+    if (!active2) return false;
     const id = channelId == null ? "" : String(channelId);
     const s = settings8.store;
     if (id && s.allowChannels.includes(id)) return false;
@@ -10317,7 +10212,7 @@ ${components_default}`;
         return void 0;
       }
     } catch (err) {
-      log33.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log32.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
@@ -10341,9 +10236,9 @@ ${components_default}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log33.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log32.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log33.warn(
+      log32.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -10373,40 +10268,40 @@ ${components_default}`;
     ],
     start() {
       suppressed = 0;
-      active = true;
+      active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log33.warn(
+        log32.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
-        active = false;
+        active2 = false;
         clearCurrentTyping();
-        active = true;
+        active2 = true;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log33.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log32.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log33.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log32.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log33.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings8.store.scope}\uFF09`);
+      log32.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings8.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
-      active = false;
+      active2 = false;
       unpatchStart?.();
       unpatchStop?.();
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log33.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log32.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -10416,7 +10311,7 @@ ${components_default}`;
      */
     shouldSilence(channelId) {
       try {
-        if (!active) return false;
+        if (!active2) return false;
         if (silenceFor(channelId)) {
           suppressed++;
           return true;
@@ -10430,7 +10325,7 @@ ${components_default}`;
     probe() {
       const module = typingModule ?? findByProps("startTyping", "stopTyping");
       return {
-        active,
+        active: active2,
         suppressed,
         scope: settings8.store.scope,
         typingModuleFound: module != null,
@@ -10448,6 +10343,51 @@ ${components_default}`;
       };
     }
   });
+
+  // src/core/dom-probe.ts
+  function describe(el) {
+    let box = "n/a";
+    try {
+      const r = el.getBoundingClientRect();
+      box = `${Math.round(r.width)}x${Math.round(r.height)}@${Math.round(r.left)},${Math.round(r.top)}`;
+    } catch {
+    }
+    return {
+      tag: el.tagName.toLowerCase(),
+      classes: typeof el.className === "string" ? el.className : String(el.className ?? ""),
+      childCount: el.children.length,
+      box
+    };
+  }
+  function probeSelector(selector, limit = 3) {
+    try {
+      const found = document.querySelectorAll(selector);
+      const samples = [];
+      for (let i = 0; i < found.length && i < limit; i++) samples.push(describe(found[i]));
+      return { selector, count: found.length, samples };
+    } catch {
+      return { selector, count: -1, samples: [] };
+    }
+  }
+  function probeSelectors(selectors, limit = 2) {
+    return selectors.map((s) => probeSelector(s, limit));
+  }
+  function classNamesContaining(needle, limit = 24) {
+    const out = /* @__PURE__ */ new Set();
+    try {
+      const nodes = document.querySelectorAll(`[class*="${needle}"]`);
+      for (let i = 0; i < nodes.length && out.size < limit; i++) {
+        const raw = nodes[i].className;
+        if (typeof raw !== "string") continue;
+        for (const name of raw.split(/\s+/)) {
+          if (name.includes(needle)) out.add(name);
+          if (out.size >= limit) break;
+        }
+      }
+    } catch {
+    }
+    return [...out];
+  }
 
   // src/plugins/member-count/settings.ts
   var settings9 = defineSettings({
@@ -10501,7 +10441,7 @@ ${components_default}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log34 = logger("member-count");
+  var log33 = logger("member-count");
   function memo(resolve) {
     let cached2;
     return () => cached2 ??= resolve();
@@ -10595,9 +10535,9 @@ ${components_default}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log34.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log33.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log34.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log33.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -10749,7 +10689,7 @@ ${components_default}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log35 = logger("member-count");
+  var log34 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -10774,9 +10714,9 @@ ${components_default}`;
       'aside[class*="members"]'
     ]
   };
-  var ENSURE_MS3 = 1e3;
+  var ENSURE_MS2 = 1e3;
   var mounted2 = /* @__PURE__ */ new Map();
-  var ensureTimer2;
+  var ensureTimer;
   var selfCheckTimer;
   var unsubscribePlacement;
   var lastSelector = /* @__PURE__ */ new Map();
@@ -10815,7 +10755,7 @@ ${components_default}`;
     try {
       hit.element.insertBefore(host5, hit.element.firstChild);
     } catch (err) {
-      log35.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log34.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
@@ -10823,14 +10763,14 @@ ${components_default}`;
       mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log35.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log34.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
       host5.remove();
-      log35.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      log34.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
-  function ensureMounted3() {
+  function ensureMounted2() {
     const want = wantedVariants();
     for (const [variant, entry] of [...mounted2]) {
       if (!want.has(variant) || !document.contains(entry.host)) teardown2(variant);
@@ -10848,7 +10788,7 @@ ${components_default}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log35.warn(
+      log34.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -10865,7 +10805,7 @@ ${components_default}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log35.warn(
+    log34.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -10882,19 +10822,19 @@ ${components_default}`;
       warnedNoAnchor = false;
       lastSelector.clear();
       startCountTracking();
-      ensureMounted3();
-      ensureTimer2 = setInterval(ensureMounted3, ENSURE_MS3);
+      ensureMounted2();
+      ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
       unsubscribePlacement = settings9.subscribe("placement", () => {
         warnedNoAnchor = false;
-        ensureMounted3();
+        ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log35.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings9.store.placement}\uFF09`);
+      log34.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings9.store.placement}\uFF09`);
     },
     stop() {
-      if (ensureTimer2) {
-        clearInterval(ensureTimer2);
-        ensureTimer2 = void 0;
+      if (ensureTimer) {
+        clearInterval(ensureTimer);
+        ensureTimer = void 0;
       }
       if (selfCheckTimer) {
         clearTimeout(selfCheckTimer);
@@ -10905,7 +10845,7 @@ ${components_default}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log35.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log34.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -11006,7 +10946,7 @@ ${components_default}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log36 = logger("who-reacted");
+  var log35 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -11089,7 +11029,7 @@ ${components_default}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log36.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log35.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight.set(key, guarded);
@@ -11151,7 +11091,7 @@ ${components_default}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log37 = logger("who-reacted");
+  var log36 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
@@ -11220,7 +11160,7 @@ ${components_default}`;
       }
       fillHost(host5, reactors, target.count);
     } catch (err) {
-      log37.debug("inline avatars: fetch failed", err);
+      log36.debug("inline avatars: fetch failed", err);
       host5.remove();
       DECORATED.delete(pill);
     }
@@ -11259,7 +11199,7 @@ ${components_default}`;
       } catch {
       }
     }
-    log37.info("inline reactor avatars: enabled");
+    log36.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -11280,7 +11220,7 @@ ${components_default}`;
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log38 = logger("who-reacted");
+  var log37 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
@@ -11363,7 +11303,7 @@ ${components_default}`;
     try {
       unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
     } catch (err) {
-      log38.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log37.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide();
       return;
     }
@@ -11491,7 +11431,7 @@ ${components_default}`;
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log38.info(
+      log37.info(
         `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings10.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings10.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
@@ -11509,7 +11449,7 @@ ${components_default}`;
       altDown = false;
       hide();
       clearCache();
-      log38.info("\u5DF2\u505C\u7528");
+      log37.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -11800,7 +11740,7 @@ ${components_default}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log39 = logger("platform-indicators");
+  var log38 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -11868,7 +11808,7 @@ ${components_default}`;
       return true;
     } catch (err) {
       host5.remove();
-      log39.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      log38.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -11924,7 +11864,7 @@ ${components_default}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log39.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log38.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
@@ -11938,7 +11878,7 @@ ${components_default}`;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log39.warn(
+      log38.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -11979,7 +11919,7 @@ ${components_default}`;
         settings11.subscribe("ignoreBots", () => bumpPresence()),
         settings11.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log39.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log38.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -11997,7 +11937,7 @@ ${components_default}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log39.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log38.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12060,7 +12000,7 @@ ${components_default}`;
   ];
 
   // src/core/probe.ts
-  var log40 = logger("probe");
+  var log39 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -12083,8 +12023,8 @@ ${components_default}`;
       }
     }
     const out = {
-      version: true ? "0.6.8" : "dev",
-      build: true ? "2026-08-31 19:52:37" : "dev",
+      version: true ? "0.6.9" : "dev",
+      build: true ? "2026-08-31 20:17:30" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12097,14 +12037,14 @@ ${components_default}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log40.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log39.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log41 = logger("userscript");
+  var log40 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -12115,8 +12055,8 @@ ${components_default}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.8" : "dev",
-        build: true ? "2026-08-31 19:52:37" : "dev",
+        version: true ? "0.6.9" : "dev",
+        build: true ? "2026-08-31 20:17:30" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -12127,6 +12067,6 @@ ${components_default}`;
       };
     } catch {
     }
-    log41.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log41.error("userscript boot failed", err));
+    log40.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log40.error("userscript boot failed", err));
 })();

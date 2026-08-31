@@ -1,38 +1,49 @@
 // The composer button, and the floating panel it toggles.
 //
-// Mounting follows the pattern message-logger's toolbar button established:
-// find a DOM anchor, append a host, mount React into it, and re-check on an
-// interval because Discord repaints the composer constantly and takes our node
-// with it. Nothing here uses a source patch — the composer's React tree is far
-// more volatile than its accessibility contract.
+// The button is a React element Discord renders itself: the source patch in
+// index.tsx pushes it into the composer's own button array, so React owns it.
+// The first attempt inserted a DOM node into that flex row instead, and React —
+// which re-renders the row on every keystroke — threw while reconciling and took
+// the whole icon cluster with it (gift / GIF / sticker / emoji vanished, and the
+// orphaned button did nothing when clicked). Never hand-splice that container.
 //
-// The panel itself lives on document.body (like who-reacted's card) so it is
-// never clipped by the composer's overflow, and is positioned just above the
-// input on an interval while open.
+// The panel is different: it lives on document.body, so it cannot be clipped by
+// the composer's overflow and cannot disturb any tree Discord manages. It is
+// positioned just above the input on an interval while open.
 
 import { React, mountDetached } from "../../core/common/react";
 import { injectStyles } from "../../ui/inject-styles";
 import { EyeIcon } from "../../icons";
 import { logger } from "../../core/logger";
-import { findEditor, findButtonRow, reportAnchorMiss, resetAnchorWarning } from "./anchor";
+import { findEditor } from "./anchor";
 import { PreviewHost } from "./ui/PreviewHost";
 
 const log = logger("message-preview");
 
-/** How often to re-check that our button is still in the DOM. */
-const ENSURE_MS = 1000;
 /** How often to re-anchor the open panel to the composer. */
 const REPOSITION_MS = 250;
 /** Gap between the panel's bottom edge and the composer's top edge. */
 const GAP_PX = 8;
 
-let buttonHost: HTMLElement | null = null;
-let unmountButton: (() => void) | null = null;
-let ensureTimer: ReturnType<typeof setInterval> | undefined;
-
 let panelHost: HTMLElement | null = null;
 let unmountPanel: (() => void) | null = null;
 let repositionTimer: ReturnType<typeof setInterval> | undefined;
+
+/**
+ * Whether the plugin is running. The patch stays in Discord's code for the
+ * session (source patches cannot be unwound), so the injector consults this
+ * instead — toggling the plugin off makes the button disappear on the composer's
+ * next render rather than needing a restart.
+ */
+let active = false;
+
+export function setActive(next: boolean): void {
+  active = next;
+}
+
+export function isActive(): boolean {
+  return active;
+}
 
 function isOpen(): boolean {
   return panelHost !== null;
@@ -54,7 +65,7 @@ function reposition(): void {
   const width = Math.min(Math.max(rect.width, 320), 720);
   const height = panelHost.offsetHeight || 96;
   const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-  // Above the composer, unless there is no room up there.
+  // Above the composer, clamped so a tall panel cannot run off the top.
   const top = Math.max(8, rect.top - height - GAP_PX);
 
   panelHost.style.width = `${Math.round(width)}px`;
@@ -64,9 +75,9 @@ function reposition(): void {
 
 function onKeyDown(event: KeyboardEvent): void {
   if (event.key === "Escape" && isOpen()) {
-    closePanel();
-    // Don't let Escape also clear the user's draft — closing the thing they
-    // just opened is the whole of what they asked for.
+    closePreviewPanel();
+    // Don't let Escape also clear the draft: closing what was just opened is
+    // the whole of what the key was pressed for.
     event.stopPropagation();
     event.preventDefault();
   }
@@ -82,7 +93,7 @@ function openPanel(): void {
   document.body.appendChild(el);
 
   try {
-    unmountPanel = mountDetached(React.createElement(PreviewHost, { onEmptied: closePanel }), el);
+    unmountPanel = mountDetached(React.createElement(PreviewHost, { onEmptied: closePreviewPanel }), el);
     panelHost = el;
   } catch (err) {
     el.remove();
@@ -93,12 +104,12 @@ function openPanel(): void {
   reposition();
   repositionTimer = setInterval(reposition, REPOSITION_MS);
   window.addEventListener("resize", reposition);
-  // Capture phase: Discord's composer also handles Escape (it clears the reply
-  // / draft state), and we want ours to win while the panel is up.
+  // Capture phase: Discord's composer also handles Escape, and ours should win
+  // while the panel is up.
   document.addEventListener("keydown", onKeyDown, true);
 }
 
-function closePanel(): void {
+export function closePreviewPanel(): void {
   if (repositionTimer) {
     clearInterval(repositionTimer);
     repositionTimer = undefined;
@@ -121,11 +132,15 @@ function closePanel(): void {
 }
 
 function togglePanel(): void {
-  if (isOpen()) closePanel();
+  if (isOpen()) closePreviewPanel();
   else openPanel();
 }
 
-function PreviewButton(): React.ReactElement {
+/**
+ * The button itself. Deliberately trivial: it renders inside Discord's composer
+ * tree, so anything that throws here would take the composer down with it.
+ */
+export function PreviewButton(): React.ReactElement {
   return (
     <button
       type="button"
@@ -133,8 +148,8 @@ function PreviewButton(): React.ReactElement {
       aria-label="预览这条消息"
       title="预览发出后的样子"
       onClick={(event: any) => {
-        // The composer's button row lives inside a form; a bare click would
-        // submit it and send the draft — the exact opposite of "preview first".
+        // The button row sits inside a form; a bare click submits it and SENDS
+        // the draft — the exact opposite of previewing first.
         event?.preventDefault?.();
         event?.stopPropagation?.();
         togglePanel();
@@ -143,68 +158,4 @@ function PreviewButton(): React.ReactElement {
       <EyeIcon size={24} />
     </button>
   );
-}
-
-function teardownButton(): void {
-  if (unmountButton) {
-    try {
-      unmountButton();
-    } catch {
-      // already gone
-    }
-    unmountButton = null;
-  }
-  if (buttonHost) {
-    buttonHost.remove();
-    buttonHost = null;
-  }
-}
-
-function ensureMounted(): void {
-  if (buttonHost && document.contains(buttonHost)) return;
-  // A stale host (composer repainted and took ours with it): drop it first.
-  if (buttonHost) teardownButton();
-
-  const row = findButtonRow();
-  if (!row) {
-    reportAnchorMiss();
-    return;
-  }
-
-  const el = document.createElement("div");
-  el.className = "hc-preview-btn-host";
-  el.setAttribute("data-hc-plugin", "message-preview");
-  try {
-    // Ahead of the icon cluster, so it does not shove the emoji button — the
-    // one people reach for by muscle memory — out of its usual spot.
-    row.insertBefore(el, row.firstChild);
-  } catch {
-    return;
-  }
-
-  try {
-    unmountButton = mountDetached(React.createElement(PreviewButton), el);
-    buttonHost = el;
-  } catch (err) {
-    el.remove();
-    log.debug("预览按钮挂载失败", err);
-  }
-}
-
-export function startPreviewButton(): void {
-  injectStyles();
-  stopPreviewButton();
-  resetAnchorWarning();
-
-  ensureMounted();
-  ensureTimer = setInterval(ensureMounted, ENSURE_MS);
-}
-
-export function stopPreviewButton(): void {
-  if (ensureTimer) {
-    clearInterval(ensureTimer);
-    ensureTimer = undefined;
-  }
-  closePanel();
-  teardownButton();
 }
