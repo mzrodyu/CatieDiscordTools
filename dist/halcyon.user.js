@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.14
+// @version      0.6.15
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -773,8 +773,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 21:10:10" : "dev";
-      const version2 = true ? "0.6.14" : "dev";
+      const build = true ? "2026-08-31 21:15:56" : "dev";
+      const version2 = true ? "0.6.15" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3768,27 +3768,50 @@ ${components_default}`;
     ));
   }
 
+  // src/ui/components/string-list-ops.ts
+  function updateAt(list, index, next) {
+    const copy = list.slice();
+    copy[index] = next;
+    return copy;
+  }
+  function removeAt(list, index) {
+    return list.filter((_, i) => i !== index);
+  }
+  function normalizeAt(list, index) {
+    if (index < 0 || index >= list.length) return list.slice();
+    const trimmed = (list[index] ?? "").trim();
+    const others = list.filter((_, i) => i !== index).map((v) => v.trim());
+    if (!trimmed || others.includes(trimmed)) return removeAt(list, index);
+    return trimmed === list[index] ? list.slice() : updateAt(list, index, trimmed);
+  }
+  function appendEntry(list, raw) {
+    const next = raw.trim();
+    if (!next || list.includes(next)) return null;
+    return [...list, next];
+  }
+
   // src/ui/components/StringListEditor.tsx
   function StringListEditor({ value, onChange: onChange2, itemPlaceholder }) {
     const [draft, setDraft] = useState("");
     const commit = () => {
-      const next = draft.trim();
-      if (!next || value.includes(next)) {
-        setDraft("");
-        return;
-      }
-      onChange2([...value, next]);
+      const next = appendEntry(value, draft);
+      if (next) onChange2(next);
       setDraft("");
     };
-    const removeAt = (index) => {
-      onChange2(value.filter((_, i) => i !== index));
-    };
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-strlist" }, value.map((item, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-strlist__item", key: item }, /* @__PURE__ */ React.createElement(TextInput, { value: item, onChange: () => void 0, readOnly: true }), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-strlist" }, value.map((item, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-strlist__item", key: index }, /* @__PURE__ */ React.createElement(
+      TextInput,
+      {
+        value: item,
+        onChange: (next) => onChange2(updateAt(value, index, next)),
+        onBlur: () => onChange2(normalizeAt(value, index)),
+        placeholder: itemPlaceholder
+      }
+    ), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
         className: "hc-iconbtn hc-iconbtn--danger",
-        onClick: () => removeAt(index),
+        onClick: () => onChange2(removeAt(value, index)),
         "aria-label": "\u79FB\u9664"
       },
       /* @__PURE__ */ React.createElement(TrashIcon, { size: 18 })
@@ -4193,7 +4216,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.14" : "dev";
+    return true ? "0.6.15" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4271,7 +4294,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.14" : "dev";
+    const version2 = true ? "0.6.15" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -12400,8 +12423,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.6.14" : "dev",
-      build: true ? "2026-08-31 21:10:10" : "dev",
+      version: true ? "0.6.15" : "dev",
+      build: true ? "2026-08-31 21:15:56" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12432,8 +12455,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.14" : "dev",
-        build: true ? "2026-08-31 21:10:10" : "dev",
+        version: true ? "0.6.15" : "dev",
+        build: true ? "2026-08-31 21:15:56" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
