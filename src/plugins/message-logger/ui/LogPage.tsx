@@ -11,6 +11,7 @@ import { logger } from "../../../core/logger";
 import { getSourcePatchReport } from "../../../core/modules/webpack";
 import { messageLog, type DeletedEntry, type EditedEntry } from "../store";
 import { renderContent } from "../render-content";
+import { cached as cachedUrl, needsRefresh, refreshUrls } from "../attachments";
 import {
   DEFAULT_FILTERS,
   compileMatcher,
@@ -95,6 +96,54 @@ function InChatStatus(): React.ReactElement | null {
   );
 }
 
+/**
+ * Re-sign the attachment URLs on the page currently being shown.
+ *
+ * Every logged URL carries Discord's `?ex=…&is=…&hm=…` signature, which rotates
+ * about daily — so a thumbnail recorded yesterday is a 404 today and the log
+ * looked like it had kept media it could no longer show. Refreshing is scoped to
+ * the VISIBLE page (25 rows) so opening the log costs one small request instead
+ * of re-signing the entire archive.
+ *
+ * Nothing is written back to the store: a refreshed URL expires too, so
+ * persisting it would only re-stale the record.
+ */
+function useFreshUrls(visible: readonly LogEntry[]): (url?: string) => string | undefined {
+  const [, bump] = useState(0);
+  // Keyed by the rows on screen, not by the array identity: the list is rebuilt
+  // on every render (filtering, sorting), so depending on the array itself would
+  // re-run this forever.
+  const key = visible.map((e) => `${e.channelId}-${e.id}`).join(",");
+
+  useEffect(() => {
+    const urls: string[] = [];
+    for (const entry of visible) {
+      const rich = "attachmentsRich" in entry ? entry.attachmentsRich : undefined;
+      if (rich) {
+        for (const a of rich) {
+          if (a.proxy_url) urls.push(a.proxy_url);
+          if (a.url) urls.push(a.url);
+        }
+      }
+      if ("attachments" in entry && Array.isArray(entry.attachments)) urls.push(...entry.attachments);
+    }
+    const stale = urls.filter((u) => needsRefresh(u) && !cachedUrl(u));
+    if (stale.length === 0) return;
+
+    let alive = true;
+    refreshUrls(stale)
+      .then((map) => {
+        if (alive && map.size > 0) bump((n) => n + 1);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+
+  return (url) => (url ? cachedUrl(url) ?? url : undefined);
+}
+
 export function LogPage(): React.ReactElement {
   const { deleted, edited } = useLog();
   const [tab, setTab] = useState<Tab>("deleted");
@@ -129,6 +178,8 @@ export function LogPage(): React.ReactElement {
 
   const goTo = (next: number) =>
     setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
+
+  const freshUrl = useFreshUrls(visible);
 
   // Any filter change resets to the first page of results, on both tabs — the
   // old page index means nothing against a different result set.
@@ -311,6 +362,7 @@ export function LogPage(): React.ReactElement {
                     key={`${entry.channelId}-${entry.id}`}
                     entry={entry}
                     highlight={matcher.highlight}
+                    freshUrl={freshUrl}
                   />
                 ))
               : (visible as readonly EditedEntry[]).map((entry) => (
@@ -474,7 +526,16 @@ function JumpButton({ entry }: { entry: DeletedEntry | EditedEntry }): React.Rea
   );
 }
 
-function DeletedRow({ entry, highlight }: { entry: DeletedEntry; highlight?: RegExp | null }): React.ReactElement {
+function DeletedRow({
+  entry,
+  highlight,
+  freshUrl
+}: {
+  entry: DeletedEntry;
+  highlight?: RegExp | null;
+  freshUrl?: (url?: string) => string | undefined;
+}): React.ReactElement {
+  const src = (url?: string): string | undefined => (freshUrl ? freshUrl(url) : url);
   return (
     <div className="hc-msg">
       <div className="hc-msg__head">
@@ -502,12 +563,12 @@ function DeletedRow({ entry, highlight }: { entry: DeletedEntry; highlight?: Reg
               <img
                 key={i}
                 className="hc-msg__thumb"
-                src={a.proxy_url ?? a.url}
+                src={src(a.proxy_url ?? a.url)}
                 alt={a.filename ?? "附件"}
                 loading="lazy"
               />
             ) : (
-              <a key={i} href={a.url} target="_blank" rel="noreferrer">
+              <a key={i} href={src(a.url)} target="_blank" rel="noreferrer">
                 📎 {a.filename ?? "附件"}
               </a>
             )

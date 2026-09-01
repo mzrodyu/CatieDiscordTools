@@ -2464,3 +2464,76 @@
   background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
   color: inherit;
 }
+
+
+/* --- Message-log search hits & filters ------------------------------------ */
+.hc-hit {
+  background: color-mix(in srgb, var(--hc-orange) 35%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.hc-mlog-search__filters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--hc-label-tertiary);
+  cursor: pointer;
+}
+.hc-mlog-search__filters[data-active="true"] {
+  color: var(--hc-accent);
+  background: var(--hc-fill-secondary);
+}
+.hc-mlog-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--hc-space-2) var(--hc-space-3);
+  margin: var(--hc-space-2) 0 var(--hc-space-3);
+  padding: var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-bg-secondary);
+}
+.hc-mlog-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.hc-mlog-filters__field > span {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}
+.hc-mlog-filters__field input,
+.hc-mlog-filters__field select {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--hc-separator);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-bg-primary);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-mlog-filters__field input:focus,
+.hc-mlog-filters__field select:focus {
+  outline: none;
+  border-color: var(--hc-accent);
+}
+.hc-mlog-filters__actions {
+  display: flex;
+  align-items: flex-end;
+}
+.hc-mlog-filters__error {
+  margin: 0 0 var(--hc-space-2);
+  color: var(--hc-orange);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}

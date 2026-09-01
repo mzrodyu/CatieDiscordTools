@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.16
+// @version      0.6.17
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -540,8 +540,8 @@ ${slices.join("\n  ...  \n")}`
 
   // src/core/common/react.ts
   function lazyProxy(resolve) {
-    let cached3;
-    const get = () => cached3 ??= resolve();
+    let cached4;
+    const get = () => cached4 ??= resolve();
     return new Proxy(function() {
     }, {
       get: (_t, key) => get()?.[key],
@@ -773,8 +773,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-08-31 21:42:06" : "dev";
-      const version2 = true ? "0.6.16" : "dev";
+      const build = true ? "2026-09-01 11:55:59" : "dev";
+      const version2 = true ? "0.6.17" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3454,6 +3454,79 @@ ${slices.join("\n  ...  \n")}`
   background: color-mix(in srgb, var(--hc-accent) 34%, transparent);
   color: inherit;
 }
+
+
+/* --- Message-log search hits & filters ------------------------------------ */
+.hc-hit {
+  background: color-mix(in srgb, var(--hc-orange) 35%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.hc-mlog-search__filters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: var(--hc-radius-sm);
+  background: transparent;
+  color: var(--hc-label-tertiary);
+  cursor: pointer;
+}
+.hc-mlog-search__filters[data-active="true"] {
+  color: var(--hc-accent);
+  background: var(--hc-fill-secondary);
+}
+.hc-mlog-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--hc-space-2) var(--hc-space-3);
+  margin: var(--hc-space-2) 0 var(--hc-space-3);
+  padding: var(--hc-space-3);
+  border-radius: var(--hc-radius-md);
+  background: var(--hc-bg-secondary);
+}
+.hc-mlog-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.hc-mlog-filters__field > span {
+  color: var(--hc-label-tertiary);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}
+.hc-mlog-filters__field input,
+.hc-mlog-filters__field select {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--hc-separator);
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-bg-primary);
+  color: var(--hc-label-primary);
+  font-family: inherit;
+  font-size: var(--hc-text-footnote);
+  line-height: var(--hc-lh-footnote);
+}
+.hc-mlog-filters__field input:focus,
+.hc-mlog-filters__field select:focus {
+  outline: none;
+  border-color: var(--hc-accent);
+}
+.hc-mlog-filters__actions {
+  display: flex;
+  align-items: flex-end;
+}
+.hc-mlog-filters__error {
+  margin: 0 0 var(--hc-space-2);
+  color: var(--hc-orange);
+  font-size: var(--hc-text-caption1);
+  line-height: var(--hc-lh-caption);
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -4302,7 +4375,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.16" : "dev";
+    return true ? "0.6.17" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4380,7 +4453,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.16" : "dev";
+    const version2 = true ? "0.6.17" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5909,8 +5982,88 @@ ${loc.channel ?? ""}`.toLowerCase();
     return parts;
   }
 
-  // src/plugins/message-logger/ui/LogPage.tsx
+  // src/plugins/message-logger/attachments.ts
   var log11 = logger("message-logger");
+  var GRACE_MS = 60 * 60 * 1e3;
+  var SIGNED_PATH_PREFIXES = ["/attachments/", "/ephemeral-attachments/"];
+  function cdnHosts() {
+    const hosts = /* @__PURE__ */ new Set(["cdn.discordapp.com", "media.discordapp.net"]);
+    try {
+      const env = globalThis.GLOBAL_ENV;
+      if (env?.CDN_HOST) hosts.add(String(env.CDN_HOST).replace(/^\/\//, ""));
+      if (env?.MEDIA_PROXY_ENDPOINT) hosts.add(String(env.MEDIA_PROXY_ENDPOINT).replace(/^\/\//, ""));
+    } catch {
+    }
+    return hosts;
+  }
+  function needsRefresh(raw, now = Date.now()) {
+    if (!raw) return false;
+    let url;
+    try {
+      url = new URL(raw);
+    } catch {
+      return false;
+    }
+    if (!cdnHosts().has(url.hostname)) return false;
+    if (!SIGNED_PATH_PREFIXES.some((p) => url.pathname.startsWith(p))) return false;
+    const ex = parseInt(url.searchParams.get("ex") ?? "", 16);
+    if (Number.isNaN(ex)) return true;
+    return ex * 1e3 <= now + GRACE_MS;
+  }
+  function stripSignature(raw) {
+    try {
+      const url = new URL(raw);
+      for (const key of ["ex", "is", "hm"]) url.searchParams.delete(key);
+      return url.toString();
+    } catch {
+      return raw;
+    }
+  }
+  var BATCH = 25;
+  var cache = /* @__PURE__ */ new Map();
+  var inFlight = /* @__PURE__ */ new Set();
+  function cached2(original) {
+    const hit = cache.get(original);
+    if (hit && !needsRefresh(hit)) return hit;
+    if (hit) cache.delete(hit);
+    return void 0;
+  }
+  async function refreshUrls(urls) {
+    const out = /* @__PURE__ */ new Map();
+    const wanted = Array.from(new Set(urls.filter((u) => u && needsRefresh(u) && !inFlight.has(u))));
+    if (wanted.length === 0) return out;
+    for (const url of wanted) inFlight.add(url);
+    try {
+      for (let i = 0; i < wanted.length; i += BATCH) {
+        const slice = wanted.slice(i, i + BATCH);
+        try {
+          const res = await RestAPI.post({
+            url: "/attachments/refresh-urls",
+            body: { attachment_urls: slice.map(stripSignature) }
+          });
+          const list = res?.body?.refreshed_urls;
+          if (!Array.isArray(list)) continue;
+          list.forEach((item, index) => {
+            const fresh = typeof item?.refreshed === "string" ? item.refreshed : void 0;
+            if (!fresh) return;
+            const original = slice[index];
+            if (original) {
+              cache.set(original, fresh);
+              out.set(original, fresh);
+            }
+          });
+        } catch (err) {
+          log11.debug("\u5237\u65B0\u9644\u4EF6\u7B7E\u540D\u5931\u8D25\uFF08\u8BE5\u9644\u4EF6\u53EF\u80FD\u5DF2\u88AB\u5F7B\u5E95\u6E05\u9664\uFF09", err);
+        }
+      }
+    } finally {
+      for (const url of wanted) inFlight.delete(url);
+    }
+    return out;
+  }
+
+  // src/plugins/message-logger/ui/LogPage.tsx
+  var log12 = logger("message-logger");
   function useLog() {
     const [snapshot, setSnapshot] = useState(() => ({
       deleted: messageLog.getDeleted(),
@@ -5942,6 +6095,33 @@ ${loc.channel ?? ""}`.toLowerCase();
     const detail = critical ? "\u88AB\u5220\u9664\u7684\u6D88\u606F\u4ECD\u7136\u8BB0\u5F55\u5728\u4E0B\u65B9\u5217\u8868\uFF0C\u4F46\u5728\u804A\u5929\u91CC\u4F1A\u76F4\u63A5\u6D88\u5931\u3002\u6838\u5FC3\u8865\u4E01 keep-deleted \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\u3002" : "\u8BB0\u5F55\u529F\u80FD\u6B63\u5E38\uFF0C\u4F46\u804A\u5929\u4E2D\u7684\u7F16\u8F91\u5386\u53F2 / \u5220\u9664\u6807\u8BB0\u53EF\u80FD\u65E0\u6CD5\u663E\u793A\u3002";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn" }, /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn__title" }, title), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn__detail" }, detail), /* @__PURE__ */ React.createElement("ul", { className: "hc-mlog-warn__list" }, failed.map((p) => /* @__PURE__ */ React.createElement("li", { key: p.label }, "\u201C", p.label, "\u201D"))), /* @__PURE__ */ React.createElement("div", { className: "hc-mlog-warn__detail" }, "\u8BF7\u628A\u6B64\u5904\u4EE5\u53CA\u65E5\u5FD7\u9875\u91CC \u201CHalcyon modules\u201D \u76F8\u5173\u7684\u8F93\u51FA\u53D1\u7ED9\u5F00\u53D1\u8005\u5B9A\u4F4D\u3002"));
   }
+  function useFreshUrls(visible) {
+    const [, bump] = useState(0);
+    const key = visible.map((e) => `${e.channelId}-${e.id}`).join(",");
+    useEffect(() => {
+      const urls = [];
+      for (const entry of visible) {
+        const rich = "attachmentsRich" in entry ? entry.attachmentsRich : void 0;
+        if (rich) {
+          for (const a of rich) {
+            if (a.proxy_url) urls.push(a.proxy_url);
+            if (a.url) urls.push(a.url);
+          }
+        }
+        if ("attachments" in entry && Array.isArray(entry.attachments)) urls.push(...entry.attachments);
+      }
+      const stale = urls.filter((u) => needsRefresh(u) && !cached2(u));
+      if (stale.length === 0) return;
+      let alive = true;
+      refreshUrls(stale).then((map) => {
+        if (alive && map.size > 0) bump((n) => n + 1);
+      }).catch(() => void 0);
+      return () => {
+        alive = false;
+      };
+    }, [key]);
+    return (url) => url ? cached2(url) ?? url : void 0;
+  }
   function LogPage() {
     const { deleted, edited } = useLog();
     const [tab, setTab] = useState("deleted");
@@ -5962,6 +6142,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const page = Math.min(pages[tab], pageCount - 1);
     const visible = entries.slice(page * PAGE_SIZE2, (page + 1) * PAGE_SIZE2);
     const goTo = (next) => setPages((prev) => ({ ...prev, [tab]: Math.max(0, Math.min(pageCount - 1, next)) }));
+    const freshUrl = useFreshUrls(visible);
     const patch = (next) => {
       setFilters((prev) => ({ ...prev, ...next }));
       setPages({ deleted: 0, edited: 0 });
@@ -6085,7 +6266,8 @@ ${loc.channel ?? ""}`.toLowerCase();
       {
         key: `${entry.channelId}-${entry.id}`,
         entry,
-        highlight: matcher.highlight
+        highlight: matcher.highlight,
+        freshUrl
       }
     )) : visible.map((entry) => /* @__PURE__ */ React.createElement(
       EditedRow,
@@ -6135,11 +6317,11 @@ ${loc.channel ?? ""}`.toLowerCase();
           if (selected() !== channelId) navigate(path);
           return;
         } catch (err) {
-          log11.warn("[jump] jumpToMessage threw; falling back to route", err);
+          log12.warn("[jump] jumpToMessage threw; falling back to route", err);
         }
       }
       if (!navigate(path)) {
-        log11.warn("[jump] \u8DF3\u8F6C\u5931\u8D25\uFF1AJumpActions \u4E0E NavigationRouter \u5747\u672A\u89E3\u6790\u5230");
+        log12.warn("[jump] \u8DF3\u8F6C\u5931\u8D25\uFF1AJumpActions \u4E0E NavigationRouter \u5747\u672A\u89E3\u6790\u5230");
       }
     };
     const schedule = [80, 220, 450, 800];
@@ -6148,7 +6330,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       doJump();
       const now = selected();
       const ok = now === channelId;
-      log11.info(`[jump] \u7B2C ${i + 1} \u6B21 \xB7 now=${now ?? "?"} wanted=${channelId} ok=${ok}`);
+      log12.info(`[jump] \u7B2C ${i + 1} \u6B21 \xB7 now=${now ?? "?"} wanted=${channelId} ok=${ok}`);
       i++;
       if (!ok && i < schedule.length) {
         setTimeout(tick, schedule[i] - schedule[i - 1]);
@@ -6166,7 +6348,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       document.dispatchEvent(new KeyboardEvent("keydown", opts));
       document.dispatchEvent(new KeyboardEvent("keyup", opts));
     } catch (err) {
-      log11.error("[jump] escape dispatch failed", err);
+      log12.error("[jump] escape dispatch failed", err);
     }
     try {
       if (typeof AppLayers.popLayer === "function") {
@@ -6175,7 +6357,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         getDispatcher()?.dispatch?.({ type: "LAYER_POP" });
       }
     } catch (err) {
-      log11.error("[jump] layer pop failed", err);
+      log12.error("[jump] layer pop failed", err);
     }
   }
   function JumpButton({ entry }) {
@@ -6192,18 +6374,23 @@ ${loc.channel ?? ""}`.toLowerCase();
       "\u8DF3\u8F6C"
     );
   }
-  function DeletedRow({ entry, highlight }) {
+  function DeletedRow({
+    entry,
+    highlight,
+    freshUrl
+  }) {
+    const src = (url) => freshUrl ? freshUrl(url) : url;
     return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? renderContent(entry.content, highlight) : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
       (a, i) => (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? /* @__PURE__ */ React.createElement(
         "img",
         {
           key: i,
           className: "hc-msg__thumb",
-          src: a.proxy_url ?? a.url,
+          src: src(a.proxy_url ?? a.url),
           alt: a.filename ?? "\u9644\u4EF6",
           loading: "lazy"
         }
-      ) : /* @__PURE__ */ React.createElement("a", { key: i, href: a.url, target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", a.filename ?? "\u9644\u4EF6")
+      ) : /* @__PURE__ */ React.createElement("a", { key: i, href: src(a.url), target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", a.filename ?? "\u9644\u4EF6")
     )), !entry.attachmentsRich?.length && entry.attachments.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__meta" }, "\u9644\u4EF6 ", entry.attachments.length, " \u4E2A"));
   }
   function EditedRow({ entry, highlight }) {
@@ -6254,12 +6441,12 @@ ${loc.channel ?? ""}`.toLowerCase();
       anchor2.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      log11.error("export failed", err);
+      log12.error("export failed", err);
     }
   }
 
   // src/plugins/message-logger/toolbar-button.tsx
-  var log12 = logger("message-logger");
+  var log13 = logger("message-logger");
   var TOOLBAR_ANCHORS = [
     'section[class*="title_"] [class*="toolbar_"]',
     'section[class*="title"] [class*="toolbar"]',
@@ -6317,7 +6504,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       unmount2 = off;
     } catch (err) {
       el.remove();
-      log12.debug("toolbar button mount failed", err);
+      log13.debug("toolbar button mount failed", err);
     }
   }
   function teardown() {
@@ -6351,7 +6538,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-logger/index.tsx
-  var log13 = logger("message-logger");
+  var log14 = logger("message-logger");
   var unpatchDispatch;
   var unsubscribeRetention;
   var unsubscribeDeleteStyle;
@@ -6461,7 +6648,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       if (!selfIgnoreLogged) {
         selfIgnoreLogged = true;
         const hit = Boolean(authorId && me && authorId === String(me));
-        log13.info(
+        log14.info(
           `\u5C4F\u853D\u81EA\u5DF1 \u81EA\u68C0 \u2014 \u5F00\u5173=on\uFF0C\u6D88\u606F\u4F5C\u8005id=${authorId || "(\u7A7A)"}\uFF0C\u5F53\u524D\u7528\u6237id=${me ?? "(\u53D6\u4E0D\u5230)"}\uFF0C\u5224\u5B9A=${hit ? "\u547D\u4E2D\u2192\u4F1A\u5C4F\u853D" : "\u672A\u547D\u4E2D\u2192\u4E0D\u5C4F\u853D"}`
         );
       }
@@ -6679,7 +6866,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       };
       dispatcher2.dispatch({ type: "MESSAGE_UPDATE", message: raw });
     } catch (err) {
-      log13.debug("force row re-render failed (non-fatal)", err);
+      log14.debug("force row re-render failed (non-fatal)", err);
     }
   }
   function scheduleRerender(channelId, messageId) {
@@ -6697,7 +6884,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const message = readMessage(channelId, id);
     const snap = shadow.get(`${channelId}:${id}`);
     if (!message && !snap) {
-      log13.debug(`delete of ${id} skipped: message not in cache or shadow`);
+      log14.debug(`delete of ${id} skipped: message not in cache or shadow`);
       return;
     }
     const author = message?.author ?? snap?.author ?? {};
@@ -6744,13 +6931,13 @@ ${loc.channel ?? ""}`.toLowerCase();
         const domEl = typeof document !== "undefined" ? document.getElementById(`chat-messages-${cid}-${mid}`) || document.getElementById(`chat-messages-${mid}`) : null;
         const tinted = !!domEl && domEl.classList.contains("hc-deleted");
         if (still && still.deleted === true) {
-          log13.info(
+          log14.info(
             `live keep-deleted \u81EA\u68C0 OK \u2014 \u88AB\u5220\u6D88\u606F\u4ECD\u7559\u5728 store \u4E14\u5DF2\u6807\u8BB0 deleted\uFF1BDOM \u884C${domEl ? tinted ? "\u5DF2\u76F4\u63A5\u67D3\u7EA2\uFF08\u5B9E\u65F6\u7EA2\u6761\u751F\u6548\uFF09" : "\u627E\u5230\u4F46\u672A\u67D3\u7EA2\uFF0C\u8BF7\u53CD\u9988" : "\u672A\u627E\u5230\uFF08\u53EF\u80FD\u5DF2\u6EDA\u51FA\u89C6\u56FE\uFF09"}`
           );
         } else if (still) {
-          log13.warn("live keep-deleted \u81EA\u68C0 PARTIAL \u2014 \u6D88\u606F\u4FDD\u7559\u4F46\u672A\u6807\u8BB0 deleted\uFF0C\u6539\u7528 DOM \u76F4\u63A5\u67D3\u7EA2\u515C\u5E95");
+          log14.warn("live keep-deleted \u81EA\u68C0 PARTIAL \u2014 \u6D88\u606F\u4FDD\u7559\u4F46\u672A\u6807\u8BB0 deleted\uFF0C\u6539\u7528 DOM \u76F4\u63A5\u67D3\u7EA2\u515C\u5E95");
         } else {
-          log13.error(
+          log14.error(
             "live keep-deleted \u81EA\u68C0 FAILED \u2014 MessageStore \u5DF2\u4E22\u5F03\u88AB\u5220\u6D88\u606F\uFF0C\u8BF4\u660E \u201Ckeep deleted message in store\u201D \u8865\u4E01\u672A\u547D\u4E2D\u5F53\u524D\u6784\u5EFA\uFF1B\u88AB\u5220\u6D88\u606F\u53EA\u4F1A\u5728\u91CD\u65B0\u52A0\u8F7D\u9891\u9053\u540E\u7531 revive \u91CD\u65B0\u51FA\u73B0\uFF08\u6B63\u662F\u4F60\u8BF4\u7684\u201C\u5237\u65B0\u624D\u6709\u3001\u5B9E\u65F6\u6CA1\u6709\u201D\uFF09\u3002"
           );
         }
@@ -6769,7 +6956,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const previous = snap?.content ?? (typeof existing?.content === "string" ? existing.content : void 0);
     remember(channelId, id, payload);
     if (previous === void 0) {
-      log13.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
+      log14.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
       return;
     }
     if (previous === payload.content) return;
@@ -6884,7 +7071,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       const c = compareIds(String(a?.id ?? "0"), String(b?.id ?? "0"));
       return descending ? -c : c;
     });
-    log13.info(
+    log14.info(
       `revived ${chosen.length} deleted message(s) into ${channelId}` + (dropped ? `\uFF08\u53E6\u6709 ${dropped} \u6761\u5728\u7A97\u53E3\u5185\u4F46\u8D85\u51FA\u5355\u9875\u4E0A\u9650\uFF0C\u4EC5\u5728\u6D88\u606F\u8BB0\u5F55\u9875\u53EF\u89C1\uFF09` : "")
     );
   }
@@ -6930,7 +7117,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         resurrectIntoLoad(action);
         setTimeout(() => reflagLoaded(action), 0);
       } catch (err) {
-        log13.error("failed to revive deleted messages on channel load", err);
+        log14.error("failed to revive deleted messages on channel load", err);
       }
     }
     try {
@@ -6946,10 +7133,10 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
       if (!firstCaptureLogged) {
         firstCaptureLogged = true;
-        log13.info(`recorder saw its first ${type}`);
+        log14.info(`recorder saw its first ${type}`);
       }
     } catch (err) {
-      log13.error("recorder failed for", type, err);
+      log14.error("recorder failed for", type, err);
     }
   }
   function onDispatch(ctx) {
@@ -7005,7 +7192,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       } catch {
       }
     }
-    log13.info(`recorder on dispatcher ${tag}: seams [${seams.join(", ") || "none"}]`);
+    log14.info(`recorder on dispatcher ${tag}: seams [${seams.join(", ") || "none"}]`);
     return () => undo.forEach((u) => u());
   }
   var MAX_DISPATCHERS = 6;
@@ -7021,7 +7208,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         if (hooked.size >= MAX_DISPATCHERS) {
           if (!capReported) {
             capReported = true;
-            log13.warn(
+            log14.warn(
               `dispatcher \u5019\u9009\u8D85\u8FC7 ${MAX_DISPATCHERS} \u4E2A\uFF0C\u5DF2\u505C\u6B62\u7EE7\u7EED\u6302\u63A5\u3002\u591A\u51FA\u6765\u7684\u901A\u5E38\u662F shape \u76F8\u4F3C\u7684\u5047\u6A21\u5757\uFF1B\u5982\u679C\u5F55\u5236\u6CA1\u751F\u6548\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002`
             );
           }
@@ -7034,14 +7221,14 @@ ${loc.channel ?? ""}`.toLowerCase();
       return added;
     };
     const first = sweep();
-    log13.info(`recorder attached to ${first} dispatcher instance(s)`);
+    log14.info(`recorder attached to ${first} dispatcher instance(s)`);
     const timer3 = setInterval(() => {
       if (hooked.size >= MAX_DISPATCHERS) {
         clearInterval(timer3);
         return;
       }
       const added = sweep();
-      if (added > 0) log13.info(`recorder attached to ${added} late dispatcher instance(s)`);
+      if (added > 0) log14.info(`recorder attached to ${added} late dispatcher instance(s)`);
     }, 5e3);
     const stopTimer = setTimeout(() => clearInterval(timer3), 6e4);
     return () => {
@@ -7183,16 +7370,16 @@ ${loc.channel ?? ""}`.toLowerCase();
     if (!mine.length) return;
     for (const p of mine) {
       if (p.applied) {
-        log13.info(`patch OK   \xB7 ${p.label} (${p.hits} hit${p.hits === 1 ? "" : "s"})`);
+        log14.info(`patch OK   \xB7 ${p.label} (${p.hits} hit${p.hits === 1 ? "" : "s"})`);
       } else {
-        log13.warn(`patch MISS \xB7 ${p.label} \u2014 \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA`);
+        log14.warn(`patch MISS \xB7 ${p.label} \u2014 \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA`);
       }
     }
     const missed = mine.filter((p) => !p.applied);
     if (missed.length === 0) {
-      log13.info("in-chat patches applied \u2014 \u5168\u90E8\u547D\u4E2D");
+      log14.info("in-chat patches applied \u2014 \u5168\u90E8\u547D\u4E2D");
     } else {
-      log13.warn(
+      log14.warn(
         "\u90E8\u5206 in-chat patch \u672A\u5339\u914D\u5F53\u524D Discord \u6784\u5EFA\uFF1A" + missed.map((p) => `"${p.label}"`).join("\u3001") + "\u3002\u5220\u9664\u6D88\u606F\u4ECD\u4F1A\u8BB0\u5F55\u5728\u63D2\u4EF6\u9875\uFF0C\u4F46\u53EF\u80FD\u65E0\u6CD5\u5728\u804A\u5929\u5185\u4FDD\u7559 / \u53D8\u7EA2\u3002"
       );
     }
@@ -7207,11 +7394,11 @@ ${loc.channel ?? ""}`.toLowerCase();
         }).filter(Boolean);
         const combined = dumps.join("  ||  ").replace(/\s+/g, " ");
         const slice = combined.length > 3800 ? combined.slice(0, 3800) + " \u2026(\u622A\u65AD)" : combined;
-        log13.warn(
+        log14.warn(
           "MESSAGE_DELETE \u5904\u7406\u5668\u771F\u5B9E\u6E90\u7801\u5207\u7247\uFF08\u8865\u4E01\u672A\u547D\u4E2D\uFF0C\u7528\u4E8E\u4FEE\u6B63\uFF0C\u8BF7\u6574\u6BB5\u53D1\u7ED9\u5F00\u53D1\u8005\uFF09\uFF1A" + (slice || "\u672A\u5728\u5DF2\u52A0\u8F7D\u6A21\u5757\u4E2D\u627E\u5230 MESSAGE_DELETE \u5904\u7406\u5668\uFF1B\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u9891\u9053\u540E\u518D\u67E5\u770B\u65E5\u5FD7\u3002")
         );
       } catch (err) {
-        log13.error("could not dump MESSAGE_DELETE handler shape", err);
+        log14.error("could not dump MESSAGE_DELETE handler shape", err);
       }
     }
   }
@@ -7405,9 +7592,9 @@ ${loc.channel ?? ""}`.toLowerCase();
       setTimeout(reportPatches, 4e3);
       setTimeout(() => {
         if (actionsSeen > 0) {
-          log13.info(`recorder pulse OK \u2014 ${actionsSeen} message action(s) observed so far`);
+          log14.info(`recorder pulse OK \u2014 ${actionsSeen} message action(s) observed so far`);
         } else {
-          log13.error(
+          log14.error(
             "recorder pulse FAILED \u2014 no message actions observed in 30s. The dispatcher hooks are not receiving events on this build. \u8BF7\u628A\u65E5\u5FD7\u9875\u91CC recorder on dispatcher \u5F00\u5934\u7684\u51E0\u884C\u53D1\u7ED9\u5F00\u53D1\u8005\u3002"
           );
         }
@@ -7435,7 +7622,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       } catch {
       }
       messageLog.flush();
-      log13.info("stopped");
+      log14.info("stopped");
     },
     // --- methods the source patches call through `$self` --------------------
     /**
@@ -7447,20 +7634,20 @@ ${loc.channel ?? ""}`.toLowerCase();
      * unchanged only when nothing was touched — a throw here must never take
      * the store down, so the whole body is guarded.
      */
-    handleDelete(cache2, action, isBulk) {
+    handleDelete(cache3, action, isBulk) {
       try {
-        if (cache2 == null) return cache2;
-        if (!isBulk && typeof cache2.has === "function" && !cache2.has(action.id)) return cache2;
+        if (cache3 == null) return cache3;
+        if (!isBulk && typeof cache3.has === "function" && !cache3.has(action.id)) return cache3;
         const keepInChat = settings.store.keepDeletedInChat;
         const EPHEMERAL = 64;
         const mutate = (id) => {
-          const msg = typeof cache2.get === "function" ? cache2.get(id) : void 0;
+          const msg = typeof cache3.get === "function" ? cache3.get(id) : void 0;
           if (!msg) return;
           const keep = keepInChat && !action.mlDeleted && (msg.flags & EPHEMERAL) !== EPHEMERAL && !isIgnored(String(action.channelId ?? action.channel_id ?? msg.channel_id ?? ""), msg.author ?? {});
           if (!keep) {
-            cache2 = cache2.remove(id);
+            cache3 = cache3.remove(id);
           } else {
-            cache2 = cache2.update(id, (m) => m.set("deleted", true));
+            cache3 = cache3.update(id, (m) => m.set("deleted", true));
           }
         };
         if (isBulk) {
@@ -7469,9 +7656,9 @@ ${loc.channel ?? ""}`.toLowerCase();
           mutate(action.id);
         }
       } catch (err) {
-        log13.error("handleDelete failed; messages removed normally", err);
+        log14.error("handleDelete failed; messages removed normally", err);
       }
-      return cache2;
+      return cache3;
     },
     /**
      * Extra classNames for a message row whose message is deleted. Keyed off the
@@ -7534,7 +7721,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   });
 
   // src/plugins/show-username/index.tsx
-  var log14 = logger("show-username");
+  var log15 = logger("show-username");
   var settings2 = defineSettings({
     mode: {
       type: "select",
@@ -7593,7 +7780,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
       return /* @__PURE__ */ React.createElement(React.Fragment, null, prefix, nick, " ", /* @__PURE__ */ React.createElement("span", { className: suffixClass }, decorated));
     } catch (err) {
-      log14.error("username render failed; falling back to the nick", err);
+      log15.error("username render failed; falling back to the nick", err);
       return /* @__PURE__ */ React.createElement(React.Fragment, null, prefix, nick);
     }
   }
@@ -7621,7 +7808,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
     ],
     start() {
-      log14.info("appending usernames to message headers");
+      log15.info("appending usernames to message headers");
     },
     stop() {
     },
@@ -7657,7 +7844,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   });
 
   // src/plugins/guild-monitor/subscribe.ts
-  var log15 = logger("guild-monitor");
+  var log16 = logger("guild-monitor");
   var REFRESH_MS = 5 * 60 * 1e3;
   var timer2;
   var getGuildIds = () => [];
@@ -7676,7 +7863,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
       return [...ids];
     } catch (err) {
-      log15.debug(`could not read channels for guild ${guildId}`, err);
+      log16.debug(`could not read channels for guild ${guildId}`, err);
       return [];
     }
   }
@@ -7694,7 +7881,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         api.subscribeToGuild(guildId);
       }
     } catch (err) {
-      log15.warn(`subscribe failed for guild ${guildId}`, err);
+      log16.warn(`subscribe failed for guild ${guildId}`, err);
     }
   }
   function isSubscriptionSupported() {
@@ -7705,13 +7892,13 @@ ${loc.channel ?? ""}`.toLowerCase();
     const ids = getGuildIds();
     if (!ids.length) return;
     for (const id of ids) subscribeGuild(id);
-    log15.debug(`refreshed subscriptions for ${ids.length} guild(s)`);
+    log16.debug(`refreshed subscriptions for ${ids.length} guild(s)`);
   }
   function startSubscribing(resolver) {
     getGuildIds = resolver;
     stopSubscribing();
     if (!isSubscriptionSupported()) {
-      log15.warn("this Discord build exposes no guild-subscription action; monitoring is inactive");
+      log16.warn("this Discord build exposes no guild-subscription action; monitoring is inactive");
       return;
     }
     pass();
@@ -7789,7 +7976,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/guild-monitor/index.tsx
-  var log16 = logger("guild-monitor");
+  var log17 = logger("guild-monitor");
   function activeGuildIds() {
     if (settings3.store.acknowledgedRisk !== true) return [];
     const ids = settings3.store.selectedGuilds;
@@ -7810,7 +7997,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     start() {
       startSubscribing(activeGuildIds);
       const n = activeGuildIds().length;
-      if (n > 0) log16.info(`monitoring ${n} guild(s)`);
+      if (n > 0) log17.info(`monitoring ${n} guild(s)`);
     },
     stop() {
       stopSubscribing();
@@ -7860,7 +8047,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   });
 
   // src/plugins/message-cleaner/cleaner.ts
-  var log17 = logger("message-cleaner");
+  var log18 = logger("message-cleaner");
   var API_BASE = "https://discord.com/api/v10";
   var skipList = /* @__PURE__ */ new Set();
   var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -8052,7 +8239,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       } catch (e) {
         skipped++;
         if (!String(e?.message ?? "").includes("404")) skipList.add(m.id);
-        log17.warn(`skip ${m.id}: ${e?.message ?? e}`);
+        log18.warn(`skip ${m.id}: ${e?.message ?? e}`);
       }
       onProgress("\u5220\u9664\u4E2D", `\u5DF2\u5220\u9664 ${deleted} / ${messages.length}${skipped ? `\uFF08\u8DF3\u8FC7 ${skipped}\uFF09` : ""}`);
       const elapsed = Date.now() - t0;
@@ -8078,7 +8265,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-cleaner/ui/CleanerPage.tsx
-  var log18 = logger("message-cleaner");
+  var log19 = logger("message-cleaner");
   function formatTs(ts) {
     const date = new Date(ts);
     if (Number.isNaN(date.getTime())) return "";
@@ -8251,7 +8438,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         progress(ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u9884\u89C8\u5B8C\u6210", `\u627E\u5230 ${found.length} \u6761\u4F60\u7684\u6D88\u606F\u3002`);
       } catch (err) {
         progress("\u5931\u8D25", err.message ?? String(err));
-        log18.error("preview failed", err);
+        log19.error("preview failed", err);
       } finally {
         setMode("idle");
       }
@@ -8285,7 +8472,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         setPreviewed([]);
       } catch (err) {
         progress("\u5931\u8D25", err.message ?? String(err));
-        log18.error("delete failed", err);
+        log19.error("delete failed", err);
       } finally {
         setMode("idle");
       }
@@ -8380,7 +8567,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-cleaner/index.tsx
-  var log19 = logger("message-cleaner");
+  var log20 = logger("message-cleaner");
   var message_cleaner_default = definePlugin({
     id: "message-cleaner",
     name: "\u6D88\u606F\u6E05\u7406",
@@ -8394,14 +8581,14 @@ ${loc.channel ?? ""}`.toLowerCase();
       component: CleanerPage
     },
     start() {
-      log19.info("message-cleaner ready");
+      log20.info("message-cleaner ready");
     },
     stop() {
     }
   });
 
   // src/plugins/fake-nitro/index.ts
-  var log20 = logger("fake-nitro");
+  var log21 = logger("fake-nitro");
   var settings5 = defineSettings({
     enableEmojiBypass: {
       group: "\u8868\u60C5",
@@ -8550,7 +8737,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const canUse = canUseStickersNatively() && hasPermission(channelId, PERM.USE_EXTERNAL_STICKERS);
     if (sticker.available !== false && (canUse || sticker.guild_id === guildId)) return false;
     if (sticker.format_type === STICKER_LOTTIE) {
-      log20.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
+      log21.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
       return false;
     }
     const url = stickerUrl(sticker);
@@ -8585,8 +8772,8 @@ ${loc.channel ?? ""}`.toLowerCase();
       const rewritten = before.replace(
         EMOJI_TOKEN_RE,
         (tokenStr, animatedFlag, _name, emojiId, offset, str) => {
-          const cached3 = EmojiStore2.getCustomEmojiById?.(emojiId);
-          if (cached3 && canUseEmote(cached3, channelId, guildId)) return tokenStr;
+          const cached4 = EmojiStore2.getCustomEmojiById?.(emojiId);
+          if (cached4 && canUseEmote(cached4, channelId, guildId)) return tokenStr;
           changed = true;
           const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
           return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
@@ -8614,7 +8801,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       if (options) rewriteStickers(channelId, message, options, guildId);
       rewriteEmojis(channelId, message, guildId);
     } catch (err) {
-      log20.error("send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+      log21.error("send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
     }
   }
   function onEditMessage(ctx) {
@@ -8628,20 +8815,20 @@ ${loc.channel ?? ""}`.toLowerCase();
       message.content = message.content.replace(
         EMOJI_TOKEN_RE,
         (tokenStr, animatedFlag, _name, emojiId, offset, str) => {
-          const cached3 = EmojiStore2.getCustomEmojiById?.(emojiId);
-          if (cached3 && canUseEmote(cached3, channelId, guildId)) return tokenStr;
+          const cached4 = EmojiStore2.getCustomEmojiById?.(emojiId);
+          if (cached4 && canUseEmote(cached4, channelId, guildId)) return tokenStr;
           const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
           return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
         }
       );
     } catch (err) {
-      log20.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
+      log21.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
     }
   }
   function reportPatches2() {
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "fake-nitro");
     if (!mine.length) {
-      log20.warn(
+      log21.warn(
         "\u672C\u63D2\u4EF6\u6CA1\u6709\u6CE8\u518C\u4EFB\u4F55\u6E90\u7801 patch \u2014\u2014 \u542F\u52A8\u65F6\u5B83\u5904\u4E8E\u5173\u95ED\u72B6\u6001\u3002\u5728\u8BBE\u7F6E\u91CC\u6253\u5F00\u201C\u5047 Nitro\u201D\u540E\u5FC5\u987B\u5237\u65B0\u9875\u9762\uFF1A\u6E90\u7801 patch \u53EA\u5728\u6A21\u5757\u52A0\u8F7D\u90A3\u4E00\u523B\u751F\u6548\uFF0C\u4E2D\u9014\u5F00\u542F\u4E0D\u4F1A\u8865\u4E0A\u3002"
       );
       return;
@@ -8650,23 +8837,23 @@ ${loc.channel ?? ""}`.toLowerCase();
     const missed = mine.filter((p) => !p.applied && !p.optional);
     const degraded = mine.filter((p) => !p.applied && p.optional);
     if (missed.length === 0) {
-      log20.info(`\u8868\u60C5 / \u8D34\u7EB8\u89E3\u9501\u7684\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548\uFF08\u5171 ${mine.length} \u5904\u66FF\u6362\uFF09`);
+      log21.info(`\u8868\u60C5 / \u8D34\u7EB8\u89E3\u9501\u7684\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548\uFF08\u5171 ${mine.length} \u5904\u66FF\u6362\uFF09`);
     } else {
       const stale = missed.filter((p) => p.seen > 0);
       const unseen = missed.filter((p) => p.seen === 0);
       if (stale.length > 0) {
-        log20.warn(
+        log21.warn(
           "\u4EE5\u4E0B patch \u627E\u5230\u4E86\u76EE\u6807\u6A21\u5757\uFF0C\u4F46\u66FF\u6362\u6B63\u5219\u5DF2\u5BF9\u4E0D\u4E0A\u5F53\u524D Discord \u7248\u672C\uFF08\u9700\u8981\u91CD\u951A\uFF09\uFF1A" + stale.map(name).join("\u3001")
         );
       }
       if (unseen.length > 0) {
-        log20.warn(
+        log21.warn(
           "\u4EE5\u4E0B patch \u4ECE\u672A\u62FF\u5230\u76EE\u6807\u6A21\u5757 \u2014\u2014 \u6A21\u5757\u8FD8\u6CA1\u52A0\u8F7D\uFF0C\u6216 find \u5DF2\u5931\u6548\uFF1A" + unseen.map(name).join("\u3001") + "\u3002\u82E5\u76F8\u5173\u754C\u9762\uFF08\u8868\u60C5\u9009\u62E9\u5668\u7B49\uFF09\u5DF2\u7ECF\u6253\u5F00\u8FC7\u4ECD\u662F\u8FD9\u6837\uFF0C\u5C31\u662F find \u9700\u8981\u66F4\u65B0\u3002"
         );
       }
     }
     if (degraded.length > 0) {
-      log20.info("\u4EE5\u4E0B\u53EF\u9009 patch \u672A\u5339\u914D\uFF08\u4EC5\u5F71\u54CD\u9644\u5E26\u529F\u80FD\uFF0C\u4E0D\u5F71\u54CD\u8868\u60C5 / \u8D34\u7EB8\uFF09\uFF1A" + degraded.map(name).join("\u3001"));
+      log21.info("\u4EE5\u4E0B\u53EF\u9009 patch \u672A\u5339\u914D\uFF08\u4EC5\u5F71\u54CD\u9644\u5E26\u529F\u80FD\uFF0C\u4E0D\u5F71\u54CD\u8868\u60C5 / \u8D34\u7EB8\uFF09\uFF1A" + degraded.map(name).join("\u3001"));
     }
   }
   var IS_BYPASSEABLE_INTENTION = `[${INTENT_CHAT},${INTENT_STICKER_EMOJI}].includes(fakeNitroIntention)`;
@@ -8913,19 +9100,19 @@ ${loc.channel ?? ""}`.toLowerCase();
           try {
             unpatchSend = patcher.before(messageActions, "sendMessage", onSendMessage);
           } catch (err) {
-            log20.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
+            log21.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
           }
         }
         if (typeof messageActions.editMessage === "function") {
           try {
             unpatchEdit = patcher.before(messageActions, "editMessage", onEditMessage);
           } catch (err) {
-            log20.error("\u6302\u63A5 editMessage \u5931\u8D25", err);
+            log21.error("\u6302\u63A5 editMessage \u5931\u8D25", err);
           }
         }
-        log20.info("MessageActions \u5DF2\u6302\u63A5\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF1B\u82E5 pre-send \u8865\u4E01\u5DF2\u751F\u6548\u5219\u6B64 hook \u4EC5\u4F5C fallback\uFF09");
+        log21.info("MessageActions \u5DF2\u6302\u63A5\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF1B\u82E5 pre-send \u8865\u4E01\u5DF2\u751F\u6548\u5219\u6B64 hook \u4EC5\u4F5C fallback\uFF09");
       } else {
-        log20.warn(
+        log21.warn(
           "\u672A\u627E\u5230 MessageActions \u2014\u2014 \u9009\u62E9\u5668\u89E3\u9501\u5DF2\u901A\u8FC7\u6E90\u7801 patch \u751F\u6548\uFF0C\u4F46\u53D1\u9001\u65F6\u7684 URL \u6539\u5199\u4E0D\u53EF\u7528\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\uFF1B\u82E5\u4ECD\u672A\u627E\u5230\uFF0C\u8BF4\u660E\u8BE5 Discord \u7248\u672C\u7684 MessageActions \u5F62\u72B6\u6709\u53D8\u3002"
         );
       }
@@ -8955,7 +9142,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         rewriteEmojis(channelId, messageObj, guildId);
         messageObj.__fakeNitroRewritten = true;
       } catch (err) {
-        log20.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+        log21.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
       }
       return false;
     },
@@ -8978,7 +9165,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         rewriteEmojis(channelId, scratch, guildIdOfChannel(channelId));
         return scratch.content;
       } catch (err) {
-        log20.debug("previewOutgoing \u5931\u8D25\uFF0C\u6309\u539F\u6587\u8FD4\u56DE", err);
+        log21.debug("previewOutgoing \u5931\u8D25\uFF0C\u6309\u539F\u6587\u8FD4\u56DE", err);
         return content;
       }
     }
@@ -9019,7 +9206,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-preview/render.tsx
-  var log21 = logger("message-preview");
+  var log22 = logger("message-preview");
   var parserChecked = false;
   var parser;
   var parserRejected = false;
@@ -9051,8 +9238,8 @@ ${loc.channel ?? ""}`.toLowerCase();
   function announce(message, err) {
     if (announced) return;
     announced = true;
-    if (err) log21.debug(message, err);
-    else log21.debug(message);
+    if (err) log22.debug(message, err);
+    else log22.debug(message);
   }
   function renderMessageContent(content, channelId) {
     if (!parserRejected) {
@@ -9109,9 +9296,9 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-preview/classes.ts
-  var log22 = logger("message-preview");
+  var log23 = logger("message-preview");
   var checked = false;
-  var cached2 = "";
+  var cached3 = "";
   function looksLikeMarkupClasses(m) {
     if (typeof m !== "object" || m === null) return false;
     if (typeof m.__halcyon_probe__ !== "undefined") return false;
@@ -9132,18 +9319,18 @@ ${loc.channel ?? ""}`.toLowerCase();
     return "";
   }
   function markupClass() {
-    if (checked) return cached2;
+    if (checked) return cached3;
     checked = true;
     try {
       const mod = find(looksLikeMarkupClasses);
-      if (mod) cached2 = pickMarkupClass(mod);
+      if (mod) cached3 = pickMarkupClass(mod);
     } catch {
-      cached2 = "";
+      cached3 = "";
     }
-    if (!cached2) {
-      log22.debug("\u672A\u627E\u5230 Discord \u7684 markup \u5BB9\u5668\u7C7B\uFF0C\u9884\u89C8\u5C06\u663E\u793A\u4E3A\u65E0\u6837\u5F0F\u6587\u672C\uFF08\u7ED3\u6784\u6B63\u786E\u3001\u5B57\u53F7/\u659C\u4F53\u7B49\u4E0D\u751F\u6548\uFF09");
+    if (!cached3) {
+      log23.debug("\u672A\u627E\u5230 Discord \u7684 markup \u5BB9\u5668\u7C7B\uFF0C\u9884\u89C8\u5C06\u663E\u793A\u4E3A\u65E0\u6837\u5F0F\u6587\u672C\uFF08\u7ED3\u6784\u6B63\u786E\u3001\u5B57\u53F7/\u659C\u4F53\u7B49\u4E0D\u751F\u6548\uFF09");
     }
-    return cached2;
+    return cached3;
   }
 
   // src/plugins/message-preview/draft.ts
@@ -9289,7 +9476,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-preview/button.tsx
-  var log23 = logger("message-preview");
+  var log24 = logger("message-preview");
   var REPOSITION_MS = 250;
   var GAP_PX = 8;
   var panelHost = null;
@@ -9343,7 +9530,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       panelHost = el;
     } catch (err) {
       el.remove();
-      log23.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
+      log24.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
       return;
     }
     reposition();
@@ -9557,7 +9744,7 @@ ${tail}`;
   }
 
   // src/plugins/message-tail/index.ts
-  var log24 = logger("message-tail");
+  var log25 = logger("message-tail");
   var settings7 = defineSettings({
     template: {
       group: "\u5C3E\u5DF4",
@@ -9660,7 +9847,7 @@ ${tail}`;
       message.content = content;
       message.__halcyonTailed = true;
     } catch (err) {
-      log24.error("\u52A0\u5C3E\u5DF4\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+      log25.error("\u52A0\u5C3E\u5DF4\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
     }
   }
   var message_tail_default = definePlugin({
@@ -9676,14 +9863,14 @@ ${tail}`;
         (m) => typeof m?.sendMessage === "function" && typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function" && typeof m?.__halcyon_probe__ === "undefined"
       );
       if (!messageActions) {
-        log24.warn("\u672A\u627E\u5230 MessageActions\uFF0C\u5C3E\u5DF4\u65E0\u6CD5\u8FFD\u52A0\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
+        log25.warn("\u672A\u627E\u5230 MessageActions\uFF0C\u5C3E\u5DF4\u65E0\u6CD5\u8FFD\u52A0\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
         return;
       }
       try {
         unpatchSend2 = patcher.before(messageActions, "sendMessage", onSendMessage2);
-        log24.info("\u5DF2\u6302\u63A5 sendMessage\uFF0C\u53D1\u6D88\u606F\u65F6\u4F1A\u8FFD\u52A0\u5C3E\u5DF4");
+        log25.info("\u5DF2\u6302\u63A5 sendMessage\uFF0C\u53D1\u6D88\u606F\u65F6\u4F1A\u8FFD\u52A0\u5C3E\u5DF4");
       } catch (err) {
-        log24.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
+        log25.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
       }
     },
     stop() {
@@ -9694,7 +9881,7 @@ ${tail}`;
   });
 
   // src/plugins/console-cleaner/index.ts
-  var log25 = logger("console-cleaner");
+  var log26 = logger("console-cleaner");
   var settings8 = defineSettings({
     hideSelfXss: {
       group: "\u5185\u7F6E\u89C4\u5219",
@@ -9806,7 +9993,7 @@ ${tail}`;
     start() {
       const con = globalThis.console;
       if (!con) {
-        log25.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        log26.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
         return;
       }
       suppressedCount = 0;
@@ -9816,11 +10003,11 @@ ${tail}`;
           try {
             unpatchers.push(patcher.instead(con, method, hook));
           } catch (err) {
-            log25.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+            log26.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
           }
         }
       }
-      log25.info(
+      log26.info(
         `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
       );
     },
@@ -9832,12 +10019,12 @@ ${tail}`;
         }
       }
       unpatchers = [];
-      log25.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+      log26.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
     }
   });
 
   // src/plugins/emote-cloner/clone.ts
-  var log26 = logger("emote-cloner");
+  var log27 = logger("emote-cloner");
   var MAX_EMOJI_SIZE_BYTES = 256 * 1024;
   var MAX_STICKER_SIZE_BYTES = 512 * 1024;
   var uploadEmojiAction = null;
@@ -9931,21 +10118,21 @@ ${tail}`;
         await upload({ guildId, name, image });
         return;
       } catch (err) {
-        log26.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
+        log27.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
         throw new Error(restErrorMessage(err));
       }
     }
     try {
       await RestAPI.post({ url: `/guilds/${guildId}/emojis`, body: { image, name, roles: [] } });
     } catch (err) {
-      log26.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
+      log27.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
   }
   async function fetchStickerInfo(id) {
     try {
-      const cached3 = StickersStore.getStickerById?.(id);
-      if (cached3) return cached3;
+      const cached4 = StickersStore.getStickerById?.(id);
+      if (cached4) return cached4;
     } catch {
     }
     try {
@@ -9959,7 +10146,7 @@ ${tail}`;
       }
       return body;
     } catch (err) {
-      log26.warn("could not fetch sticker info; using fallbacks", err);
+      log27.warn("could not fetch sticker info; using fallbacks", err);
       return null;
     }
   }
@@ -9988,10 +10175,10 @@ ${tail}`;
       created = resPayload(res);
       if (created && !created.id && created.sticker?.id) created = created.sticker;
     } catch (err) {
-      log26.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
+      log27.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
-    log26.info("sticker uploaded", { id: created?.id, name: created?.name });
+    log27.info("sticker uploaded", { id: created?.id, name: created?.name });
     try {
       getDispatcher()?.dispatch({
         type: "GUILD_STICKERS_CREATE_SUCCESS",
@@ -10003,7 +10190,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/resolve.ts
-  var log27 = logger("emote-cloner");
+  var log28 = logger("emote-cloner");
   var SNOWFLAKE = /^\d{5,25}$/;
   var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
   function emojiName(raw) {
@@ -10270,9 +10457,9 @@ ${tail}`;
     const record2 = recordFromFiber(target, found.id);
     const resolved = emojiName(record2?.name) ?? emojiNameFromMessages(target, found.id) ?? emojiNameFromStore(found.id) ?? emojiNameFromDom(elements) ?? emojiName(found.domName);
     if (!resolved) {
-      log27.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
+      log28.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
     } else {
-      log27.debug("resolved emoji", { id: found.id, name: resolved });
+      log28.debug("resolved emoji", { id: found.id, name: resolved });
     }
     return {
       kind: "emoji",
@@ -10283,7 +10470,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/picker.tsx
-  var log28 = logger("emote-cloner");
+  var log29 = logger("emote-cloner");
   function iconUrl(g2) {
     const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
     return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
@@ -10329,7 +10516,7 @@ ${tail}`;
         host3
       );
     } catch (err) {
-      log28.error("could not open guild picker", err);
+      log29.error("could not open guild picker", err);
       closeGuildPicker();
     }
   }
@@ -10349,7 +10536,7 @@ ${tail}`;
         setStatus({ state: "done", guild: g2.name });
         setTimeout(onClose, 1e3);
       }).catch((err) => {
-        log28.error("clone failed", err);
+        log29.error("clone failed", err);
         setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
       });
     };
@@ -10408,7 +10595,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/index.tsx
-  var log29 = logger("emote-cloner");
+  var log30 = logger("emote-cloner");
   var PERM2 = {
     CREATE_GUILD_EXPRESSIONS: 1n << 43n,
     MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
@@ -10448,7 +10635,7 @@ ${tail}`;
     if (!hit) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) {
-      log29.warn("MenuItem component not learned yet; skipping clone item this open");
+      log30.warn("MenuItem component not learned yet; skipping clone item this open");
       return;
     }
     const label = hit.kind === "emoji" ? `\u590D\u5236\u8868\u60C5 :${hit.name}: \u5230\u670D\u52A1\u5668` : hit.name ? `\u590D\u5236\u8D34\u7EB8 ${hit.name} \u5230\u670D\u52A1\u5668` : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668";
@@ -10469,7 +10656,7 @@ ${tail}`;
     category: "utility",
     start() {
       unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
-      log29.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+      log30.info("emote-cloner ready \u2014 right-click an emoji or sticker");
     },
     stop() {
       for (const un of unpatchers2) {
@@ -10483,12 +10670,12 @@ ${tail}`;
   });
 
   // src/core/flux/index.ts
-  var log30 = logger("flux");
+  var log31 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log30.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log31.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -10500,7 +10687,7 @@ ${tail}`;
         try {
           listener(action);
         } catch (err) {
-          log30.error(`listener for ${type} threw`, err);
+          log31.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -10509,7 +10696,7 @@ ${tail}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log30.error(`could not subscribe to ${type}`, err);
+      log31.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -10520,7 +10707,7 @@ ${tail}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log30.error(`could not unsubscribe from ${type}`, err);
+      log31.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -10551,13 +10738,13 @@ ${tail}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log30.error("dispatch failed", action?.type, err);
+        log31.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log31 = logger("mark-all-read");
+  var log32 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -10571,7 +10758,7 @@ ${tail}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log31.warn(`could not read channels for guild ${guildId}`, err);
+        log32.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -10597,16 +10784,16 @@ ${tail}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log31.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log32.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log31.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log32.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log31.warn("could not describe getChannels shape", err);
+          log32.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -10626,14 +10813,14 @@ ${tail}`;
           }
         }
       } catch (err) {
-        log31.warn(`could not read joined threads for guild ${guildId}`, err);
+        log32.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log31.info(
+    log32.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -10650,9 +10837,9 @@ ${tail}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log31.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log32.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log31.info("nothing unread; skipping BULK_ACK");
+      log32.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -10660,12 +10847,12 @@ ${tail}`;
       context: "APP",
       channels
     });
-    log31.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log32.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log32 = logger("mark-all-read");
+  var log33 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -10690,7 +10877,7 @@ ${tail}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log32.error("mark all read failed", err);
+        log33.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -10699,7 +10886,7 @@ ${tail}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log33 = logger("mark-all-read");
+  var log34 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -10710,7 +10897,7 @@ ${tail}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log33.error("mark all read failed", err);
+      log34.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -10795,7 +10982,7 @@ ${tail}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log33.info("mark-all-read ready");
+      log34.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -10803,7 +10990,7 @@ ${tail}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log34 = logger("silent-typing");
+  var log35 = logger("silent-typing");
   var settings9 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
@@ -10865,7 +11052,7 @@ ${tail}`;
         return void 0;
       }
     } catch (err) {
-      log34.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log35.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
@@ -10889,9 +11076,9 @@ ${tail}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log34.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log35.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log34.warn(
+      log35.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -10924,7 +11111,7 @@ ${tail}`;
       active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log34.warn(
+        log35.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -10934,17 +11121,17 @@ ${tail}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log34.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log35.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log34.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log35.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log34.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings9.store.scope}\uFF09`);
+      log35.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings9.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -10954,7 +11141,7 @@ ${tail}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log34.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log35.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -11094,10 +11281,10 @@ ${tail}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log35 = logger("member-count");
+  var log36 = logger("member-count");
   function memo(resolve) {
-    let cached3;
-    return () => cached3 ??= resolve();
+    let cached4;
+    return () => cached4 ??= resolve();
   }
   var memberCountStore = memo(
     () => findStoreByName("GuildMemberCountStore") ?? findStoreWithMethods("getMemberCount")
@@ -11188,9 +11375,9 @@ ${tail}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log35.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log36.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log35.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log36.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -11342,7 +11529,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log36 = logger("member-count");
+  var log37 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -11408,7 +11595,7 @@ ${tail}`;
     try {
       hit.element.insertBefore(host5, hit.element.firstChild);
     } catch (err) {
-      log36.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log37.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
@@ -11416,11 +11603,11 @@ ${tail}`;
       mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log36.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log37.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
       host5.remove();
-      log36.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      log37.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
   function ensureMounted2() {
@@ -11441,7 +11628,7 @@ ${tail}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log36.warn(
+      log37.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -11458,7 +11645,7 @@ ${tail}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log36.warn(
+    log37.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -11482,7 +11669,7 @@ ${tail}`;
         ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log36.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings10.store.placement}\uFF09`);
+      log37.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings10.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -11498,7 +11685,7 @@ ${tail}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log36.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log37.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -11599,7 +11786,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log37 = logger("who-reacted");
+  var log38 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -11642,26 +11829,26 @@ ${tail}`;
     const name = typeof user.global_name === "string" && user.global_name || typeof user.username === "string" && user.username || id;
     return { id, name, avatarUrl: avatarUrl(user), bot: user?.bot === true };
   }
-  var cache = /* @__PURE__ */ new Map();
-  var inFlight = /* @__PURE__ */ new Map();
+  var cache2 = /* @__PURE__ */ new Map();
+  var inFlight2 = /* @__PURE__ */ new Map();
   function cachedReactors(target) {
-    const entry = cache.get(cacheKey(target));
+    const entry = cache2.get(cacheKey(target));
     if (!entry) return null;
     if (Date.now() - entry.at > CACHE_TTL_MS) {
-      cache.delete(cacheKey(target));
+      cache2.delete(cacheKey(target));
       return null;
     }
     return entry.reactors;
   }
   function clearCache() {
-    cache.clear();
-    inFlight.clear();
+    cache2.clear();
+    inFlight2.clear();
   }
   function fetchReactors(target, limit) {
     const key = cacheKey(target);
     const fresh = cachedReactors(target);
     if (fresh) return Promise.resolve(fresh);
-    const pending = inFlight.get(key);
+    const pending = inFlight2.get(key);
     if (pending) return pending;
     const capped = Math.max(1, Math.min(100, Math.trunc(limit) || 20));
     const url = `/channels/${target.channelId}/messages/${target.messageId}/reactions/${encodeURIComponent(emojiParam(target.emoji))}?limit=${capped}` + (target.type === 1 ? "&type=1" : "");
@@ -11678,15 +11865,15 @@ ${tail}`;
         const reactor = toReactor(user);
         if (reactor) reactors.push(reactor);
       }
-      cache.set(key, { at: Date.now(), reactors });
+      cache2.set(key, { at: Date.now(), reactors });
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log37.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log38.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
-    inFlight.set(key, guarded);
-    void guarded.catch(() => void 0).then(() => inFlight.delete(key));
+    inFlight2.set(key, guarded);
+    void guarded.catch(() => void 0).then(() => inFlight2.delete(key));
     return guarded;
   }
 
@@ -11712,8 +11899,8 @@ ${tail}`;
   function ReactorCard({ target }) {
     const s = settings11.store;
     const [state, setState] = useState(() => {
-      const cached3 = cachedReactors(target);
-      return cached3 ? { kind: "ready", reactors: cached3 } : { kind: "loading" };
+      const cached4 = cachedReactors(target);
+      return cached4 ? { kind: "ready", reactors: cached4 } : { kind: "loading" };
     });
     useEffect(() => {
       let live = true;
@@ -11744,7 +11931,7 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log38 = logger("who-reacted");
+  var log39 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
@@ -11813,7 +12000,7 @@ ${tail}`;
       }
       fillHost(host5, reactors, target.count);
     } catch (err) {
-      log38.debug("inline avatars: fetch failed", err);
+      log39.debug("inline avatars: fetch failed", err);
       host5.remove();
       DECORATED.delete(pill);
     }
@@ -11852,7 +12039,7 @@ ${tail}`;
       } catch {
       }
     }
-    log38.info("inline reactor avatars: enabled");
+    log39.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -11873,7 +12060,7 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log39 = logger("who-reacted");
+  var log40 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
@@ -11956,7 +12143,7 @@ ${tail}`;
     try {
       unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
     } catch (err) {
-      log39.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log40.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide();
       return;
     }
@@ -12084,7 +12271,7 @@ ${tail}`;
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log39.info(
+      log40.info(
         `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings11.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings11.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
@@ -12102,7 +12289,7 @@ ${tail}`;
       altDown = false;
       hide();
       clearCache();
-      log39.info("\u5DF2\u505C\u7528");
+      log40.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12393,7 +12580,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log40 = logger("platform-indicators");
+  var log41 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -12461,7 +12648,7 @@ ${tail}`;
       return true;
     } catch (err) {
       host5.remove();
-      log40.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      log41.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -12517,7 +12704,7 @@ ${tail}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log40.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log41.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
@@ -12531,7 +12718,7 @@ ${tail}`;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log40.warn(
+      log41.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -12572,7 +12759,7 @@ ${tail}`;
         settings12.subscribe("ignoreBots", () => bumpPresence()),
         settings12.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log40.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log41.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -12590,7 +12777,7 @@ ${tail}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log40.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log41.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12654,7 +12841,7 @@ ${tail}`;
   ];
 
   // src/core/probe.ts
-  var log41 = logger("probe");
+  var log42 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -12677,8 +12864,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.6.16" : "dev",
-      build: true ? "2026-08-31 21:42:06" : "dev",
+      version: true ? "0.6.17" : "dev",
+      build: true ? "2026-09-01 11:55:59" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12691,14 +12878,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log41.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log42.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log42 = logger("userscript");
+  var log43 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -12709,8 +12896,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.16" : "dev",
-        build: true ? "2026-08-31 21:42:06" : "dev",
+        version: true ? "0.6.17" : "dev",
+        build: true ? "2026-09-01 11:55:59" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -12721,6 +12908,6 @@ ${tail}`;
       };
     } catch {
     }
-    log42.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log42.error("userscript boot failed", err));
+    log43.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log43.error("userscript boot failed", err));
 })();
