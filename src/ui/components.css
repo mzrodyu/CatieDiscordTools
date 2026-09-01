@@ -2537,3 +2537,19 @@
   font-size: var(--hc-text-caption1);
   line-height: var(--hc-lh-caption);
 }
+
+
+/* --- Image zoom lens ----------------------------------------------------- */
+/* Body-mounted, follows the cursor, never intercepts a click. Position, size
+ * and backdrop are all set from JS; only the chrome lives here. */
+.hc-zoom-lens {
+  position: fixed;
+  display: none;
+  z-index: 4200;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-color: var(--hc-bg-elevated);
+  box-shadow: var(--hc-elev-2), 0 0 0 2px rgba(255, 255, 255, 0.14) inset;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  image-rendering: auto;
+}

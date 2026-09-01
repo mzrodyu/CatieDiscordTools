@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.6.17
+// @version      0.7.0
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -773,8 +773,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-01 11:55:59" : "dev";
-      const version2 = true ? "0.6.17" : "dev";
+      const build = true ? "2026-09-01 13:37:48" : "dev";
+      const version2 = true ? "0.7.0" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3527,6 +3527,22 @@ ${slices.join("\n  ...  \n")}`
   font-size: var(--hc-text-caption1);
   line-height: var(--hc-lh-caption);
 }
+
+
+/* --- Image zoom lens ----------------------------------------------------- */
+/* Body-mounted, follows the cursor, never intercepts a click. Position, size
+ * and backdrop are all set from JS; only the chrome lives here. */
+.hc-zoom-lens {
+  position: fixed;
+  display: none;
+  z-index: 4200;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-color: var(--hc-bg-elevated);
+  box-shadow: var(--hc-elev-2), 0 0 0 2px rgba(255, 255, 255, 0.14) inset;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  image-rendering: auto;
+}
 `;
 
   // src/ui/inject-styles.ts
@@ -3546,15 +3562,15 @@ ${components_default}`;
   }
 
   // src/icons/index.tsx
-  function Glyph({ size = 20, className, filled, children, ...rest }) {
+  function Glyph({ size: size2 = 20, className, filled, children, ...rest }) {
     const label = rest["aria-label"];
-    if (typeof size !== "number" || !Number.isFinite(size)) size = 20;
+    if (typeof size2 !== "number" || !Number.isFinite(size2)) size2 = 20;
     return /* @__PURE__ */ React.createElement(
       "svg",
       {
         className,
-        width: size,
-        height: size,
+        width: size2,
+        height: size2,
         viewBox: "0 0 24 24",
         fill: filled ? "currentColor" : "none",
         stroke: filled ? "none" : "currentColor",
@@ -3786,7 +3802,7 @@ ${components_default}`;
     const rootRef = useRef(null);
     const menuRef = useRef(null);
     const [menuPos, setMenuPos] = useState(null);
-    const current = options.find((o) => o.value === value);
+    const current2 = options.find((o) => o.value === value);
     useEffect(() => {
       if (!open) return;
       const onPress = (e) => {
@@ -3864,7 +3880,7 @@ ${components_default}`;
         "aria-label": rest["aria-label"],
         onClick: () => open ? setOpen(false) : openMenu()
       },
-      /* @__PURE__ */ React.createElement("span", { className: "hc-select__value" }, current?.label ?? value),
+      /* @__PURE__ */ React.createElement("span", { className: "hc-select__value" }, current2?.label ?? value),
       /* @__PURE__ */ React.createElement(
         "svg",
         {
@@ -4003,7 +4019,7 @@ ${components_default}`;
   // src/ui/components/Button.tsx
   function Button({
     variant = "secondary",
-    size = "md",
+    size: size2 = "md",
     icon,
     className,
     children,
@@ -4011,7 +4027,7 @@ ${components_default}`;
     ...rest
   }) {
     const classes = ["hc-btn", `hc-btn--${variant}`];
-    if (size !== "md") classes.push(`hc-btn--${size}`);
+    if (size2 !== "md") classes.push(`hc-btn--${size2}`);
     if (className) classes.push(className);
     return /* @__PURE__ */ React.createElement("button", { type, className: classes.join(" "), ...rest }, icon, children != null && children !== false && /* @__PURE__ */ React.createElement("span", null, children));
   }
@@ -4026,17 +4042,17 @@ ${components_default}`;
     }, []);
     return list;
   }
-  function useSettingsSnapshot(settings13) {
+  function useSettingsSnapshot(settings15) {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubscribes3 = Object.keys(settings13.schema).map(
-        (key) => settings13.subscribe(key, () => bump((n) => n + 1))
+      const unsubscribes4 = Object.keys(settings15.schema).map(
+        (key) => settings15.subscribe(key, () => bump((n) => n + 1))
       );
       return () => {
-        for (const off of unsubscribes3) off();
+        for (const off of unsubscribes4) off();
       };
-    }, [settings13]);
-    return settings13.store;
+    }, [settings15]);
+    return settings15.store;
   }
 
   // src/ui/settings/SettingsForm.tsx
@@ -4052,16 +4068,16 @@ ${components_default}`;
       return false;
     }
   }
-  function SettingsForm({ settings: settings13 }) {
-    const store = useSettingsSnapshot(settings13);
+  function SettingsForm({ settings: settings15 }) {
+    const store = useSettingsSnapshot(settings15);
     const keys = useMemo(
-      () => Object.keys(settings13.schema).filter((key) => !settings13.schema[key].hidden),
-      [settings13]
+      () => Object.keys(settings15.schema).filter((key) => !settings15.schema[key].hidden),
+      [settings15]
     );
     const [draft, setDraft] = useState(() => seed(store, keys));
     useEffect(() => {
       setDraft(seed(store, keys));
-    }, [settings13]);
+    }, [settings15]);
     if (keys.length === 0) return null;
     const dirty = keys.filter((key) => !equal(draft[key], store[key]));
     const save = () => {
@@ -4070,7 +4086,7 @@ ${components_default}`;
     const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
-      const title = settings13.schema[key].group ?? "\u8BBE\u7F6E";
+      const title = settings15.schema[key].group ?? "\u8BBE\u7F6E";
       const last = sections[sections.length - 1];
       if (last && last.title === title) last.keys.push(key);
       else sections.push({ title, keys: [key] });
@@ -4079,7 +4095,7 @@ ${components_default}`;
       SettingField,
       {
         key,
-        def: settings13.schema[key],
+        def: settings15.schema[key],
         value: draft[key],
         onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
@@ -4375,7 +4391,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.6.17" : "dev";
+    return true ? "0.7.0" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4414,11 +4430,11 @@ ${components_default}`;
     if (!force && cached && cached.status !== "unknown") return cached;
     if (inflight) return inflight;
     inflight = (async () => {
-      const current = currentVersion();
+      const current2 = currentVersion();
       const raw = await fetchText(VERSION_URL);
       let state;
       if (raw == null) {
-        state = { status: "unknown", current, latest: null };
+        state = { status: "unknown", current: current2, latest: null };
       } else {
         let latest = null;
         try {
@@ -4428,11 +4444,11 @@ ${components_default}`;
           latest = null;
         }
         if (!latest) {
-          state = { status: "unknown", current, latest: null };
-        } else if (current === "dev") {
-          state = { status: "current", current, latest };
+          state = { status: "unknown", current: current2, latest: null };
+        } else if (current2 === "dev") {
+          state = { status: "current", current: current2, latest };
         } else {
-          state = { status: isNewer(latest, current) ? "outdated" : "current", current, latest };
+          state = { status: isNewer(latest, current2) ? "outdated" : "current", current: current2, latest };
         }
       }
       if (state.status === "outdated") {
@@ -4453,7 +4469,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.6.17" : "dev";
+    const version2 = true ? "0.7.0" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5016,18 +5032,18 @@ ${components_default}`;
   var log8 = logger("patcher");
   var INSTALLED = Symbol("halcyon.patch");
   function ensureInstalled(target, method) {
-    const current = target[method];
-    if (current && current[INSTALLED]) {
-      return current[INSTALLED];
+    const current2 = target[method];
+    if (current2 && current2[INSTALLED]) {
+      return current2[INSTALLED];
     }
-    if (typeof current !== "function") {
+    if (typeof current2 !== "function") {
       throw new TypeError(`cannot patch "${method}": not a function`);
     }
     const hooks = {
       before: /* @__PURE__ */ new Set(),
       instead: /* @__PURE__ */ new Set(),
       after: /* @__PURE__ */ new Set(),
-      original: current
+      original: current2
     };
     const wrapper = function(...args) {
       const ctx = {
@@ -5073,11 +5089,11 @@ ${components_default}`;
       }
       return ctx.result;
     };
-    Object.defineProperty(wrapper, "name", { value: current.name, configurable: true });
-    Object.defineProperty(wrapper, "length", { value: current.length, configurable: true });
+    Object.defineProperty(wrapper, "name", { value: current2.name, configurable: true });
+    Object.defineProperty(wrapper, "length", { value: current2.length, configurable: true });
     wrapper.toString = () => hooks.original.toString();
     wrapper[INSTALLED] = hooks;
-    Object.assign(wrapper, current);
+    Object.assign(wrapper, current2);
     target[method] = wrapper;
     return hooks;
   }
@@ -5785,8 +5801,8 @@ ${components_default}`;
     2048,
     4096
   ];
-  function normalizeSize(size, fallback) {
-    const n = Number(size);
+  function normalizeSize(size2, fallback) {
+    const n = Number(size2);
     if (!Number.isFinite(n) || n <= 0) return fallback;
     let best = ALLOWED_SIZES[0];
     for (const candidate of ALLOWED_SIZES) {
@@ -5794,8 +5810,8 @@ ${components_default}`;
     }
     return best;
   }
-  function emojiCdnUrl(id, animated, size) {
-    const px = normalizeSize(size, 48);
+  function emojiCdnUrl(id, animated, size2) {
+    const px = normalizeSize(size2, 48);
     const query = `size=${px}${animated ? "&animated=true" : ""}`;
     return `https://cdn.discordapp.com/emojis/${id}.webp?${query}`;
   }
@@ -5805,8 +5821,8 @@ ${components_default}`;
     LOTTIE: 3,
     GIF: 4
   };
-  function stickerCdnUrl(id, formatType, size) {
-    const px = normalizeSize(size, 160);
+  function stickerCdnUrl(id, formatType, size2) {
+    const px = normalizeSize(size2, 160);
     const ext = formatType === StickerFormat.GIF ? "gif" : "png";
     return `https://media.discordapp.net/stickers/${id}.${ext}?size=${px}`;
   }
@@ -5819,9 +5835,9 @@ ${components_default}`;
     }
     return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
   }
-  function avatarCdnUrl(userId, hash, size) {
+  function avatarCdnUrl(userId, hash, size2) {
     if (typeof hash !== "string" || hash.length === 0) return defaultAvatarUrl(userId);
-    const px = normalizeSize(size, 32);
+    const px = normalizeSize(size2, 32);
     const ext = hash.startsWith("a_") ? "gif" : "webp";
     return `https://cdn.discordapp.com/avatars/${userId}/${hash}.${ext}?size=${px}`;
   }
@@ -6324,7 +6340,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         log12.warn("[jump] \u8DF3\u8F6C\u5931\u8D25\uFF1AJumpActions \u4E0E NavigationRouter \u5747\u672A\u89E3\u6790\u5230");
       }
     };
-    const schedule = [80, 220, 450, 800];
+    const schedule2 = [80, 220, 450, 800];
     let i = 0;
     const tick = () => {
       doJump();
@@ -6332,11 +6348,11 @@ ${loc.channel ?? ""}`.toLowerCase();
       const ok = now === channelId;
       log12.info(`[jump] \u7B2C ${i + 1} \u6B21 \xB7 now=${now ?? "?"} wanted=${channelId} ok=${ok}`);
       i++;
-      if (!ok && i < schedule.length) {
-        setTimeout(tick, schedule[i] - schedule[i - 1]);
+      if (!ok && i < schedule2.length) {
+        setTimeout(tick, schedule2[i] - schedule2[i - 1]);
       }
     };
-    setTimeout(tick, schedule[0]);
+    setTimeout(tick, schedule2[0]);
   }
   function dismissSettingsSurface() {
     try {
@@ -7634,20 +7650,20 @@ ${loc.channel ?? ""}`.toLowerCase();
      * unchanged only when nothing was touched — a throw here must never take
      * the store down, so the whole body is guarded.
      */
-    handleDelete(cache3, action, isBulk) {
+    handleDelete(cache4, action, isBulk) {
       try {
-        if (cache3 == null) return cache3;
-        if (!isBulk && typeof cache3.has === "function" && !cache3.has(action.id)) return cache3;
+        if (cache4 == null) return cache4;
+        if (!isBulk && typeof cache4.has === "function" && !cache4.has(action.id)) return cache4;
         const keepInChat = settings.store.keepDeletedInChat;
         const EPHEMERAL = 64;
         const mutate = (id) => {
-          const msg = typeof cache3.get === "function" ? cache3.get(id) : void 0;
+          const msg = typeof cache4.get === "function" ? cache4.get(id) : void 0;
           if (!msg) return;
           const keep = keepInChat && !action.mlDeleted && (msg.flags & EPHEMERAL) !== EPHEMERAL && !isIgnored(String(action.channelId ?? action.channel_id ?? msg.channel_id ?? ""), msg.author ?? {});
           if (!keep) {
-            cache3 = cache3.remove(id);
+            cache4 = cache4.remove(id);
           } else {
-            cache3 = cache3.update(id, (m) => m.set("deleted", true));
+            cache4 = cache4.update(id, (m) => m.set("deleted", true));
           }
         };
         if (isBulk) {
@@ -7658,7 +7674,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       } catch (err) {
         log14.error("handleDelete failed; messages removed normally", err);
       }
-      return cache3;
+      return cache4;
     },
     /**
      * Extra classNames for a message row whose message is deleted. Keyed off the
@@ -9459,11 +9475,11 @@ ${loc.channel ?? ""}`.toLowerCase();
         if (hadContent.current && !has) onEmptied();
         hadContent.current = has;
       };
-      const schedule = () => {
+      const schedule2 = () => {
         if (timer3) clearTimeout(timer3);
         timer3 = setTimeout(sample2, DEBOUNCE_MS);
       };
-      const { attached, off } = subscribeToDraft(schedule);
+      const { attached, off } = subscribeToDraft(schedule2);
       poll = setInterval(sample2, attached ? POLL_MS * 4 : POLL_MS);
       return () => {
         disposed = true;
@@ -9880,9 +9896,519 @@ ${tail}`;
     }
   });
 
-  // src/plugins/console-cleaner/index.ts
-  var log26 = logger("console-cleaner");
+  // src/plugins/custom-rpc/activity.ts
+  var ActivityType = {
+    PLAYING: 0,
+    STREAMING: 1,
+    LISTENING: 2,
+    WATCHING: 3,
+    COMPETING: 5
+  };
+  function clean(value) {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : void 0;
+  }
+  function isExternalImage(value) {
+    const v = value?.trim() ?? "";
+    return /^https?:\/\//i.test(v);
+  }
+  function buildActivity(config, resolveImage = (v) => clean(v)) {
+    const problems = [];
+    const name = clean(config.name);
+    if (!name) {
+      return { activity: null, problems: ["\u6CA1\u586B\u540D\u79F0\u2014\u2014\u8FD9\u662F\u552F\u4E00\u5FC5\u586B\u9879\uFF0C\u7559\u7A7A\u5C31\u4E0D\u4F1A\u663E\u793A\u4EFB\u4F55\u4E1C\u897F\u3002"] };
+    }
+    if (name.length < 2) {
+      problems.push("\u540D\u79F0\u81F3\u5C11\u8981\u4E24\u4E2A\u5B57\u7B26\uFF0CDiscord \u4F1A\u4E22\u6389\u66F4\u77ED\u7684\u3002");
+    }
+    const activity = {
+      name,
+      type: config.type,
+      flags: 1
+      // INSTANCE
+    };
+    const appId = clean(config.appId);
+    if (appId) activity.application_id = appId;
+    const details = clean(config.details);
+    if (details) activity.details = details;
+    const state = clean(config.state);
+    if (state) activity.state = state;
+    if (config.type === ActivityType.STREAMING) {
+      const url = clean(config.streamUrl);
+      if (url && /^https?:\/\/(www\.)?(twitch\.tv|youtube\.com)\//i.test(url)) activity.url = url;
+      else problems.push("\u300C\u76F4\u64AD\u4E2D\u300D\u8FD9\u4E2A\u7C7B\u578B\u5FC5\u987B\u914D twitch.tv \u6216 youtube.com \u7684\u94FE\u63A5\uFF0C\u5426\u5219\u4E0D\u663E\u793A\u3002");
+    }
+    const assets = {};
+    const large = config.largeImage?.trim() ? resolveImage(config.largeImage) : void 0;
+    if (large) assets.large_image = large;
+    const largeText = clean(config.largeText);
+    if (largeText) assets.large_text = largeText;
+    const small = config.smallImage?.trim() ? resolveImage(config.smallImage) : void 0;
+    if (small) assets.small_image = small;
+    const smallText = clean(config.smallText);
+    if (smallText) assets.small_text = smallText;
+    if (Object.keys(assets).length) activity.assets = assets;
+    if ((assets.small_image || assets.small_text) && !assets.large_image) {
+      problems.push("\u53EA\u914D\u5C0F\u56FE\u65F6 Discord \u4E0D\u4F1A\u663E\u793A\u5B83\u2014\u2014\u5C0F\u56FE\u662F\u6302\u5728\u5927\u56FE\u89D2\u4E0A\u7684\uFF0C\u5F97\u5148\u6709\u5927\u56FE\u3002");
+    }
+    if ((large || small) && !appId) {
+      problems.push("\u56FE\u7247\u9700\u8981\u586B\u5E94\u7528 ID\uFF1A\u56FE\u5E8A\u5730\u5740\u8981\u5148\u6362\u6210 Discord \u7684\u8D44\u6E90 id\uFF0C\u6CA1\u6709\u5E94\u7528 ID \u6362\u4E0D\u4E86\u3002");
+    }
+    const buttons = [];
+    const urls = [];
+    for (const [text, url] of [
+      [config.button1Text, config.button1Url],
+      [config.button2Text, config.button2Url]
+    ]) {
+      const label = clean(text);
+      const href = clean(url);
+      if (!label && !href) continue;
+      if (!label || !href) {
+        problems.push("\u6309\u94AE\u7684\u6587\u5B57\u548C\u94FE\u63A5\u8981\u4E00\u8D77\u586B\uFF0C\u53EA\u586B\u4E00\u4E2A\u4F1A\u88AB\u6574\u9897\u4E22\u6389\u3002");
+        continue;
+      }
+      buttons.push(label);
+      urls.push(href);
+    }
+    if (buttons.length) {
+      activity.buttons = buttons;
+      activity.metadata = { button_urls: urls };
+    }
+    if (config.timestampMode === "now") {
+      activity.timestamps = { start: config.startedAt };
+    }
+    return { activity, problems };
+  }
+
+  // src/plugins/custom-rpc/assets.ts
+  var log26 = logger("custom-rpc");
+  var cache2 = /* @__PURE__ */ new Map();
+  function endpoint(appId) {
+    try {
+      const builder = Constants?.Endpoints?.APPLICATION_EXTERNAL_ASSETS;
+      if (typeof builder === "function") return builder(appId);
+    } catch {
+    }
+    return `/applications/${appId}/external-assets`;
+  }
+  function cachedAsset(url) {
+    return cache2.get(url);
+  }
+  async function resolveAssets(appId, urls) {
+    const pending = urls.filter((u) => u && !cache2.has(u));
+    if (!appId || pending.length === 0) return;
+    try {
+      const response = await RestAPI.post({
+        url: endpoint(appId),
+        body: { urls: pending }
+      });
+      const list = response?.body ?? [];
+      pending.forEach((url, i) => {
+        const path = list[i]?.external_asset_path;
+        if (typeof path === "string" && path) cache2.set(url, `mp:${path}`);
+        else cache2.set(url, null);
+      });
+    } catch (err) {
+      for (const url of pending) cache2.set(url, null);
+      log26.debug("\u56FE\u7247\u6362\u53D6\u8D44\u6E90 id \u5931\u8D25\uFF08\u5E94\u7528 ID \u662F\u5426\u6B63\u786E\uFF1F\u56FE\u7247\u80FD\u516C\u5F00\u8BBF\u95EE\u5417\uFF1F\uFF09", err);
+    }
+  }
+  function clearAssetCache() {
+    cache2.clear();
+  }
+
+  // src/plugins/custom-rpc/index.ts
+  var log27 = logger("custom-rpc");
+  var SOCKET_ID = "halcyon-custom-rpc";
   var settings8 = defineSettings({
+    name: {
+      group: "\u663E\u793A\u4EC0\u4E48",
+      type: "string",
+      default: "",
+      label: "\u540D\u79F0\uFF08\u5FC5\u586B\uFF09",
+      description: "\u8D44\u6599\u5361\u4E0A\u52A0\u7C97\u7684\u90A3\u4E00\u884C\u3002\u7559\u7A7A\u5219\u6574\u4E2Apresence\u4E0D\u663E\u793A\u3002\u81F3\u5C11\u4E24\u4E2A\u5B57\u7B26\u3002",
+      placeholder: "\u4F8B\u5982 \u9AD8\u4E09\u5012\u8BA1\u65F6",
+      maxLength: 128
+    },
+    type: {
+      group: "\u663E\u793A\u4EC0\u4E48",
+      type: "select",
+      default: String(ActivityType.PLAYING),
+      label: "\u7C7B\u578B",
+      description: "\u51B3\u5B9A\u540D\u79F0\u524D\u9762\u90A3\u4E2A\u8BCD\uFF1A\u6B63\u5728\u73A9 / \u6B63\u5728\u542C / \u6B63\u5728\u89C2\u770B / \u6B63\u5728\u53C2\u52A0 / \u76F4\u64AD\u4E2D\u3002",
+      options: [
+        { value: String(ActivityType.PLAYING), label: "\u6B63\u5728\u73A9" },
+        { value: String(ActivityType.LISTENING), label: "\u6B63\u5728\u542C" },
+        { value: String(ActivityType.WATCHING), label: "\u6B63\u5728\u89C2\u770B" },
+        { value: String(ActivityType.COMPETING), label: "\u6B63\u5728\u53C2\u52A0" },
+        { value: String(ActivityType.STREAMING), label: "\u76F4\u64AD\u4E2D\uFF08\u9700\u8981 twitch / youtube \u94FE\u63A5\uFF09" }
+      ]
+    },
+    details: {
+      group: "\u663E\u793A\u4EC0\u4E48",
+      type: "string",
+      default: "",
+      label: "\u7B2C\u4E8C\u884C",
+      description: "\u540D\u79F0\u4E0B\u9762\u90A3\u4E00\u884C\uFF0C\u901A\u5E38\u5199\u5728\u505A\u4EC0\u4E48\u3002",
+      maxLength: 128
+    },
+    state: {
+      group: "\u663E\u793A\u4EC0\u4E48",
+      type: "string",
+      default: "",
+      label: "\u7B2C\u4E09\u884C",
+      description: "\u518D\u4E0B\u9762\u4E00\u884C\uFF0C\u901A\u5E38\u5199\u72B6\u6001\u3002",
+      maxLength: 128
+    },
+    timestampMode: {
+      group: "\u663E\u793A\u4EC0\u4E48",
+      type: "select",
+      default: "none",
+      label: "\u8BA1\u65F6\u5668",
+      description: "\u300C\u5DF2\u8FDB\u884C 12:34\u300D\u90A3\u4E2A\u8DF3\u52A8\u7684\u8BA1\u65F6\u3002",
+      options: [
+        { value: "none", label: "\u4E0D\u663E\u793A" },
+        { value: "now", label: "\u4ECE\u542F\u7528\u65F6\u5F00\u59CB\u8BA1\u65F6" }
+      ]
+    },
+    appId: {
+      group: "\u56FE\u7247",
+      type: "string",
+      default: "",
+      label: "\u5E94\u7528 ID",
+      description: "\u53EA\u6709\u914D\u56FE\u7247\u65F6\u624D\u9700\u8981\u3002\u53BB Discord \u5F00\u53D1\u8005\u540E\u53F0\u968F\u4FBF\u5EFA\u4E00\u4E2A\u5E94\u7528\uFF0C\u628A\u5B83\u7684 Application ID \u586B\u8FD9\u91CC\uFF1B\u56FE\u7247\u5730\u5740\u8981\u9760\u5B83\u6362\u6210 Discord \u7684\u8D44\u6E90 id\u3002\u4E0D\u586B\u4E5F\u80FD\u663E\u793A\u6587\u5B57\u3002",
+      placeholder: "19 \u4F4D\u6570\u5B57",
+      maxLength: 32
+    },
+    largeImage: {
+      group: "\u56FE\u7247",
+      type: "string",
+      default: "",
+      label: "\u5927\u56FE",
+      description: "\u56FE\u7247\u76F4\u94FE\uFF08https \u5F00\u5934\uFF0C\u9700\u8981\u80FD\u516C\u5F00\u8BBF\u95EE\uFF09\uFF0C\u6216\u8005\u4F60\u5728\u5F00\u53D1\u8005\u540E\u53F0\u4E0A\u4F20\u7684\u8D44\u6E90\u540D\u3002",
+      maxLength: 512
+    },
+    largeText: {
+      group: "\u56FE\u7247",
+      type: "string",
+      default: "",
+      label: "\u5927\u56FE\u60AC\u505C\u6587\u5B57",
+      description: "\u9F20\u6807\u653E\u5230\u5927\u56FE\u4E0A\u65F6\u663E\u793A\u3002",
+      maxLength: 128
+    },
+    smallImage: {
+      group: "\u56FE\u7247",
+      type: "string",
+      default: "",
+      label: "\u5C0F\u56FE",
+      description: "\u6302\u5728\u5927\u56FE\u53F3\u4E0B\u89D2\u7684\u5C0F\u5706\u56FE\u3002\u5FC5\u987B\u5148\u6709\u5927\u56FE\uFF0C\u5426\u5219\u4E0D\u663E\u793A\u3002",
+      maxLength: 512
+    },
+    smallText: {
+      group: "\u56FE\u7247",
+      type: "string",
+      default: "",
+      label: "\u5C0F\u56FE\u60AC\u505C\u6587\u5B57",
+      maxLength: 128
+    },
+    streamUrl: {
+      group: "\u76F4\u64AD",
+      type: "string",
+      default: "",
+      label: "\u76F4\u64AD\u94FE\u63A5",
+      description: "\u53EA\u5728\u7C7B\u578B\u9009\u300C\u76F4\u64AD\u4E2D\u300D\u65F6\u7528\uFF0C\u4E14\u53EA\u8BA4 twitch.tv \u548C youtube.com\u3002",
+      maxLength: 256
+    },
+    button1Text: {
+      group: "\u6309\u94AE",
+      type: "string",
+      default: "",
+      label: "\u6309\u94AE 1 \u6587\u5B57",
+      description: "\u8D44\u6599\u5361\u4E0B\u65B9\u7684\u6309\u94AE\u3002\u6587\u5B57\u548C\u94FE\u63A5\u5FC5\u987B\u4E00\u8D77\u586B\u3002",
+      maxLength: 32
+    },
+    button1Url: { group: "\u6309\u94AE", type: "string", default: "", label: "\u6309\u94AE 1 \u94FE\u63A5", maxLength: 512 },
+    button2Text: { group: "\u6309\u94AE", type: "string", default: "", label: "\u6309\u94AE 2 \u6587\u5B57", maxLength: 32 },
+    button2Url: { group: "\u6309\u94AE", type: "string", default: "", label: "\u6309\u94AE 2 \u94FE\u63A5", maxLength: 512 }
+  });
+  var startedAt = Date.now();
+  var unsubscribes = [];
+  var pushing = false;
+  var lastProblems = "";
+  function readConfig() {
+    const s = settings8.store;
+    return {
+      appId: s.appId,
+      type: Number(s.type) || 0,
+      name: s.name,
+      details: s.details,
+      state: s.state,
+      largeImage: s.largeImage,
+      largeText: s.largeText,
+      smallImage: s.smallImage,
+      smallText: s.smallText,
+      streamUrl: s.streamUrl,
+      button1Text: s.button1Text,
+      button1Url: s.button1Url,
+      button2Text: s.button2Text,
+      button2Url: s.button2Url,
+      timestampMode: s.timestampMode,
+      startedAt
+    };
+  }
+  function dispatchActivity(activity) {
+    try {
+      getDispatcher()?.dispatch({ type: "LOCAL_ACTIVITY_UPDATE", socketId: SOCKET_ID, activity });
+    } catch (err) {
+      log27.error("presence \u4E0B\u53D1\u5931\u8D25", err);
+    }
+  }
+  async function push() {
+    if (pushing) return;
+    pushing = true;
+    try {
+      const config = readConfig();
+      const resolve = (value) => {
+        const v = value.trim();
+        if (!v) return void 0;
+        if (!isExternalImage(v)) return v;
+        const hit = cachedAsset(v);
+        return typeof hit === "string" ? hit : void 0;
+      };
+      const built = buildActivity(config, resolve);
+      dispatchActivity(built.activity);
+      const summary = built.problems.join(" / ");
+      if (summary !== lastProblems) {
+        lastProblems = summary;
+        if (summary) log27.warn(summary);
+      }
+      const urls = [config.largeImage, config.smallImage].map((v) => v.trim()).filter(isExternalImage);
+      const missing = urls.filter((u) => cachedAsset(u) === void 0);
+      if (missing.length && config.appId.trim()) {
+        await resolveAssets(config.appId.trim(), missing);
+        const again = buildActivity(readConfig(), resolve);
+        dispatchActivity(again.activity);
+      }
+    } finally {
+      pushing = false;
+    }
+  }
+  var custom_rpc_default = definePlugin({
+    id: "custom-rpc",
+    name: "\u81EA\u5B9A\u4E49\u300C\u6B63\u5728\u73A9\u300D",
+    description: "\u5728\u81EA\u5DF1\u7684\u8D44\u6599\u5361\u4E0A\u6302\u4E00\u6761\u81EA\u5B9A\u4E49\u7684 Rich Presence\uFF1A\u6B63\u5728\u73A9 / \u6B63\u5728\u542C / \u6B63\u5728\u89C2\u770B\u4EC0\u4E48\u90FD\u7531\u4F60\u5199\uFF0C\u53EF\u4EE5\u914D\u5927\u5C0F\u56FE\u3001\u8BA1\u65F6\u5668\u548C\u4E24\u4E2A\u6309\u94AE\u3002\u4E0D\u9700\u8981 Nitro\uFF0C\u800C\u4E14\u522B\u4EBA\u771F\u7684\u80FD\u770B\u5230\u3002",
+    authors: [{ name: "caitemm" }],
+    category: "misc",
+    settings: settings8,
+    start() {
+      startedAt = Date.now();
+      unsubscribes = Object.keys(settings8.schema).map(
+        (key) => settings8.subscribe(key, () => {
+          void push();
+        })
+      );
+      void push();
+    },
+    stop() {
+      for (const off of unsubscribes) off();
+      unsubscribes = [];
+      lastProblems = "";
+      clearAssetCache();
+      dispatchActivity(null);
+    }
+  });
+
+  // src/plugins/image-zoom/lens.ts
+  function lensStyle(rect, cursorX, cursorY, lens2, zoom2) {
+    const bgWidth = Math.max(1, rect.width * zoom2);
+    const bgHeight = Math.max(1, rect.height * zoom2);
+    const cx = Math.min(Math.max(cursorX - rect.left, 0), rect.width);
+    const cy = Math.min(Math.max(cursorY - rect.top, 0), rect.height);
+    const half = lens2 / 2;
+    let bgX = half - cx * zoom2;
+    let bgY = half - cy * zoom2;
+    bgX = bgWidth <= lens2 ? (lens2 - bgWidth) / 2 : Math.min(0, Math.max(lens2 - bgWidth, bgX));
+    bgY = bgHeight <= lens2 ? (lens2 - bgHeight) / 2 : Math.min(0, Math.max(lens2 - bgHeight, bgY));
+    return { bgWidth, bgHeight, bgX, bgY };
+  }
+  function stepZoom(current2, direction, min, max) {
+    const next = current2 + (direction < 0 ? 0.5 : -0.5);
+    return Math.round(Math.min(max, Math.max(min, next)) * 10) / 10;
+  }
+  function stepLens(current2, direction) {
+    const next = current2 + (direction < 0 ? 40 : -40);
+    return Math.min(800, Math.max(120, Math.round(next)));
+  }
+  var MEDIA_HOSTS = /(^|\.)(discordapp\.com|discordapp\.net|discord\.com)$/i;
+  function parseUrl(src) {
+    try {
+      return new URL(src);
+    } catch {
+    }
+    try {
+      const base = typeof location !== "undefined" ? location.href : "https://discord.com/";
+      return new URL(src, base);
+    } catch {
+      return null;
+    }
+  }
+  function originalSrc(src) {
+    const url = parseUrl(src);
+    if (!url || !MEDIA_HOSTS.test(url.hostname)) return src;
+    for (const param of ["width", "height", "size", "quality", "format"]) url.searchParams.delete(param);
+    return url.toString();
+  }
+  function qualifies(el, minSize) {
+    if (!(el instanceof HTMLImageElement)) return false;
+    if (!el.currentSrc && !el.src) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width < minSize || rect.height < minSize) return false;
+    if (el.closest(".halcyon") !== null) return false;
+    return true;
+  }
+
+  // src/plugins/image-zoom/index.ts
+  var settings9 = defineSettings({
+    zoom: {
+      group: "\u653E\u5927\u955C",
+      type: "number",
+      default: 2.5,
+      min: 1.5,
+      max: 10,
+      step: 0.5,
+      label: "\u9ED8\u8BA4\u500D\u7387",
+      description: "\u6EDA\u8F6E\u53EF\u4EE5\u968F\u65F6\u8C03\u6574\uFF1B\u8FD9\u91CC\u662F\u6BCF\u6B21\u60AC\u505C\u65F6\u7684\u8D77\u59CB\u500D\u7387\u3002"
+    },
+    lensSize: {
+      group: "\u653E\u5927\u955C",
+      type: "number",
+      default: 280,
+      min: 120,
+      max: 800,
+      step: 20,
+      label: "\u955C\u7247\u5927\u5C0F\uFF08\u50CF\u7D20\uFF09",
+      description: "\u6309\u4F4F Shift \u6EDA\u8F6E\u53EF\u4EE5\u968F\u65F6\u6539\u3002"
+    },
+    minSize: {
+      group: "\u653E\u5927\u955C",
+      type: "number",
+      default: 100,
+      min: 40,
+      max: 400,
+      step: 10,
+      label: "\u6700\u5C0F\u751F\u6548\u5C3A\u5BF8\uFF08\u50CF\u7D20\uFF09",
+      description: "\u6BD4\u8FD9\u4E2A\u5C0F\u7684\u56FE\u4E0D\u7ED9\u653E\u5927\u955C\uFF0C\u7528\u6765\u6392\u9664\u8868\u60C5\u548C\u5934\u50CF\u3002\u8C03\u4F4E\u4F1A\u8FDE\u8868\u60C5\u4E00\u8D77\u653E\u5927\u3002"
+    },
+    square: {
+      group: "\u653E\u5927\u955C",
+      type: "boolean",
+      default: false,
+      label: "\u65B9\u5F62\u955C\u7247",
+      description: "\u9ED8\u8BA4\u662F\u5706\u5F62\u3002"
+    },
+    requireShift: {
+      group: "\u653E\u5927\u955C",
+      type: "boolean",
+      default: false,
+      label: "\u53EA\u5728\u6309\u4F4F Alt \u65F6\u542F\u7528",
+      description: "\u5F00\u542F\u540E\u5E73\u65F6\u4E0D\u51FA\u73B0\uFF0C\u6309\u4F4F Alt \u60AC\u505C\u624D\u6709\u2014\u2014\u5ACC\u5B83\u592A\u4E3B\u52A8\u5C31\u6253\u5F00\u8FD9\u4E2A\u3002"
+    }
+  });
+  var lens = null;
+  var current = null;
+  var zoom = 2.5;
+  var size = 280;
+  var lastX = 0;
+  var lastY = 0;
+  var frame = 0;
+  function hide() {
+    current = null;
+    if (lens) lens.style.display = "none";
+  }
+  function paint() {
+    frame = 0;
+    if (!current || !lens) return;
+    const rect = current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      hide();
+      return;
+    }
+    const style = lensStyle(rect, lastX, lastY, size, zoom);
+    const half = size / 2;
+    lens.style.display = "block";
+    lens.style.width = `${size}px`;
+    lens.style.height = `${size}px`;
+    lens.style.borderRadius = settings9.store.square ? "8px" : "50%";
+    lens.style.left = `${Math.round(lastX - half)}px`;
+    lens.style.top = `${Math.round(lastY - half)}px`;
+    lens.style.backgroundImage = `url("${originalSrc(current.currentSrc || current.src)}")`;
+    lens.style.backgroundSize = `${Math.round(style.bgWidth)}px ${Math.round(style.bgHeight)}px`;
+    lens.style.backgroundPosition = `${Math.round(style.bgX)}px ${Math.round(style.bgY)}px`;
+  }
+  function schedule() {
+    if (frame) return;
+    frame = requestAnimationFrame(paint);
+  }
+  function onMouseMove(event) {
+    lastX = event.clientX;
+    lastY = event.clientY;
+    if (settings9.store.requireShift && !event.altKey) {
+      if (current) hide();
+      return;
+    }
+    const target = document.elementFromPoint(event.clientX, event.clientY);
+    if (!qualifies(target, settings9.store.minSize)) {
+      if (current) hide();
+      return;
+    }
+    if (target !== current) {
+      current = target;
+      zoom = settings9.store.zoom;
+      size = settings9.store.lensSize;
+    }
+    schedule();
+  }
+  function onWheel(event) {
+    if (!current) return;
+    if (event.shiftKey) size = stepLens(size, event.deltaY);
+    else zoom = stepZoom(zoom, event.deltaY, 1.5, 10);
+    event.preventDefault();
+    schedule();
+  }
+  function onLeave() {
+    hide();
+  }
+  var image_zoom_default = definePlugin({
+    id: "image-zoom",
+    name: "\u56FE\u7247\u653E\u5927\u955C",
+    description: "\u9F20\u6807\u60AC\u505C\u5728\u56FE\u7247\u4E0A\u51FA\u73B0\u653E\u5927\u955C\uFF0C\u6EDA\u8F6E\u8C03\u500D\u7387\u3001Shift+\u6EDA\u8F6E\u8C03\u955C\u7247\u5927\u5C0F\u3002\u653E\u5927\u7528\u7684\u662F\u539F\u56FE\uFF08\u53BB\u6389 Discord \u7684\u7F29\u7565\u56FE\u53C2\u6570\uFF09\uFF0C\u6240\u4EE5\u653E\u5927\u540E\u662F\u771F\u7684\u66F4\u6E05\u695A\uFF0C\u800C\u4E0D\u662F\u628A\u5C0F\u56FE\u62C9\u5927\u3002",
+    authors: [{ name: "caitemm" }],
+    category: "appearance",
+    settings: settings9,
+    start() {
+      zoom = settings9.store.zoom;
+      size = settings9.store.lensSize;
+      document.addEventListener("mousemove", onMouseMove, true);
+      document.addEventListener("wheel", onWheel, { capture: true, passive: false });
+      document.addEventListener("mouseleave", onLeave, true);
+      window.addEventListener("blur", onLeave);
+    },
+    stop() {
+      document.removeEventListener("mousemove", onMouseMove, true);
+      document.removeEventListener("wheel", onWheel, true);
+      document.removeEventListener("mouseleave", onLeave, true);
+      window.removeEventListener("blur", onLeave);
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      current = null;
+      lens?.remove();
+      lens = null;
+    }
+  });
+
+  // src/plugins/console-cleaner/index.ts
+  var log28 = logger("console-cleaner");
+  var settings10 = defineSettings({
     hideSelfXss: {
       group: "\u5185\u7F6E\u89C4\u5219",
       type: "boolean",
@@ -9961,7 +10487,7 @@ ${tail}`;
     if (typeof args[0] === "string" && args[0].startsWith("%cHalcyon")) return false;
     const text = textOf(args);
     if (text === "") return false;
-    const s = settings8.store;
+    const s = settings10.store;
     if (s.hideSelfXss && anyNeedle(text, SELF_XSS_NEEDLES)) return true;
     if (s.hideLocaleSpam && anyNeedle(text, LOCALE_NEEDLES)) return true;
     if (s.hideRiveSpam && anyNeedle(text, RIVE_NEEDLES)) return true;
@@ -9989,11 +10515,11 @@ ${tail}`;
     description: "\u5C4F\u853D Discord \u5728\u5F00\u53D1\u8005\u63A7\u5236\u53F0\u91CC\u5237\u5C4F\u7684\u65E0\u7528\u4FE1\u606F\uFF08\u81EA\u6211 XSS \u8B66\u544A\u3001Rive \u52A8\u753B\u62A5\u9519\u3001\u672C\u5730\u5316\u7F3A\u5931\u3001\u8D44\u6E90\u9884\u52A0\u8F7D\u8B66\u544A\uFF09\uFF0C\u652F\u6301\u81EA\u5B9A\u4E49\u5173\u952E\u8BCD\u3002\u5173\u95ED\u63D2\u4EF6\u5373\u6062\u590D\u539F\u59CB console\u3002",
     authors: [{ name: "caitemm" }, { name: "catie" }],
     category: "utility",
-    settings: settings8,
+    settings: settings10,
     start() {
       const con = globalThis.console;
       if (!con) {
-        log26.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        log28.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
         return;
       }
       suppressedCount = 0;
@@ -10003,11 +10529,11 @@ ${tail}`;
           try {
             unpatchers.push(patcher.instead(con, method, hook));
           } catch (err) {
-            log26.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+            log28.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
           }
         }
       }
-      log26.info(
+      log28.info(
         `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
       );
     },
@@ -10019,12 +10545,12 @@ ${tail}`;
         }
       }
       unpatchers = [];
-      log26.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+      log28.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
     }
   });
 
   // src/plugins/emote-cloner/clone.ts
-  var log27 = logger("emote-cloner");
+  var log29 = logger("emote-cloner");
   var MAX_EMOJI_SIZE_BYTES = 256 * 1024;
   var MAX_STICKER_SIZE_BYTES = 512 * 1024;
   var uploadEmojiAction = null;
@@ -10043,15 +10569,15 @@ ${tail}`;
     if (formatType === 3) return "json";
     return "png";
   }
-  function emojiUrl2(id, size) {
-    return `https://cdn.discordapp.com/emojis/${id}.webp?size=${size}&lossless=true&animated=true`;
+  function emojiUrl2(id, size2) {
+    return `https://cdn.discordapp.com/emojis/${id}.webp?size=${size2}&lossless=true&animated=true`;
   }
-  function stickerUrl2(id, ext, size) {
-    return `https://media.discordapp.net/stickers/${id}.${ext}?size=${size}&lossless=true&animated=true`;
+  function stickerUrl2(id, ext, size2) {
+    return `https://media.discordapp.net/stickers/${id}.${ext}?size=${size2}&lossless=true&animated=true`;
   }
   async function fetchBlobUnderLimit(makeUrl, maxBytes) {
-    for (let size = 4096; size >= 16; size /= 2) {
-      const url = makeUrl(size);
+    for (let size2 = 4096; size2 >= 16; size2 /= 2) {
+      const url = makeUrl(size2);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`\u4E0B\u8F7D\u56FE\u7247\u5931\u8D25\uFF1AHTTP ${res.status}`);
       const blob = await res.blob();
@@ -10109,7 +10635,7 @@ ${tail}`;
     return err?.message ? String(err.message) : "\u672A\u77E5\u9519\u8BEF";
   }
   async function cloneEmoji(guildId, emoji) {
-    const blob = await fetchBlobUnderLimit((size) => emojiUrl2(emoji.id, size), MAX_EMOJI_SIZE_BYTES);
+    const blob = await fetchBlobUnderLimit((size2) => emojiUrl2(emoji.id, size2), MAX_EMOJI_SIZE_BYTES);
     const image = await blobToDataUri(blob);
     const name = sanitizeEmojiName(emoji.name);
     const upload = getUploadEmoji();
@@ -10118,14 +10644,14 @@ ${tail}`;
         await upload({ guildId, name, image });
         return;
       } catch (err) {
-        log27.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
+        log29.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
         throw new Error(restErrorMessage(err));
       }
     }
     try {
       await RestAPI.post({ url: `/guilds/${guildId}/emojis`, body: { image, name, roles: [] } });
     } catch (err) {
-      log27.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
+      log29.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
   }
@@ -10146,7 +10672,7 @@ ${tail}`;
       }
       return body;
     } catch (err) {
-      log27.warn("could not fetch sticker info; using fallbacks", err);
+      log29.warn("could not fetch sticker info; using fallbacks", err);
       return null;
     }
   }
@@ -10160,7 +10686,7 @@ ${tail}`;
     const description = (sticker.description ?? info?.description ?? "").slice(0, 100);
     const ext = stickerExt(info?.format_type);
     const blob = await fetchBlobUnderLimit(
-      (size) => stickerUrl2(sticker.id, ext, size),
+      (size2) => stickerUrl2(sticker.id, ext, size2),
       MAX_STICKER_SIZE_BYTES
     );
     const form = new FormData();
@@ -10175,10 +10701,10 @@ ${tail}`;
       created = resPayload(res);
       if (created && !created.id && created.sticker?.id) created = created.sticker;
     } catch (err) {
-      log27.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
+      log29.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
-    log27.info("sticker uploaded", { id: created?.id, name: created?.name });
+    log29.info("sticker uploaded", { id: created?.id, name: created?.name });
     try {
       getDispatcher()?.dispatch({
         type: "GUILD_STICKERS_CREATE_SUCCESS",
@@ -10190,7 +10716,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/resolve.ts
-  var log28 = logger("emote-cloner");
+  var log30 = logger("emote-cloner");
   var SNOWFLAKE = /^\d{5,25}$/;
   var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
   function emojiName(raw) {
@@ -10457,9 +10983,9 @@ ${tail}`;
     const record2 = recordFromFiber(target, found.id);
     const resolved = emojiName(record2?.name) ?? emojiNameFromMessages(target, found.id) ?? emojiNameFromStore(found.id) ?? emojiNameFromDom(elements) ?? emojiName(found.domName);
     if (!resolved) {
-      log28.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
+      log30.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
     } else {
-      log28.debug("resolved emoji", { id: found.id, name: resolved });
+      log30.debug("resolved emoji", { id: found.id, name: resolved });
     }
     return {
       kind: "emoji",
@@ -10470,7 +10996,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/picker.tsx
-  var log29 = logger("emote-cloner");
+  var log31 = logger("emote-cloner");
   function iconUrl(g2) {
     const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
     return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
@@ -10516,7 +11042,7 @@ ${tail}`;
         host3
       );
     } catch (err) {
-      log29.error("could not open guild picker", err);
+      log31.error("could not open guild picker", err);
       closeGuildPicker();
     }
   }
@@ -10536,7 +11062,7 @@ ${tail}`;
         setStatus({ state: "done", guild: g2.name });
         setTimeout(onClose, 1e3);
       }).catch((err) => {
-        log29.error("clone failed", err);
+        log31.error("clone failed", err);
         setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
       });
     };
@@ -10595,7 +11121,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/index.tsx
-  var log30 = logger("emote-cloner");
+  var log32 = logger("emote-cloner");
   var PERM2 = {
     CREATE_GUILD_EXPRESSIONS: 1n << 43n,
     MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
@@ -10635,7 +11161,7 @@ ${tail}`;
     if (!hit) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) {
-      log30.warn("MenuItem component not learned yet; skipping clone item this open");
+      log32.warn("MenuItem component not learned yet; skipping clone item this open");
       return;
     }
     const label = hit.kind === "emoji" ? `\u590D\u5236\u8868\u60C5 :${hit.name}: \u5230\u670D\u52A1\u5668` : hit.name ? `\u590D\u5236\u8D34\u7EB8 ${hit.name} \u5230\u670D\u52A1\u5668` : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668";
@@ -10656,7 +11182,7 @@ ${tail}`;
     category: "utility",
     start() {
       unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
-      log30.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+      log32.info("emote-cloner ready \u2014 right-click an emoji or sticker");
     },
     stop() {
       for (const un of unpatchers2) {
@@ -10670,12 +11196,12 @@ ${tail}`;
   });
 
   // src/core/flux/index.ts
-  var log31 = logger("flux");
+  var log33 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log31.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log33.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -10687,7 +11213,7 @@ ${tail}`;
         try {
           listener(action);
         } catch (err) {
-          log31.error(`listener for ${type} threw`, err);
+          log33.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -10696,7 +11222,7 @@ ${tail}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log31.error(`could not subscribe to ${type}`, err);
+      log33.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -10707,7 +11233,7 @@ ${tail}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log31.error(`could not unsubscribe from ${type}`, err);
+      log33.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -10738,13 +11264,13 @@ ${tail}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log31.error("dispatch failed", action?.type, err);
+        log33.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log32 = logger("mark-all-read");
+  var log34 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -10758,7 +11284,7 @@ ${tail}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log32.warn(`could not read channels for guild ${guildId}`, err);
+        log34.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -10784,16 +11310,16 @@ ${tail}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log32.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log34.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log32.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log34.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log32.warn("could not describe getChannels shape", err);
+          log34.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -10813,14 +11339,14 @@ ${tail}`;
           }
         }
       } catch (err) {
-        log32.warn(`could not read joined threads for guild ${guildId}`, err);
+        log34.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log32.info(
+    log34.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -10837,9 +11363,9 @@ ${tail}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log32.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log34.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log32.info("nothing unread; skipping BULK_ACK");
+      log34.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -10847,12 +11373,12 @@ ${tail}`;
       context: "APP",
       channels
     });
-    log32.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log34.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log33 = logger("mark-all-read");
+  var log35 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -10877,7 +11403,7 @@ ${tail}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log33.error("mark all read failed", err);
+        log35.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -10886,7 +11412,7 @@ ${tail}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log34 = logger("mark-all-read");
+  var log36 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -10897,7 +11423,7 @@ ${tail}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log34.error("mark all read failed", err);
+      log36.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -10982,7 +11508,7 @@ ${tail}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log34.info("mark-all-read ready");
+      log36.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -10990,8 +11516,8 @@ ${tail}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log35 = logger("silent-typing");
-  var settings9 = defineSettings({
+  var log37 = logger("silent-typing");
+  var settings11 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
       type: "select",
@@ -11039,7 +11565,7 @@ ${tail}`;
   function silenceFor(channelId) {
     if (!active2) return false;
     const id = channelId == null ? "" : String(channelId);
-    const s = settings9.store;
+    const s = settings11.store;
     if (id && s.allowChannels.includes(id)) return false;
     if (s.scope === "guilds") return !isPrivateChannel(id);
     if (s.scope === "dms") return isPrivateChannel(id);
@@ -11052,13 +11578,13 @@ ${tail}`;
         return void 0;
       }
     } catch (err) {
-      log35.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log37.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
   function onStopTyping(ctx) {
     try {
-      if (settings9.store.silenceStop && silenceFor(ctx.args[0])) return void 0;
+      if (settings11.store.silenceStop && silenceFor(ctx.args[0])) return void 0;
     } catch {
     }
     return ctx.callOriginal();
@@ -11076,9 +11602,9 @@ ${tail}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log35.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log37.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log35.warn(
+      log37.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -11089,7 +11615,7 @@ ${tail}`;
     description: "\u4E0D\u518D\u5411\u522B\u4EBA\u53D1\u9001\u201C\u6B63\u5728\u8F93\u5165\u2026\u201D\u72B6\u6001\u3002\u53EF\u4EE5\u53EA\u5728\u670D\u52A1\u5668\u6216\u53EA\u5728\u79C1\u804A\u751F\u6548\uFF0C\u4E5F\u80FD\u4E3A\u6307\u5B9A\u9891\u9053\u5F00\u4F8B\u5916\u3002\u522B\u4EBA\u7684\u8F93\u5165\u72B6\u6001\u7167\u5E38\u663E\u793A\uFF0C\u5173\u95ED\u63D2\u4EF6\u7ACB\u5373\u6062\u590D\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "privacy",
-    settings: settings9,
+    settings: settings11,
     patches: [
       {
         // The module that owns Discord's typing actions, identified by the local
@@ -11111,7 +11637,7 @@ ${tail}`;
       active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log35.warn(
+        log37.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -11121,17 +11647,17 @@ ${tail}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log35.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log37.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log35.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log37.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log35.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings9.store.scope}\uFF09`);
+      log37.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings11.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -11141,7 +11667,7 @@ ${tail}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log35.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log37.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -11167,7 +11693,7 @@ ${tail}`;
       return {
         active: active2,
         suppressed,
-        scope: settings9.store.scope,
+        scope: settings11.store.scope,
         typingModuleFound: module != null,
         startTypingIsFunction: typeof module?.startTyping === "function",
         /** True once our wrapper is installed on the module. */
@@ -11230,7 +11756,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/settings.ts
-  var settings10 = defineSettings({
+  var settings12 = defineSettings({
     placement: {
       group: "\u4F4D\u7F6E",
       type: "select",
@@ -11281,7 +11807,7 @@ ${tail}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log36 = logger("member-count");
+  var log38 = logger("member-count");
   function memo(resolve) {
     let cached4;
     return () => cached4 ??= resolve();
@@ -11312,7 +11838,7 @@ ${tail}`;
   }
   var onlineByGuild = /* @__PURE__ */ new Map();
   var totalByGuild = /* @__PURE__ */ new Map();
-  var unsubscribes = [];
+  var unsubscribes2 = [];
   function sumGroups(groups) {
     if (!Array.isArray(groups) || groups.length === 0) return null;
     if (groups.length === 1 && groups[0]?.id === "unknown") return null;
@@ -11333,7 +11859,7 @@ ${tail}`;
       const count2 = asCount(value);
       if (guildId != null && count2 != null) map.set(String(guildId), count2);
     };
-    unsubscribes = [
+    unsubscribes2 = [
       flux.subscribe("GUILD_MEMBER_LIST_UPDATE", (action) => {
         const a = action;
         const sum = sumGroups(a?.groups);
@@ -11354,20 +11880,20 @@ ${tail}`;
     ];
   }
   function stopCountTracking() {
-    for (const off of unsubscribes) {
+    for (const off of unsubscribes2) {
       try {
         off();
       } catch {
       }
     }
-    unsubscribes = [];
+    unsubscribes2 = [];
     onlineByGuild.clear();
     totalByGuild.clear();
     nudged.clear();
   }
   var nudged = /* @__PURE__ */ new Set();
   function nudge(guildId, channelId) {
-    if (!settings10.store.preloadCounts) return;
+    if (!settings12.store.preloadCounts) return;
     if (nudged.has(guildId)) return;
     nudged.add(guildId);
     try {
@@ -11375,9 +11901,9 @@ ${tail}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log36.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log38.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log36.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log38.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -11447,7 +11973,7 @@ ${tail}`;
       captured: {
         total: guildId ? totalByGuild.get(guildId) ?? null : null,
         online: guildId ? onlineByGuild.get(guildId) ?? null : null,
-        trackingActive: unsubscribes.length > 0,
+        trackingActive: unsubscribes2.length > 0,
         nudged: [...nudged]
       },
       /** Every store this client registered whose name mentions a count/member. */
@@ -11495,19 +12021,19 @@ ${tail}`;
         setCounts((prev) => sameCounts(prev, next) ? prev : next);
       };
       refresh();
-      const unsubscribes3 = WATCHED_ACTIONS.map((type) => flux.subscribe(type, refresh));
+      const unsubscribes4 = WATCHED_ACTIONS.map((type) => flux.subscribe(type, refresh));
       const timer3 = setInterval(refresh, POLL_MS2);
       return () => {
         live = false;
         clearInterval(timer3);
-        for (const off of unsubscribes3) off();
+        for (const off of unsubscribes4) off();
       };
     }, []);
     return counts;
   }
   function MemberCountChip({ variant }) {
     const { total, online } = useMemberCounts();
-    const s = settings10.store;
+    const s = settings12.store;
     const showOnline = s.showOnline && online != null;
     const showTotal = s.showTotal && total != null;
     if (!showOnline && !showTotal) return null;
@@ -11529,7 +12055,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log37 = logger("member-count");
+  var log39 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -11572,7 +12098,7 @@ ${tail}`;
     return null;
   }
   function wantedVariants() {
-    const placement = settings10.store.placement;
+    const placement = settings12.store.placement;
     const want = /* @__PURE__ */ new Set();
     if (placement === "header" || placement === "both") want.add("header");
     if (placement === "member-list" || placement === "both") want.add("list");
@@ -11595,7 +12121,7 @@ ${tail}`;
     try {
       hit.element.insertBefore(host5, hit.element.firstChild);
     } catch (err) {
-      log37.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log39.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
@@ -11603,11 +12129,11 @@ ${tail}`;
       mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log37.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log39.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
       host5.remove();
-      log37.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      log39.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
   function ensureMounted2() {
@@ -11628,7 +12154,7 @@ ${tail}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log37.warn(
+      log39.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -11645,7 +12171,7 @@ ${tail}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log37.warn(
+    log39.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -11656,7 +12182,7 @@ ${tail}`;
     description: "\u5728\u9891\u9053\u9876\u680F\u6216\u6210\u5458\u5217\u8868\u9876\u90E8\u663E\u793A\u5F53\u524D\u670D\u52A1\u5668\u7684\u5728\u7EBF\u4EBA\u6570\u4E0E\u603B\u6210\u5458\u6570\u3002\u6570\u5B57\u53D6\u81EA Discord \u81EA\u5DF1\u7684 store\uFF1B\u82E5\u67D0\u670D\u52A1\u5668\u8FD8\u6CA1\u6709\u6210\u5458\u5217\u8868\u6570\u636E\uFF0C\u4F1A\u8C03\u7528\u4E00\u6B21 Discord \u81EA\u8EAB\u7684\u9891\u9053\u9884\u52A0\u8F7D\u6765\u53D6\uFF08\u53EF\u5728\u8BBE\u7F6E\u91CC\u5173\u95ED\uFF09\u3002\u5207\u6362\u670D\u52A1\u5668\u81EA\u52A8\u66F4\u65B0\u3002",
     authors: [{ name: "caitemm" }],
     category: "utility",
-    settings: settings10,
+    settings: settings12,
     start() {
       injectStyles();
       warnedNoAnchor = false;
@@ -11664,12 +12190,12 @@ ${tail}`;
       startCountTracking();
       ensureMounted2();
       ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
-      unsubscribePlacement = settings10.subscribe("placement", () => {
+      unsubscribePlacement = settings12.subscribe("placement", () => {
         warnedNoAnchor = false;
         ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log37.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings10.store.placement}\uFF09`);
+      log39.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings12.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -11685,13 +12211,13 @@ ${tail}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log37.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log39.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
       const channelId = currentChannelId2();
       return {
-        placement: settings10.store.placement,
+        placement: settings12.store.placement,
         mounted: [...mounted2.entries()].map(([variant, entry]) => ({
           variant,
           selector: entry.selector,
@@ -11713,7 +12239,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/settings.ts
-  var settings11 = defineSettings({
+  var settings13 = defineSettings({
     inlineAvatars: {
       group: "\u5E38\u9A7B\u663E\u793A",
       type: "boolean",
@@ -11786,7 +12312,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log38 = logger("who-reacted");
+  var log40 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -11829,19 +12355,19 @@ ${tail}`;
     const name = typeof user.global_name === "string" && user.global_name || typeof user.username === "string" && user.username || id;
     return { id, name, avatarUrl: avatarUrl(user), bot: user?.bot === true };
   }
-  var cache2 = /* @__PURE__ */ new Map();
+  var cache3 = /* @__PURE__ */ new Map();
   var inFlight2 = /* @__PURE__ */ new Map();
   function cachedReactors(target) {
-    const entry = cache2.get(cacheKey(target));
+    const entry = cache3.get(cacheKey(target));
     if (!entry) return null;
     if (Date.now() - entry.at > CACHE_TTL_MS) {
-      cache2.delete(cacheKey(target));
+      cache3.delete(cacheKey(target));
       return null;
     }
     return entry.reactors;
   }
   function clearCache() {
-    cache2.clear();
+    cache3.clear();
     inFlight2.clear();
   }
   function fetchReactors(target, limit) {
@@ -11865,11 +12391,11 @@ ${tail}`;
         const reactor = toReactor(user);
         if (reactor) reactors.push(reactor);
       }
-      cache2.set(key, { at: Date.now(), reactors });
+      cache3.set(key, { at: Date.now(), reactors });
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log38.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log40.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight2.set(key, guarded);
@@ -11897,7 +12423,7 @@ ${tail}`;
     return /* @__PURE__ */ React.createElement("span", { className: "hc-whoreacted__emoji-char" }, emoji.name ?? "");
   }
   function ReactorCard({ target }) {
-    const s = settings11.store;
+    const s = settings13.store;
     const [state, setState] = useState(() => {
       const cached4 = cachedReactors(target);
       return cached4 ? { kind: "ready", reactors: cached4 } : { kind: "loading" };
@@ -11931,7 +12457,7 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log39 = logger("who-reacted");
+  var log41 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
@@ -11944,7 +12470,7 @@ ${tail}`;
     return host5;
   }
   function fillHost(host5, reactors, totalHint) {
-    const max = Math.max(1, Math.min(6, Math.trunc(settings11.store.inlineAvatarCount) || 3));
+    const max = Math.max(1, Math.min(6, Math.trunc(settings13.store.inlineAvatarCount) || 3));
     const shown = reactors.slice(0, max);
     const total = totalHint ?? reactors.length;
     const overflow = Math.max(0, total - shown.length);
@@ -11986,7 +12512,7 @@ ${tail}`;
       return;
     }
     try {
-      const wanted = Math.min(12, Math.max(6, (settings11.store.inlineAvatarCount || 3) + 3));
+      const wanted = Math.min(12, Math.max(6, (settings13.store.inlineAvatarCount || 3) + 3));
       const reactors = await fetchReactors(target, wanted);
       if (!host5.isConnected) return;
       if (reactors.length === 0) {
@@ -12000,13 +12526,13 @@ ${tail}`;
       }
       fillHost(host5, reactors, target.count);
     } catch (err) {
-      log39.debug("inline avatars: fetch failed", err);
+      log41.debug("inline avatars: fetch failed", err);
       host5.remove();
       DECORATED.delete(pill);
     }
   }
   function scan() {
-    if (!settings11.store.inlineAvatars) return;
+    if (!settings13.store.inlineAvatars) return;
     let pills;
     try {
       pills = document.querySelectorAll(REACTION_SELECTOR);
@@ -12020,7 +12546,7 @@ ${tail}`;
     });
   }
   function startInlineAvatars() {
-    if (!settings11.store.inlineAvatars) return;
+    if (!settings13.store.inlineAvatars) return;
     stopInlineAvatars();
     scan();
     scanTimer = setInterval(scan, 1500);
@@ -12039,7 +12565,7 @@ ${tail}`;
       } catch {
       }
     }
-    log39.info("inline reactor avatars: enabled");
+    log41.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -12060,7 +12586,7 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log40 = logger("who-reacted");
+  var log42 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
@@ -12091,7 +12617,7 @@ ${tail}`;
     host4.style.left = `${Math.round(left)}px`;
     host4.style.top = `${Math.round(top)}px`;
   }
-  function hide() {
+  function hide2() {
     if (hideTimer) {
       clearTimeout(hideTimer);
       hideTimer = void 0;
@@ -12124,7 +12650,7 @@ ${tail}`;
     if (!host4 || hideTimer) return;
     hideTimer = setTimeout(() => {
       hideTimer = void 0;
-      hide();
+      hide2();
     }, HIDE_GRACE_MS);
   }
   function cancelHide() {
@@ -12134,7 +12660,7 @@ ${tail}`;
     }
   }
   function show(element, target) {
-    hide();
+    hide2();
     host4 = document.createElement("div");
     host4.className = "halcyon hc-whoreacted-host";
     host4.setAttribute("data-hc-plugin", "who-reacted");
@@ -12143,8 +12669,8 @@ ${tail}`;
     try {
       unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
     } catch (err) {
-      log40.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
-      hide();
+      log42.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      hide2();
       return;
     }
     reposition2();
@@ -12156,11 +12682,11 @@ ${tail}`;
       setTimeout(reposition2, 400);
     }
     anchorTimer = setInterval(() => {
-      if (!anchor || !document.contains(anchor)) hide();
+      if (!anchor || !document.contains(anchor)) hide2();
     }, ANCHOR_CHECK_MS);
   }
   function triggerOpen() {
-    return settings11.store.trigger !== "alt-hover" || altDown;
+    return settings13.store.trigger !== "alt-hover" || altDown;
   }
   function tryShow(element) {
     if (!triggerOpen()) return;
@@ -12191,7 +12717,7 @@ ${tail}`;
     hovered = pill;
     clearShowTimer();
     cancelHide();
-    const delay = Math.max(0, Math.min(2e3, settings11.store.delay));
+    const delay = Math.max(0, Math.min(2e3, settings13.store.delay));
     showTimer = setTimeout(() => {
       showTimer = void 0;
       if (hovered === pill && document.contains(pill)) tryShow(pill);
@@ -12200,23 +12726,23 @@ ${tail}`;
   function onMouseLeaveWindow() {
     hovered = null;
     clearShowTimer();
-    hide();
+    hide2();
   }
   function onKeyDown3(event) {
     if (!event.altKey) return;
     altDown = true;
-    if (settings11.store.trigger === "alt-hover" && hovered && !host4) {
+    if (settings13.store.trigger === "alt-hover" && hovered && !host4) {
       if (document.contains(hovered)) tryShow(hovered);
     }
   }
   function onKeyUp(event) {
     if (event.key === "Alt" || !event.altKey) {
       altDown = false;
-      if (settings11.store.trigger === "alt-hover") hide();
+      if (settings13.store.trigger === "alt-hover") hide2();
     }
   }
   function onScrollOrResize() {
-    if (host4) hide();
+    if (host4) hide2();
   }
   function onWindowBlur() {
     altDown = false;
@@ -12245,7 +12771,7 @@ ${tail}`;
     clearShowTimer();
     hovered = null;
     altDown = false;
-    hide();
+    hide2();
   }
   var who_reacted_default = definePlugin({
     id: "who-reacted",
@@ -12253,26 +12779,26 @@ ${tail}`;
     description: "\u5728\u6BCF\u4E2A\u53CD\u5E94\u56DE\u5E94\u5185\u5D4C\u4E00\u5C0F\u884C\u5934\u50CF\uFF08\u524D\u51E0\u4E2A\u53CD\u5E94\u8005\uFF09\uFF0C\u50CF Discord \u684C\u9762\u8FD1\u7248\u7684 Reaction Preview \u4E00\u6837\uFF0C\u4E0D\u7528\u60AC\u505C\u5C31\u770B\u5F97\u5230\u3002\u540D\u5355\u6309\u9700\u67E5\u8BE2\u3001\u7F13\u5B58 30 \u79D2\u3002\u60AC\u505C\u5B8C\u6574\u540D\u5355\u6D6E\u5C42\u9ED8\u8BA4\u5173\u95ED\uFF0C\u9700\u8981\u65F6\u53EF\u5728\u8BBE\u7F6E\u91CC\u5F00\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "utility",
-    settings: settings11,
+    settings: settings13,
     start() {
       injectStyles();
       clearCache();
       startInlineAvatars();
-      inlineToggleUnsub = settings11.subscribe("inlineAvatars", (on) => {
+      inlineToggleUnsub = settings13.subscribe("inlineAvatars", (on) => {
         if (on) startInlineAvatars();
         else stopInlineAvatars();
       });
-      inlineCountUnsub = settings11.subscribe("inlineAvatarCount", () => {
+      inlineCountUnsub = settings13.subscribe("inlineAvatarCount", () => {
         stopInlineAvatars();
         startInlineAvatars();
       });
-      if (settings11.store.hoverPopout) attachHoverListeners();
-      hoverToggleUnsub = settings11.subscribe("hoverPopout", (on) => {
+      if (settings13.store.hoverPopout) attachHoverListeners();
+      hoverToggleUnsub = settings13.subscribe("hoverPopout", (on) => {
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log40.info(
-        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings11.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings11.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
+      log42.info(
+        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings13.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings13.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
     stop() {
@@ -12287,9 +12813,9 @@ ${tail}`;
       clearShowTimer();
       hovered = null;
       altDown = false;
-      hide();
+      hide2();
       clearCache();
-      log40.info("\u5DF2\u505C\u7528");
+      log42.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12311,7 +12837,7 @@ ${tail}`;
         } : "fiber props \u91CC\u6CA1\u6709 message + emoji \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A\u7248\u672C\u7684 reaction \u7EC4\u4EF6 props \u53D8\u4E86";
       }
       return {
-        trigger: settings11.store.trigger,
+        trigger: settings13.store.trigger,
         cardShown: host4 != null,
         reactionNodes: nodes?.length ?? -1,
         sample: sample2,
@@ -12474,7 +13000,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/settings.ts
-  var settings12 = defineSettings({
+  var settings14 = defineSettings({
     inMessages: {
       group: "\u663E\u793A\u4F4D\u7F6E",
       type: "boolean",
@@ -12557,12 +13083,12 @@ ${tail}`;
     isSelf
   }) {
     usePresenceVersion();
-    const s = settings12.store;
+    const s = settings14.store;
     if (s.ignoreSelf && isSelf) return null;
     if (s.ignoreBots && isBot(userId)) return null;
     const platforms = readPlatforms(userId);
     if (platforms.length === 0) return null;
-    const size = Number(s.iconSize) || 14;
+    const size2 = Number(s.iconSize) || 14;
     const tone = s.colorize === "status";
     return /* @__PURE__ */ React.createElement("span", { className: "hc-platform" }, platforms.map(({ platform, status }) => {
       const Icon = ICONS[platform];
@@ -12574,13 +13100,13 @@ ${tail}`;
           className: `hc-platform__item hc-platform__item--${tone ? status : "muted"}`,
           title: label
         },
-        /* @__PURE__ */ React.createElement(Icon, { size, "aria-label": label })
+        /* @__PURE__ */ React.createElement(Icon, { size: size2, "aria-label": label })
       );
     }));
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log41 = logger("platform-indicators");
+  var log43 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -12603,7 +13129,7 @@ ${tail}`;
   var SCAN_MS = 1e3;
   var mounted3 = /* @__PURE__ */ new Map();
   var scanTimer2;
-  var unsubscribes2 = [];
+  var unsubscribes3 = [];
   function currentUserId3() {
     try {
       const id = UserStore.getCurrentUser?.()?.id;
@@ -12648,7 +13174,7 @@ ${tail}`;
       return true;
     } catch (err) {
       host5.remove();
-      log41.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      log43.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -12704,21 +13230,21 @@ ${tail}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log41.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log43.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
   }
   function scan2() {
     prune();
-    const s = settings12.store;
+    const s = settings14.store;
     const selfId = currentUserId3();
     let anyAnchor = false;
     if (s.inMessages && scanKind("message", MESSAGE_SELECTORS, selfId)) anyAnchor = true;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log41.warn(
+      log43.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -12737,47 +13263,47 @@ ${tail}`;
     description: "\u5728\u6D88\u606F\u4F5C\u8005\u4E0E\u6210\u5458\u5217\u8868\u65C1\u663E\u793A\u5BF9\u65B9\u5F53\u524D\u6240\u5728\u7684\u5E73\u53F0\uFF08\u684C\u9762\u7AEF / \u624B\u673A / \u7F51\u9875 / \u6E38\u620F\u4E3B\u673A\uFF09\uFF0C\u56FE\u6807\u6309\u5728\u7EBF\u72B6\u6001\u7740\u8272\u3002\u6570\u636E\u53D6\u81EA Discord \u81EA\u5DF1\u7684\u72B6\u6001 store\uFF0C\u4E0D\u53D1\u4EFB\u4F55\u8BF7\u6C42\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "appearance",
-    settings: settings12,
+    settings: settings14,
     start() {
       injectStyles();
       warnedNoAnchor2 = false;
       lastSelector2.clear();
       scan2();
       scanTimer2 = setInterval(scan2, SCAN_MS);
-      unsubscribes2 = WATCHED_ACTIONS2.map((type) => flux.subscribe(type, bumpPresence));
-      unsubscribes2.push(
-        settings12.subscribe("inMessages", (on) => {
+      unsubscribes3 = WATCHED_ACTIONS2.map((type) => flux.subscribe(type, bumpPresence));
+      unsubscribes3.push(
+        settings14.subscribe("inMessages", (on) => {
           if (!on) detachKind("message");
           else scan2();
         }),
-        settings12.subscribe("inMemberList", (on) => {
+        settings14.subscribe("inMemberList", (on) => {
           if (!on) detachKind("member");
           else scan2();
         }),
-        settings12.subscribe("colorize", () => bumpPresence()),
-        settings12.subscribe("iconSize", () => bumpPresence()),
-        settings12.subscribe("ignoreBots", () => bumpPresence()),
-        settings12.subscribe("ignoreSelf", () => bumpPresence())
+        settings14.subscribe("colorize", () => bumpPresence()),
+        settings14.subscribe("iconSize", () => bumpPresence()),
+        settings14.subscribe("ignoreBots", () => bumpPresence()),
+        settings14.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log41.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log43.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
         clearInterval(scanTimer2);
         scanTimer2 = void 0;
       }
-      for (const off of unsubscribes2) {
+      for (const off of unsubscribes3) {
         try {
           off();
         } catch {
         }
       }
-      unsubscribes2 = [];
+      unsubscribes3 = [];
       for (const entry of [...mounted3.values()]) detach(entry);
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log41.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log43.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12798,9 +13324,9 @@ ${tail}`;
       };
       return {
         settings: {
-          inMessages: settings12.store.inMessages,
-          inMemberList: settings12.store.inMemberList,
-          ignoreBots: settings12.store.ignoreBots
+          inMessages: settings14.store.inMessages,
+          inMemberList: settings14.store.inMemberList,
+          ignoreBots: settings14.store.ignoreBots
         },
         mountedCount: mounted3.size,
         selfId,
@@ -12831,6 +13357,8 @@ ${tail}`;
     fake_nitro_default,
     message_preview_default,
     message_tail_default,
+    custom_rpc_default,
+    image_zoom_default,
     console_cleaner_default,
     emote_cloner_default,
     mark_all_read_default,
@@ -12841,7 +13369,7 @@ ${tail}`;
   ];
 
   // src/core/probe.ts
-  var log42 = logger("probe");
+  var log44 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -12864,8 +13392,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.6.17" : "dev",
-      build: true ? "2026-09-01 11:55:59" : "dev",
+      version: true ? "0.7.0" : "dev",
+      build: true ? "2026-09-01 13:37:48" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -12878,14 +13406,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log42.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log44.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log43 = logger("userscript");
+  var log45 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -12896,8 +13424,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.6.17" : "dev",
-        build: true ? "2026-09-01 11:55:59" : "dev",
+        version: true ? "0.7.0" : "dev",
+        build: true ? "2026-09-01 13:37:48" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -12908,6 +13436,6 @@ ${tail}`;
       };
     } catch {
     }
-    log43.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log43.error("userscript boot failed", err));
+    log45.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log45.error("userscript boot failed", err));
 })();

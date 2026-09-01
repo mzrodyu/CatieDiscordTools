@@ -14,6 +14,8 @@ import messageCleaner from "./message-cleaner";
 import fakeNitro from "./fake-nitro";
 import messagePreview from "./message-preview";
 import messageTail from "./message-tail";
+import customRpc from "./custom-rpc";
+import imageZoom from "./image-zoom";
 import consoleCleaner from "./console-cleaner";
 import emoteCloner from "./emote-cloner";
 import markAllRead from "./mark-all-read";
@@ -32,6 +34,8 @@ export const plugins: Plugin[] = [
   fakeNitro,
   messagePreview,
   messageTail,
+  customRpc,
+  imageZoom,
   consoleCleaner,
   emoteCloner,
   markAllRead,
