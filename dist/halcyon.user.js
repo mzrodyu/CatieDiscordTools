@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.0
+// @version      0.7.1
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -773,8 +773,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-01 13:37:48" : "dev";
-      const version2 = true ? "0.7.0" : "dev";
+      const build = true ? "2026-09-04 12:26:32" : "dev";
+      const version2 = true ? "0.7.1" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4391,7 +4391,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.0" : "dev";
+    return true ? "0.7.1" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4469,7 +4469,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.0" : "dev";
+    const version2 = true ? "0.7.1" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -8655,6 +8655,22 @@ ${loc.channel ?? ""}`.toLowerCase();
         { value: "512", label: "512" }
       ]
     },
+    useHyperLinks: {
+      group: "\u94FE\u63A5\u5F62\u5F0F",
+      type: "boolean",
+      default: true,
+      label: "\u7528\u8D85\u94FE\u63A5\u4EE3\u66FF\u88F8\u94FE\u63A5",
+      description: "\u6539\u5199\u6210\u300C[\u8868\u60C5\u540D](\u94FE\u63A5)\u300D\u800C\u4E0D\u662F\u76F4\u63A5\u8D34\u4E00\u957F\u4E32 CDN \u5730\u5740\u3002\u56FE\u7247\u7167\u6837\u4F1A\u51FA\u73B0\uFF0C\u4F46\u6D88\u606F\u91CC\u90A3\u884C\u5B57\u53D8\u6210\u8868\u60C5\u540D\uFF0C\u6DF7\u5728\u53E5\u5B50\u91CC\u4E0D\u518D\u662F\u4E00\u5835\u94FE\u63A5\u5899\u3002"
+    },
+    hyperLinkText: {
+      group: "\u94FE\u63A5\u5F62\u5F0F",
+      type: "string",
+      default: "{{NAME}}",
+      label: "\u8D85\u94FE\u63A5\u6587\u5B57",
+      description: "\u4E0A\u4E00\u9879\u5F00\u542F\u65F6\u94FE\u63A5\u663E\u793A\u6210\u4EC0\u4E48\uFF0C{{NAME}} \u4F1A\u66FF\u6362\u6210\u8868\u60C5 / \u8D34\u7EB8\u7684\u540D\u5B57\u3002\u60F3\u53EA\u7559\u56FE\u7247\u3001\u8FDE\u540D\u5B57\u90FD\u4E0D\u8981\uFF0C\u586B\u4E00\u4E2A\u96F6\u5BBD\u5B57\u7B26\uFF08\u5982 U+200E\uFF09\u5373\u53EF\uFF1BDiscord \u4E0D\u8BA4\u7A7A\u7684\u94FE\u63A5\u6587\u5B57\uFF0C\u771F\u7559\u7A7A\u4F1A\u9000\u56DE\u88F8\u94FE\u63A5\u3002",
+      placeholder: "{{NAME}}",
+      maxLength: 100
+    },
     enableStreamQualityBypass: {
       group: "\u76F4\u64AD",
       type: "boolean",
@@ -8731,6 +8747,31 @@ ${loc.channel ?? ""}`.toLowerCase();
   function escapeRegExp2(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
+  var PAIRED_MARKDOWN = ["*", "_", "~", "|", "`"];
+  function escapeMarkdown(text) {
+    let out = text.replace(/[[\]]/g, "").replace(/\\/g, "\\\\");
+    for (const delimiter of PAIRED_MARKDOWN) {
+      const parts = out.split(delimiter);
+      if (parts.length > 2) out = parts.join(`\\${delimiter}`);
+    }
+    return out;
+  }
+  function withNameParam(url, name) {
+    if (!name) return url;
+    try {
+      const u = new URL(url);
+      u.searchParams.set("name", name);
+      return u.toString();
+    } catch {
+      return url;
+    }
+  }
+  function renderLink(url, name) {
+    if (!settings5.store.useHyperLinks) return url;
+    const label = String(settings5.store.hyperLinkText ?? "").replace(/\{\{NAME\}\}/g, () => escapeMarkdown(name)).trim();
+    if (label.length === 0) return url;
+    return `[${label}](${withNameParam(url, name)})`;
+  }
   function findMessageArg(args) {
     const m = args[1];
     if (m && typeof m === "object" && typeof m.content === "string") return m;
@@ -8756,7 +8797,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       log21.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
       return false;
     }
-    const url = stickerUrl(sticker);
+    const url = renderLink(stickerUrl(sticker), String(sticker?.name ?? ""));
     message.content = `${message.content ?? ""}${wordBoundary(message.content ?? "", (message.content ?? "").length - 1)}${url}`;
     ids.length = 0;
     return true;
@@ -8770,7 +8811,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       for (const emoji of emojis) {
         if (canUseEmote(emoji, channelId, guildId)) continue;
         const token = `<${emoji.animated ? "a" : ""}:${emoji.originalName || emoji.name}:${emoji.id}>`;
-        const url = emojiUrl(emoji);
+        const url = renderLink(emojiUrl(emoji), String(emoji.name || emoji.originalName || ""));
         const re = new RegExp(escapeRegExp2(token), "g");
         message.content = String(message.content ?? "").replace(
           re,
@@ -8787,11 +8828,11 @@ ${loc.channel ?? ""}`.toLowerCase();
       EMOJI_TOKEN_RE.lastIndex = 0;
       const rewritten = before.replace(
         EMOJI_TOKEN_RE,
-        (tokenStr, animatedFlag, _name, emojiId, offset, str) => {
+        (tokenStr, animatedFlag, name, emojiId, offset, str) => {
           const cached4 = EmojiStore2.getCustomEmojiById?.(emojiId);
           if (cached4 && canUseEmote(cached4, channelId, guildId)) return tokenStr;
           changed = true;
-          const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
+          const url = renderLink(emojiUrlFromParts(emojiId, Boolean(animatedFlag)), name);
           return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
         }
       );
@@ -8830,10 +8871,10 @@ ${loc.channel ?? ""}`.toLowerCase();
       const guildId = guildIdOfChannel(channelId);
       message.content = message.content.replace(
         EMOJI_TOKEN_RE,
-        (tokenStr, animatedFlag, _name, emojiId, offset, str) => {
+        (tokenStr, animatedFlag, name, emojiId, offset, str) => {
           const cached4 = EmojiStore2.getCustomEmojiById?.(emojiId);
           if (cached4 && canUseEmote(cached4, channelId, guildId)) return tokenStr;
-          const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
+          const url = renderLink(emojiUrlFromParts(emojiId, Boolean(animatedFlag)), name);
           return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
         }
       );
@@ -8876,7 +8917,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   var fake_nitro_default = definePlugin({
     id: "fake-nitro",
     name: "\u5047 Nitro",
-    description: "\u65E0\u9700 Nitro \u4E5F\u80FD\u4F7F\u7528\u9700\u8981 Nitro \u7684\u81EA\u5B9A\u4E49\u8868\u60C5\u4E0E\u8D34\u7EB8\uFF1A\u89E3\u9501\u9009\u62E9\u5668\uFF0C\u5E76\u5728\u53D1\u9001\u65F6\u628A\u9501\u5B9A\u7684\u8868\u60C5 / \u8D34\u7EB8\u81EA\u52A8\u6539\u5199\u4E3A\u56FE\u7247\u94FE\u63A5\uFF0C\u5BF9\u65B9\u770B\u5230\u7684\u5C31\u662F\u5185\u8054\u56FE\u7247\u3002\u4FEE\u6539\u9700\u91CD\u542F\u5BA2\u6237\u7AEF\u624D\u80FD\u5B8C\u5168\u751F\u6548\u3002",
+    description: "\u65E0\u9700 Nitro \u4E5F\u80FD\u4F7F\u7528\u9700\u8981 Nitro \u7684\u81EA\u5B9A\u4E49\u8868\u60C5\u4E0E\u8D34\u7EB8\uFF1A\u89E3\u9501\u9009\u62E9\u5668\uFF0C\u5E76\u5728\u53D1\u9001\u65F6\u628A\u9501\u5B9A\u7684\u8868\u60C5 / \u8D34\u7EB8\u81EA\u52A8\u6539\u5199\u4E3A\u56FE\u7247\u94FE\u63A5\uFF0C\u9ED8\u8BA4\u5199\u6210\u300C[\u8868\u60C5\u540D](\u94FE\u63A5)\u300D\u7684\u8D85\u94FE\u63A5\u5F62\u5F0F\uFF0C\u5BF9\u65B9\u770B\u5230\u8868\u60C5\u540D\u52A0\u5185\u8054\u56FE\u7247\uFF0C\u800C\u4E0D\u662F\u4E00\u957F\u4E32\u5730\u5740\u3002\u4FEE\u6539\u9700\u91CD\u542F\u5BA2\u6237\u7AEF\u624D\u80FD\u5B8C\u5168\u751F\u6548\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "chat",
     settings: settings5,
@@ -13392,8 +13433,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.0" : "dev",
-      build: true ? "2026-09-01 13:37:48" : "dev",
+      version: true ? "0.7.1" : "dev",
+      build: true ? "2026-09-04 12:26:32" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13424,8 +13465,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.0" : "dev",
-        build: true ? "2026-09-01 13:37:48" : "dev",
+        version: true ? "0.7.1" : "dev",
+        build: true ? "2026-09-04 12:26:32" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

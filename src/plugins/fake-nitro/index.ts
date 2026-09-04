@@ -18,7 +18,11 @@
 //   2. Runtime send/edit hook (turn the fake token into a link). Once the
 //      user has selected a locked emoji/sticker, we intercept sendMessage /
 //      editMessage on the MessageActions module and rewrite the outgoing
-//      content to a CDN URL, so recipients see an inline image.
+//      content to a CDN URL, so recipients see an inline image. By default that
+//      URL ships as a masked link — `[nailong_fadian](https://cdn…)` — which
+//      still unfurls into the image but puts the emoji's NAME in the message
+//      text instead of ninety characters of CDN path. See the "link shape" note
+//      further down for the tradeoff.
 
 import { definePlugin } from "../../core/plugin";
 import { defineSettings } from "../../core/settings";
@@ -82,6 +86,24 @@ const settings = defineSettings({
       { value: "256", label: "256" },
       { value: "512", label: "512" }
     ]
+  },
+  useHyperLinks: {
+    group: "链接形式",
+    type: "boolean",
+    default: true,
+    label: "用超链接代替裸链接",
+    description:
+      "改写成「[表情名](链接)」而不是直接贴一长串 CDN 地址。图片照样会出现，但消息里那行字变成表情名，混在句子里不再是一堵链接墙。"
+  },
+  hyperLinkText: {
+    group: "链接形式",
+    type: "string",
+    default: "{{NAME}}",
+    label: "超链接文字",
+    description:
+      "上一项开启时链接显示成什么，{{NAME}} 会替换成表情 / 贴纸的名字。想只留图片、连名字都不要，填一个零宽字符（如 U+200E）即可；Discord 不认空的链接文字，真留空会退回裸链接。",
+    placeholder: "{{NAME}}",
+    maxLength: 100
   },
   enableStreamQualityBypass: {
     group: "直播",
@@ -191,6 +213,100 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// --- link shape ------------------------------------------------------------
+//
+// Two ways to drop a CDN URL into a message, and they read very differently on
+// the receiving end:
+//
+//   bare        https://cdn.discordapp.com/emojis/1514172282812104745.webp?size=48&animated=true
+//   hyperlink   [nailong_fadian](https://cdn.discordapp.com/emojis/1514172282812104745.webp?size=48&animated=true)
+//
+// Discord unfurls the URL into an image embed EITHER WAY — a masked link does
+// not suppress the preview (only `<…>` angle brackets do) — so the emoji still
+// arrives as a picture. What changes is the line of text above it: ninety-odd
+// characters of CDN path, or the emoji's name. In a sentence, the bare form is
+// the thing that wrecks the message, so hyperlinks are the default.
+//
+// What it costs, stated plainly: a message whose content is nothing but a bare
+// media link gets that text hidden by Discord, leaving a clean standalone image.
+// `[name](url)` is not a bare link, so that collapse doesn't happen and the
+// label stays visible. If the emoji-on-its-own case is the one you care about,
+// turn 「用超链接代替裸链接」 off — or set the label to a zero-width character,
+// which gets you the image with no visible text in both cases.
+
+/** Delimiters Discord only acts on in pairs. A lone one renders as itself. */
+const PAIRED_MARKDOWN = ["*", "_", "~", "|", "`"];
+
+/**
+ * Make a name safe to use as a link label. Three different problems, handled
+ * three different ways:
+ *
+ *   `[` and `]` are STRIPPED, not escaped. Discord's link regex defines the label
+ *   as "anything except a bracket, or a balanced pair" and has no case for a
+ *   backslash-escaped one, so `[a\]b](url)` does not parse as a link at all — the
+ *   label ends early and the remainder leaks out as literal text. Deleting them
+ *   is the only thing that keeps the link a link.
+ *
+ *   A backslash is always doubled, so it can't eat the character after it.
+ *
+ *   Emphasis delimiters are escaped ONLY from the second occurrence on. A lone
+ *   `_` is inert — `nailong_fadian` really renders as `nailong_fadian` — so
+ *   escaping it buys nothing and stakes the common case on Discord applying the
+ *   `escape` rule inside a link label (it re-parses the label with the inline
+ *   rules, so it should, but nothing here needs to depend on that). Two or more
+ *   can pair up and italicise the middle, and there the escape is worth it:
+ *   `nai_long_fa_dian` would otherwise come out with "long_fa" in italics.
+ *
+ * Applied to the substituted NAME only, never to the whole template: someone who
+ * types `**{{NAME}}**` into the setting means that asterisk.
+ */
+function escapeMarkdown(text: string): string {
+  let out = text.replace(/[[\]]/g, "").replace(/\\/g, "\\\\");
+  for (const delimiter of PAIRED_MARKDOWN) {
+    const parts = out.split(delimiter);
+    if (parts.length > 2) out = parts.join(`\\${delimiter}`);
+  }
+  return out;
+}
+
+/**
+ * Attach `?name=` to a URL. Vencord's FakeNitro reads that param to render the
+ * link back as a real inline emoji when the id isn't in its own EmojiStore —
+ * which is exactly the cross-server case — so carrying it means a Vencord
+ * recipient sees `:nailong_fadian:` rather than `:FakeNitroEmoji:`.
+ *
+ * Only done for the hyperlink form, where the URL sits hidden behind the label
+ * and the extra bytes are free. In bare mode the URL *is* the visible text, and
+ * making it longer is the exact complaint hyperlinks exist to fix.
+ */
+function withNameParam(url: string, name: string): string {
+  if (!name) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set("name", name);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * The text one emoji / sticker token is replaced with: either the bare CDN URL,
+ * or a masked link labelled from `hyperLinkText`.
+ *
+ * Falls back to the bare URL when the label comes out empty — Discord does not
+ * parse `[](url)` as a link, so an empty label would ship the literal brackets
+ * and the full URL anyway, which is worse than either option on purpose.
+ */
+function renderLink(url: string, name: string): string {
+  if (!settings.store.useHyperLinks) return url;
+  const label = String(settings.store.hyperLinkText ?? "")
+    .replace(/\{\{NAME\}\}/g, () => escapeMarkdown(name))
+    .trim();
+  if (label.length === 0) return url;
+  return `[${label}](${withNameParam(url, name)})`;
+}
+
 // --- send / edit rewrites --------------------------------------------------
 
 function findMessageArg(args: any[]): any {
@@ -224,7 +340,7 @@ function rewriteStickers(channelId: string, message: any, options: any, guildId:
     return false;
   }
 
-  const url = stickerUrl(sticker);
+  const url = renderLink(stickerUrl(sticker), String(sticker?.name ?? ""));
   message.content = `${message.content ?? ""}${wordBoundary(message.content ?? "", (message.content ?? "").length - 1)}${url}`;
   ids.length = 0;
   return true;
@@ -253,7 +369,9 @@ function rewriteEmojis(channelId: string, message: any, guildId: string | undefi
       if (canUseEmote(emoji, channelId, guildId)) continue;
 
       const token = `<${emoji.animated ? "a" : ""}:${emoji.originalName || emoji.name}:${emoji.id}>`;
-      const url = emojiUrl(emoji);
+      // Label from `name` — what your client calls it — rather than the token's
+      // `originalName`, so the recipient reads the name you actually saw.
+      const url = renderLink(emojiUrl(emoji), String(emoji.name || emoji.originalName || ""));
       const re = new RegExp(escapeRegExp(token), "g");
       message.content = String(message.content ?? "").replace(
         re,
@@ -281,7 +399,7 @@ function rewriteEmojis(channelId: string, message: any, guildId: string | undefi
     EMOJI_TOKEN_RE.lastIndex = 0;
     const rewritten = before.replace(
       EMOJI_TOKEN_RE,
-      (tokenStr: string, animatedFlag: string | undefined, _name: string, emojiId: string, offset: number, str: string) => {
+      (tokenStr: string, animatedFlag: string | undefined, name: string, emojiId: string, offset: number, str: string) => {
         // If we have the emoji cached AND it's usable natively here, keep the
         // token (Discord will render it inline for free). Otherwise rewrite —
         // including when the emoji isn't cached at all, which is the exact
@@ -290,7 +408,9 @@ function rewriteEmojis(channelId: string, message: any, guildId: string | undefi
         if (cached && canUseEmote(cached, channelId, guildId)) return tokenStr;
 
         changed = true;
-        const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
+        // The token carries the name, so a hyperlink label is available here too
+        // even when the emoji is in no store at all.
+        const url = renderLink(emojiUrlFromParts(emojiId, Boolean(animatedFlag)), name);
         return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
       }
     );
@@ -343,14 +463,14 @@ function onEditMessage(ctx: PatchContext): void {
     const guildId = guildIdOfChannel(channelId);
     message.content = message.content.replace(
       EMOJI_TOKEN_RE,
-      (tokenStr: string, animatedFlag: string | undefined, _name: string, emojiId: string, offset: number, str: string) => {
+      (tokenStr: string, animatedFlag: string | undefined, name: string, emojiId: string, offset: number, str: string) => {
         // Same policy as the send fallback: keep the token only when the emoji
         // is cached AND usable natively here. Everything else — a rewrite in
         // progress, cross-server, no cache — becomes a URL, using the token's
         // own `animated` flag so we don't need a store record to build it.
         const cached = EmojiStore.getCustomEmojiById?.(emojiId);
         if (cached && canUseEmote(cached, channelId, guildId)) return tokenStr;
-        const url = emojiUrlFromParts(emojiId, Boolean(animatedFlag));
+        const url = renderLink(emojiUrlFromParts(emojiId, Boolean(animatedFlag)), name);
         return `${wordBoundary(str, offset - 1)}${url}${wordBoundary(str, offset + tokenStr.length)}`;
       }
     );
@@ -427,7 +547,7 @@ export default definePlugin({
   id: "fake-nitro",
   name: "假 Nitro",
   description:
-    "无需 Nitro 也能使用需要 Nitro 的自定义表情与贴纸：解锁选择器，并在发送时把锁定的表情 / 贴纸自动改写为图片链接，对方看到的就是内联图片。修改需重启客户端才能完全生效。",
+    "无需 Nitro 也能使用需要 Nitro 的自定义表情与贴纸：解锁选择器，并在发送时把锁定的表情 / 贴纸自动改写为图片链接，默认写成「[表情名](链接)」的超链接形式，对方看到表情名加内联图片，而不是一长串地址。修改需重启客户端才能完全生效。",
   authors: [{ name: "Vencord" }, { name: "caitemm" }],
   category: "chat",
 
