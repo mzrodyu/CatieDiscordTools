@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.5
+// @version      0.7.6
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-23 07:48:40" : "dev";
-      const version2 = true ? "0.7.5" : "dev";
+      const build = true ? "2026-09-23 08:02:49" : "dev";
+      const version2 = true ? "0.7.6" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -2880,8 +2880,9 @@ ${slices.join("\n  ...  \n")}`
 }
 
 /* --- Quest indicator badge ------------------------------------------------ */
-/* Small count badge on the quest rail button. Positioned at top-right, styled
-   to match Discord's own notification badges. */
+/* Small count badge on the quest rail button. Positioned at top-right; blurple
+   rather than the notification red, and it shows the exact count (no "9+" cap),
+   so min-width + padding let it grow for two digits. */
 .hc-quest-btn {
   position: relative;
 }
@@ -2894,7 +2895,7 @@ ${slices.join("\n  ...  \n")}`
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: #ed4245;
+  background: #5865f2;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -4460,7 +4461,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.5" : "dev";
+    return true ? "0.7.6" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4538,7 +4539,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.5" : "dev";
+    const version2 = true ? "0.7.6" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -11598,7 +11599,7 @@ ${tail}`;
         onClick: openQuestHub
       },
       /* @__PURE__ */ React.createElement(QuestIcon, { size: 24 }),
-      count2 > 0 && /* @__PURE__ */ React.createElement("span", { className: "hc-quest-badge" }, count2 > 9 ? "9+" : count2)
+      count2 > 0 && /* @__PURE__ */ React.createElement("span", { className: "hc-quest-badge" }, count2)
     ));
   }
   var GUILD_MENUS = ["guild-context", "guild-header-popout"];
@@ -13538,8 +13539,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.5" : "dev",
-      build: true ? "2026-09-23 07:48:40" : "dev",
+      version: true ? "0.7.6" : "dev",
+      build: true ? "2026-09-23 08:02:49" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13570,8 +13571,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.5" : "dev",
-        build: true ? "2026-09-23 07:48:40" : "dev",
+        version: true ? "0.7.6" : "dev",
+        build: true ? "2026-09-23 08:02:49" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

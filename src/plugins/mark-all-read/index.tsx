@@ -149,7 +149,7 @@ function QuestRailButton(): React.ReactElement {
         onClick={openQuestHub}
       >
         <QuestIcon size={24} />
-        {count > 0 && <span className="hc-quest-badge">{count > 9 ? "9+" : count}</span>}
+        {count > 0 && <span className="hc-quest-badge">{count}</span>}
       </button>
     </div>
   );

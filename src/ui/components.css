@@ -1821,8 +1821,9 @@
 }
 
 /* --- Quest indicator badge ------------------------------------------------ */
-/* Small count badge on the quest rail button. Positioned at top-right, styled
-   to match Discord's own notification badges. */
+/* Small count badge on the quest rail button. Positioned at top-right; blurple
+   rather than the notification red, and it shows the exact count (no "9+" cap),
+   so min-width + padding let it grow for two digits. */
 .hc-quest-btn {
   position: relative;
 }
@@ -1835,7 +1836,7 @@
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: #ed4245;
+  background: #5865f2;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
