@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.3
+// @version      0.7.4
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -442,6 +442,44 @@ var Halcyon = (() => {
       }
     );
   }
+  function questsDiagnostic() {
+    const info = {};
+    try {
+      info.viaExportScan = !!find((m) => m?.getName?.() === "QuestsStore");
+    } catch {
+      info.viaExportScan = "err";
+    }
+    let store;
+    try {
+      store = findStoreByName("QuestsStore");
+      info.viaRegistry = !!store;
+    } catch {
+      info.viaRegistry = "err";
+    }
+    try {
+      info.storeNamesWithQuest = storeNames().filter((n) => /quest/i.test(n));
+    } catch {
+    }
+    try {
+      const q = store?.quests;
+      const arr = q instanceof Map ? [...q.values()] : Array.isArray(q) ? q : [];
+      info.questsProp = Object.prototype.toString.call(q);
+      info.questCount = arr.length;
+      info.storeKeys = store ? Object.keys(store).slice(0, 40) : null;
+      const f = arr[0];
+      info.firstQuest = f ? {
+        keys: Object.keys(f),
+        userStatus: f.userStatus == null ? f.userStatus : Object.keys(f.userStatus),
+        completedAt: f.userStatus?.completedAt,
+        enrolledAt: f.userStatus?.enrolledAt,
+        expiresAt: f.config?.expiresAt,
+        expiresAtType: typeof f.config?.expiresAt
+      } : null;
+    } catch (e) {
+      info.readError = e?.message;
+    }
+    return info;
+  }
   function isReady() {
     return ready;
   }
@@ -792,8 +830,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-23 07:28:48" : "dev";
-      const version2 = true ? "0.7.3" : "dev";
+      const build = true ? "2026-09-23 07:36:39" : "dev";
+      const version2 = true ? "0.7.4" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4410,7 +4448,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.3" : "dev";
+    return true ? "0.7.4" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4488,7 +4526,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.3" : "dev";
+    const version2 = true ? "0.7.4" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -13485,8 +13523,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.3" : "dev",
-      build: true ? "2026-09-23 07:28:48" : "dev",
+      version: true ? "0.7.4" : "dev",
+      build: true ? "2026-09-23 07:36:39" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13517,14 +13555,20 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.3" : "dev",
-        build: true ? "2026-09-23 07:28:48" : "dev",
+        version: true ? "0.7.4" : "dev",
+        build: true ? "2026-09-23 07:36:39" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
         patchReport: () => getSourcePatchReport(),
         dumpSource: (needle, radius) => dumpFactorySource(needle, radius),
         diagnose: () => diagnoseSettings(),
+        quests: () => questsDiagnostic(),
+        storeNames: () => storeNames(),
+        find,
+        findByProps,
+        findByCode,
+        findStoreByName,
         probe
       };
     } catch {
