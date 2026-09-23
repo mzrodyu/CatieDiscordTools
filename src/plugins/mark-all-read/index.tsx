@@ -29,8 +29,8 @@ import {
   getMenuItemComponent,
   type ContextMenuPatchCallback
 } from "../../core/common/context-menu";
-import { showToast, NavigationRouter } from "../../core/common/discord";
-import { React } from "../../core/common/react";
+import { showToast, navigate, QuestsStore } from "../../core/common/discord";
+import { React, useState, useEffect } from "../../core/common/react";
 import { injectStyles } from "../../ui/inject-styles";
 import { markAllRead } from "./mark";
 import { MarkAllReadPage } from "./ui/MarkAllReadPage";
@@ -73,21 +73,84 @@ function RailButton(): React.ReactElement {
   );
 }
 
-/** Quest rail button — opens the quest hub. */
+/** True once a quest's active window has closed. */
+function isQuestExpired(quest: any): boolean {
+  const expiresAt = quest?.config?.expiresAt;
+  if (!expiresAt) return false;
+  try {
+    return new Date(expiresAt).getTime() < Date.now();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Count the quests still worth attention — the "未接取 / 未完成" set other clients
+ * badge. A quest the user never enrolled in has no `userStatus`, so `completedAt`
+ * is absent and it counts; an enrolled-but-unfinished one has `completedAt` null
+ * and also counts; a finished one carries a `completedAt` timestamp and drops
+ * out, as do expired ones. Discord fetches quests on startup, but the store may
+ * lag the first paint, so we re-poll and keep the last good count until it fills.
+ */
+function useOpenQuestCount(): number {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const read = () => {
+      try {
+        const store = QuestsStore as any;
+        const raw = store?.quests;
+        const list: any[] = raw instanceof Map
+          ? [...raw.values()]
+          : Array.isArray(raw)
+            ? raw
+            : Array.isArray(store?.getQuests?.())
+              ? store.getQuests()
+              : [];
+        setCount(
+          list.filter((q) => q && !q.userStatus?.completedAt && !isQuestExpired(q)).length
+        );
+      } catch {
+        // Store not ready yet — leave the last known count untouched.
+      }
+    };
+
+    read();
+    const id = setInterval(read, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return count;
+}
+
+/**
+ * Open Discord's quest hub with an in-app route change. Never `location.href` —
+ * that is a full page reload (the old "任务中心变成刷新了" report). `navigate()`
+ * does an SPA transition, or returns false, in which case we log and do nothing
+ * rather than nuking the session.
+ */
+function openQuestHub(): void {
+  if (navigate("/quest-home")) return;
+  log.warn("无法打开任务中心：未解析到导航路由，已放弃跳转以避免整页刷新。");
+}
+
+/** Quest rail button — opens the quest hub, badged with the number of quests
+ *  still open (un-accepted or unfinished), matching what other clients show. */
 function QuestRailButton(): React.ReactElement {
+  const count = useOpenQuestCount();
+  const label = count > 0 ? `${count} 个可用任务` : "任务中心";
+
   return (
     <div className="hc-rail-item">
       <button
         type="button"
         className="hc-rail-btn hc-quest-btn"
-        aria-label="任务中心"
-        title="任务中心"
-        onClick={() => {
-          history.pushState(null, "", "/quest-home");
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        }}
+        aria-label={label}
+        title={label}
+        onClick={openQuestHub}
       >
         <QuestIcon size={24} />
+        {count > 0 && <span className="hc-quest-badge">{count > 9 ? "9+" : count}</span>}
       </button>
     </div>
   );

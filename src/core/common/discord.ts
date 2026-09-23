@@ -166,7 +166,7 @@ export const NavigationRouter = lazy<any>(
     // NOT the full {replaceWith AND transitionToGuild} triple: on the current
     // build the real router doesn't expose transitionToGuild, so requiring it
     // made this resolve to NOTHING — which sent NavigationRouter callers down
-    // their fallback path (quest-indicator to `location.href`, i.e. a full page
+    // their fallback path (the quest button to `location.href`, i.e. a full page
     // reload — the "任务中心变成刷新了" report — and the log-page jump to a warn).
     // The intl-proxy is rejected by the __halcyon_probe__ guard alone, so the
     // companion check only needs to be specific enough, not exhaustive.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.1
+// @version      0.7.2
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -773,8 +773,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-04 12:26:32" : "dev";
-      const version2 = true ? "0.7.1" : "dev";
+      const build = true ? "2026-09-23 06:43:30" : "dev";
+      const version2 = true ? "0.7.2" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4391,7 +4391,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.1" : "dev";
+    return true ? "0.7.2" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4469,7 +4469,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.1" : "dev";
+    const version2 = true ? "0.7.2" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5191,7 +5191,7 @@ ${components_default}`;
     // NOT the full {replaceWith AND transitionToGuild} triple: on the current
     // build the real router doesn't expose transitionToGuild, so requiring it
     // made this resolve to NOTHING — which sent NavigationRouter callers down
-    // their fallback path (quest-indicator to `location.href`, i.e. a full page
+    // their fallback path (the quest button to `location.href`, i.e. a full page
     // reload — the "任务中心变成刷新了" report — and the log-page jump to a warn).
     // The intl-proxy is rejected by the __halcyon_probe__ guard alone, so the
     // companion check only needs to be specific enough, not exhaustive.
@@ -5229,9 +5229,9 @@ ${components_default}`;
       }
       for (const c of candidates) {
         try {
-          const history2 = c?.getHistory?.();
-          if (history2 && typeof history2.push === "function") {
-            history2.push(path);
+          const history = c?.getHistory?.();
+          if (history && typeof history.push === "function") {
+            history.push(path);
             return true;
           }
         } catch {
@@ -11480,20 +11480,53 @@ ${tail}`;
       /* @__PURE__ */ React.createElement(MessageCheckIcon, { size: 24 })
     ));
   }
+  function isQuestExpired(quest) {
+    const expiresAt = quest?.config?.expiresAt;
+    if (!expiresAt) return false;
+    try {
+      return new Date(expiresAt).getTime() < Date.now();
+    } catch {
+      return false;
+    }
+  }
+  function useOpenQuestCount() {
+    const [count2, setCount] = useState(0);
+    useEffect(() => {
+      const read = () => {
+        try {
+          const store = QuestsStore;
+          const raw = store?.quests;
+          const list = raw instanceof Map ? [...raw.values()] : Array.isArray(raw) ? raw : Array.isArray(store?.getQuests?.()) ? store.getQuests() : [];
+          setCount(
+            list.filter((q) => q && !q.userStatus?.completedAt && !isQuestExpired(q)).length
+          );
+        } catch {
+        }
+      };
+      read();
+      const id = setInterval(read, 3e4);
+      return () => clearInterval(id);
+    }, []);
+    return count2;
+  }
+  function openQuestHub() {
+    if (navigate("/quest-home")) return;
+    log36.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
+  }
   function QuestRailButton() {
+    const count2 = useOpenQuestCount();
+    const label = count2 > 0 ? `${count2} \u4E2A\u53EF\u7528\u4EFB\u52A1` : "\u4EFB\u52A1\u4E2D\u5FC3";
     return /* @__PURE__ */ React.createElement("div", { className: "hc-rail-item" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
         className: "hc-rail-btn hc-quest-btn",
-        "aria-label": "\u4EFB\u52A1\u4E2D\u5FC3",
-        title: "\u4EFB\u52A1\u4E2D\u5FC3",
-        onClick: () => {
-          history.pushState(null, "", "/quest-home");
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        }
+        "aria-label": label,
+        title: label,
+        onClick: openQuestHub
       },
-      /* @__PURE__ */ React.createElement(QuestIcon, { size: 24 })
+      /* @__PURE__ */ React.createElement(QuestIcon, { size: 24 }),
+      count2 > 0 && /* @__PURE__ */ React.createElement("span", { className: "hc-quest-badge" }, count2 > 9 ? "9+" : count2)
     ));
   }
   var GUILD_MENUS = ["guild-context", "guild-header-popout"];
@@ -13433,8 +13466,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.1" : "dev",
-      build: true ? "2026-09-04 12:26:32" : "dev",
+      version: true ? "0.7.2" : "dev",
+      build: true ? "2026-09-23 06:43:30" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13465,8 +13498,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.1" : "dev",
-        build: true ? "2026-09-04 12:26:32" : "dev",
+        version: true ? "0.7.2" : "dev",
+        build: true ? "2026-09-23 06:43:30" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
