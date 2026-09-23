@@ -66,12 +66,19 @@ const SAVE_DEBOUNCE = 500;
 const MAX_SAVE_WAIT = 3000;
 
 /**
- * Serialized-size ceiling for the persisted log (bytes of JSON).
+ * Serialized-size ceiling for the persisted log (UTF-16 chars of JSON — what
+ * `JSON.stringify(...).length` measures in withinBudget()).
  *
- * Comfortably under localStorage's ~5MB and chrome.storage.local's default
- * quota, with room for Halcyon's other namespaces. See withinBudget().
+ * On the userscript/desktop builds this log shares ONE localStorage origin with
+ * Discord itself, whose own state (read states, experiment exposures, selected
+ * channel, …) needs a healthy slice of the ~5MB quota. An earlier 3,000,000
+ * ceiling let a heavy log crowd Discord out: its `setItem` then threw
+ * QuotaExceededError on every dispatch (SelectedChannelStore, apexTrackedExposures
+ * spammed the console and Discord stopped persisting). Keep our footprint modest
+ * so the client keeps working; withinBudget() sheds embeds then oldest entries
+ * to stay under it.
  */
-const SIZE_BUDGET = 3_000_000;
+const SIZE_BUDGET = 1_000_000;
 
 class MessageLogStore {
   private deleted: DeletedEntry[] = [];

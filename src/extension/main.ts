@@ -14,7 +14,7 @@ import { runtime } from "../core/runtime";
 import { plugins } from "../plugins";
 import { openSettings, closeSettings } from "../ui/settings/overlay";
 import { injectStyles } from "../ui/inject-styles";
-import { getSourcePatchReport, dumpFactorySource, diagnoseSettings } from "../core/modules/webpack";
+import { getSourcePatchReport, dumpFactorySource, diagnoseSettings, find, findByProps, findByCode, findStoreByName, storeNames, questsDiagnostic } from "../core/modules/webpack";
 import { probe } from "../core/probe";
 import { logger } from "../core/logger";
 
@@ -47,6 +47,12 @@ async function start(): Promise<void> {
       patchReport: () => getSourcePatchReport(),
       dumpSource: (needle: string, radius?: number) => dumpFactorySource(needle, radius),
       diagnose: () => diagnoseSettings(),
+      quests: () => questsDiagnostic(),
+      storeNames: () => storeNames(),
+      find,
+      findByProps,
+      findByCode,
+      findStoreByName,
       probe
     };
   } catch {

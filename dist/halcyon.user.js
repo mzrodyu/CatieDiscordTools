@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.2
+// @version      0.7.3
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -423,6 +423,25 @@ var Halcyon = (() => {
       }
     );
   }
+  function lazyStore(name) {
+    let resolved;
+    const get = () => resolved ??= findStoreByName(name);
+    return new Proxy(
+      {},
+      {
+        get(_t, key) {
+          const mod = get();
+          if (mod == null) return void 0;
+          const value = mod[key];
+          return typeof value === "function" ? value.bind(mod) : value;
+        },
+        has(_t, key) {
+          const mod = get();
+          return mod != null && key in mod;
+        }
+      }
+    );
+  }
   function isReady() {
     return ready;
   }
@@ -773,8 +792,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-23 06:43:30" : "dev";
-      const version2 = true ? "0.7.2" : "dev";
+      const build = true ? "2026-09-23 07:28:48" : "dev";
+      const version2 = true ? "0.7.3" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4391,7 +4410,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.2" : "dev";
+    return true ? "0.7.3" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4469,7 +4488,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.2" : "dev";
+    const version2 = true ? "0.7.3" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5272,7 +5291,7 @@ ${components_default}`;
     (m) => typeof m?.Endpoints?.GUILD_STICKER_PACKS === "function"
   );
   var StickersStore = lazy((m) => m?.getName?.() === "StickersStore");
-  var QuestsStore = lazy((m) => m?.getName?.() === "QuestsStore");
+  var QuestsStore = lazyStore("QuestsStore");
   var ReadStateStore = lazy(
     (m) => (
       // Name-only (see GuildChannelStore): the method-shape fallback also matched
@@ -5518,7 +5537,7 @@ ${components_default}`;
   var DATA_NS = "message-logger.log";
   var SAVE_DEBOUNCE = 500;
   var MAX_SAVE_WAIT = 3e3;
-  var SIZE_BUDGET = 3e6;
+  var SIZE_BUDGET = 1e6;
   var MessageLogStore = class {
     deleted = [];
     edited = [];
@@ -13466,8 +13485,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.2" : "dev",
-      build: true ? "2026-09-23 06:43:30" : "dev",
+      version: true ? "0.7.3" : "dev",
+      build: true ? "2026-09-23 07:28:48" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13498,8 +13517,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.2" : "dev",
-        build: true ? "2026-09-23 06:43:30" : "dev",
+        version: true ? "0.7.3" : "dev",
+        build: true ? "2026-09-23 07:28:48" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

@@ -4,7 +4,7 @@
 // keeps startup cheap and tolerates modules that load late. Filters describe
 // modules by shape, never by ID, so they survive client updates.
 
-import { find, isFluxDispatcher, lazy } from "../modules/webpack";
+import { find, isFluxDispatcher, lazy, lazyStore } from "../modules/webpack";
 
 /** Central Flux dispatcher. Everything state-related flows through it. */
 export const Dispatcher = lazy<any>(isFluxDispatcher);
@@ -330,9 +330,14 @@ export const StickersStore = lazy<any>((m) => m?.getName?.() === "StickersStore"
 /**
  * Active quests (time-limited promotional tasks). The store holds a Map or
  * array of quest records; each has `config` (expiresAt, rewards) and
- * `userStatus` (completedAt if finished). Resolved by name.
+ * `userStatus` (completedAt if finished).
+ *
+ * Resolved through the Flux instance registry (`lazyStore`), not the export
+ * scan: on current builds the store isn't on any module's exports where a
+ * `getName` scan can see it, so the old `lazy(getName === "QuestsStore")` came
+ * back undefined and the quest badge always counted 0.
  */
-export const QuestsStore = lazy<any>((m) => m?.getName?.() === "QuestsStore");
+export const QuestsStore = lazyStore<any>("QuestsStore");
 
 /**
  * Per-channel read state: what's unread, the last message seen, mention counts.
