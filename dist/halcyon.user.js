@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.4
+// @version      0.7.5
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -423,9 +423,9 @@ var Halcyon = (() => {
       }
     );
   }
-  function lazyStore(name) {
+  function lazyStore(...names) {
     let resolved;
-    const get = () => resolved ??= findStoreByName(name);
+    const get = () => resolved ??= names.map((n) => findStoreByName(n)).find(Boolean);
     return new Proxy(
       {},
       {
@@ -445,39 +445,51 @@ var Halcyon = (() => {
   function questsDiagnostic() {
     const info = {};
     try {
-      info.viaExportScan = !!find((m) => m?.getName?.() === "QuestsStore");
-    } catch {
-      info.viaExportScan = "err";
-    }
-    let store;
-    try {
-      store = findStoreByName("QuestsStore");
-      info.viaRegistry = !!store;
-    } catch {
-      info.viaRegistry = "err";
-    }
-    try {
       info.storeNamesWithQuest = storeNames().filter((n) => /quest/i.test(n));
     } catch {
     }
-    try {
-      const q = store?.quests;
-      const arr = q instanceof Map ? [...q.values()] : Array.isArray(q) ? q : [];
-      info.questsProp = Object.prototype.toString.call(q);
-      info.questCount = arr.length;
-      info.storeKeys = store ? Object.keys(store).slice(0, 40) : null;
-      const f = arr[0];
-      info.firstQuest = f ? {
-        keys: Object.keys(f),
-        userStatus: f.userStatus == null ? f.userStatus : Object.keys(f.userStatus),
-        completedAt: f.userStatus?.completedAt,
-        enrolledAt: f.userStatus?.enrolledAt,
-        expiresAt: f.config?.expiresAt,
-        expiresAtType: typeof f.config?.expiresAt
-      } : null;
-    } catch (e) {
-      info.readError = e?.message;
+    const store = findStoreByName("QuestStore") ?? findStoreByName("QuestsStore");
+    info.found = !!store;
+    if (!store) return info;
+    const describe2 = (v) => v instanceof Map ? `Map(${v.size})` : Array.isArray(v) ? `Array(${v.length})` : typeof v;
+    const methods = /* @__PURE__ */ new Set();
+    for (let p = store; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) {
+      for (const k of Object.getOwnPropertyNames(p)) {
+        if (k === "constructor") continue;
+        try {
+          if (typeof store[k] === "function") methods.add(k);
+        } catch {
+        }
+      }
     }
+    info.questMethods = [...methods].filter((m) => /quest/i.test(m));
+    let list;
+    try {
+      const q = store.quests;
+      info.questsGetter = describe2(q);
+      if (q instanceof Map || Array.isArray(q)) list = q;
+    } catch (e) {
+      info.questsGetter = "err:" + e?.message;
+    }
+    for (const m of ["getQuests", "getAllQuests"]) {
+      try {
+        const v = typeof store[m] === "function" ? store[m]() : void 0;
+        if (v !== void 0) info[`fn:${m}`] = describe2(v);
+        if (!list && (v instanceof Map || Array.isArray(v))) list = v;
+      } catch {
+      }
+    }
+    const arr = list instanceof Map ? [...list.values()] : Array.isArray(list) ? list : [];
+    info.questCount = arr.length;
+    const f = arr[0];
+    info.firstQuest = f ? {
+      keys: Object.keys(f),
+      userStatus: f.userStatus == null ? f.userStatus : Object.keys(f.userStatus),
+      completedAt: f.userStatus?.completedAt,
+      enrolledAt: f.userStatus?.enrolledAt,
+      expiresAt: f.config?.expiresAt,
+      expiresAtType: typeof f.config?.expiresAt
+    } : null;
     return info;
   }
   function isReady() {
@@ -830,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-23 07:36:39" : "dev";
-      const version2 = true ? "0.7.4" : "dev";
+      const build = true ? "2026-09-23 07:48:40" : "dev";
+      const version2 = true ? "0.7.5" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4448,7 +4460,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.4" : "dev";
+    return true ? "0.7.5" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4526,7 +4538,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.4" : "dev";
+    const version2 = true ? "0.7.5" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -5329,7 +5341,7 @@ ${components_default}`;
     (m) => typeof m?.Endpoints?.GUILD_STICKER_PACKS === "function"
   );
   var StickersStore = lazy((m) => m?.getName?.() === "StickersStore");
-  var QuestsStore = lazyStore("QuestsStore");
+  var QuestsStore = lazyStore("QuestStore", "QuestsStore");
   var ReadStateStore = lazy(
     (m) => (
       // Name-only (see GuildChannelStore): the method-shape fallback also matched
@@ -11552,8 +11564,11 @@ ${tail}`;
       const read = () => {
         try {
           const store = QuestsStore;
-          const raw = store?.quests;
-          const list = raw instanceof Map ? [...raw.values()] : Array.isArray(raw) ? raw : Array.isArray(store?.getQuests?.()) ? store.getQuests() : [];
+          let raw = store?.quests;
+          if (!(raw instanceof Map) && !Array.isArray(raw)) {
+            raw = store?.getQuests?.() ?? store?.getAllQuests?.();
+          }
+          const list = raw instanceof Map ? [...raw.values()] : Array.isArray(raw) ? raw : [];
           setCount(
             list.filter((q) => q && !q.userStatus?.completedAt && !isQuestExpired(q)).length
           );
@@ -13523,8 +13538,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.4" : "dev",
-      build: true ? "2026-09-23 07:36:39" : "dev",
+      version: true ? "0.7.5" : "dev",
+      build: true ? "2026-09-23 07:48:40" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13555,8 +13570,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.4" : "dev",
-        build: true ? "2026-09-23 07:36:39" : "dev",
+        version: true ? "0.7.5" : "dev",
+        build: true ? "2026-09-23 07:48:40" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

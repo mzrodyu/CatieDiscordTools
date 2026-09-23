@@ -328,16 +328,17 @@ export const Constants = lazy<any>(
 export const StickersStore = lazy<any>((m) => m?.getName?.() === "StickersStore");
 
 /**
- * Active quests (time-limited promotional tasks). The store holds a Map or
- * array of quest records; each has `config` (expiresAt, rewards) and
- * `userStatus` (completedAt if finished).
+ * Active quests (time-limited promotional tasks). The store holds a `quests`
+ * Map (behind a getter) of quest records; each has `config` (expiresAt, rewards)
+ * and `userStatus` (completedAt if finished).
  *
  * Resolved through the Flux instance registry (`lazyStore`), not the export
- * scan: on current builds the store isn't on any module's exports where a
- * `getName` scan can see it, so the old `lazy(getName === "QuestsStore")` came
- * back undefined and the quest badge always counted 0.
+ * scan: the store isn't on any module's exports where a `getName` scan can see
+ * it. It is named `QuestStore` on current builds and `QuestsStore` on older
+ * ones — try both. The old `lazy(getName === "QuestsStore")` matched neither on
+ * current Discord, so the quest badge always counted 0.
  */
-export const QuestsStore = lazyStore<any>("QuestsStore");
+export const QuestsStore = lazyStore<any>("QuestStore", "QuestsStore");
 
 /**
  * Per-channel read state: what's unread, the last message seen, mention counts.

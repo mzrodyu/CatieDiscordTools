@@ -709,16 +709,19 @@ export function lazy<T = any>(filter: ModuleFilter): T {
 /**
  * Like {@link lazy}, but resolves a Flux store by its registered name through
  * {@link findStoreByName}, which also consults Flux's own instance registry.
+ * Accepts several names and resolves the first that exists, so one handle can
+ * ride out a rename across builds (the quest store is `QuestStore` on current
+ * builds, `QuestsStore` on older ones).
  *
  * Use this for stores the plain export scan can't see. `lazy(m => m.getName() ===
  * "X")` only looks at module exports (and one key deep), so a store that sits
  * behind a getter or two namespaces down is invisible even though it exists and
- * is populated — `GuildMemberCountStore` was the first case, `QuestsStore` is
+ * is populated — `GuildMemberCountStore` was the first case, `QuestStore` is
  * another (its `.quests` came back undefined, so the quest badge counted 0).
  */
-export function lazyStore<T = any>(name: string): T {
+export function lazyStore<T = any>(...names: string[]): T {
   let resolved: any;
-  const get = () => (resolved ??= findStoreByName(name));
+  const get = () => (resolved ??= names.map((n) => findStoreByName(n)).find(Boolean));
 
   return new Proxy(
     {},
@@ -738,50 +741,71 @@ export function lazyStore<T = any>(name: string): T {
 }
 
 /**
- * Diagnostic snapshot of Discord's QuestsStore, surfaced through
- * `HalcyonAPI.quests()`. Reports whether the store is reachable by each strategy
- * and the real shape of a quest record, so a build that renames the store or its
- * fields can be spotted without guessing.
+ * Diagnostic snapshot of Discord's quest store, surfaced through
+ * `HalcyonAPI.quests()`. The quest collection lives behind a getter/method, not
+ * an own-enumerable field, so it reads `.quests` directly and walks the
+ * prototype for quest-named methods rather than trusting `Object.keys`.
  */
 export function questsDiagnostic(): Record<string, unknown> {
   const info: Record<string, unknown> = {};
-  try {
-    info.viaExportScan = !!find((m: any) => m?.getName?.() === "QuestsStore");
-  } catch {
-    info.viaExportScan = "err";
-  }
-  let store: any;
-  try {
-    store = findStoreByName("QuestsStore");
-    info.viaRegistry = !!store;
-  } catch {
-    info.viaRegistry = "err";
-  }
   try {
     info.storeNamesWithQuest = storeNames().filter((n) => /quest/i.test(n));
   } catch {
     // registry unavailable
   }
-  try {
-    const q = store?.quests;
-    const arr = q instanceof Map ? [...q.values()] : Array.isArray(q) ? q : [];
-    info.questsProp = Object.prototype.toString.call(q);
-    info.questCount = arr.length;
-    info.storeKeys = store ? Object.keys(store).slice(0, 40) : null;
-    const f = arr[0];
-    info.firstQuest = f
-      ? {
-          keys: Object.keys(f),
-          userStatus: f.userStatus == null ? f.userStatus : Object.keys(f.userStatus),
-          completedAt: f.userStatus?.completedAt,
-          enrolledAt: f.userStatus?.enrolledAt,
-          expiresAt: f.config?.expiresAt,
-          expiresAtType: typeof f.config?.expiresAt
-        }
-      : null;
-  } catch (e: any) {
-    info.readError = e?.message;
+
+  const store = findStoreByName("QuestStore") ?? findStoreByName("QuestsStore");
+  info.found = !!store;
+  if (!store) return info;
+
+  const describe = (v: any): string =>
+    v instanceof Map ? `Map(${v.size})` : Array.isArray(v) ? `Array(${v.length})` : typeof v;
+
+  // Prototype-walk for quest-named accessors (own-enumerable keys miss them).
+  const methods = new Set<string>();
+  for (let p = store; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) {
+    for (const k of Object.getOwnPropertyNames(p)) {
+      if (k === "constructor") continue;
+      try {
+        if (typeof store[k] === "function") methods.add(k);
+      } catch {
+        // getter threw
+      }
+    }
   }
+  info.questMethods = [...methods].filter((m) => /quest/i.test(m));
+
+  let list: any;
+  try {
+    const q = store.quests;
+    info.questsGetter = describe(q);
+    if (q instanceof Map || Array.isArray(q)) list = q;
+  } catch (e: any) {
+    info.questsGetter = "err:" + e?.message;
+  }
+  for (const m of ["getQuests", "getAllQuests"]) {
+    try {
+      const v = typeof store[m] === "function" ? store[m]() : undefined;
+      if (v !== undefined) info[`fn:${m}`] = describe(v);
+      if (!list && (v instanceof Map || Array.isArray(v))) list = v;
+    } catch {
+      // not callable with no args
+    }
+  }
+
+  const arr = list instanceof Map ? [...list.values()] : Array.isArray(list) ? list : [];
+  info.questCount = arr.length;
+  const f = arr[0];
+  info.firstQuest = f
+    ? {
+        keys: Object.keys(f),
+        userStatus: f.userStatus == null ? f.userStatus : Object.keys(f.userStatus),
+        completedAt: f.userStatus?.completedAt,
+        enrolledAt: f.userStatus?.enrolledAt,
+        expiresAt: f.config?.expiresAt,
+        expiresAtType: typeof f.config?.expiresAt
+      }
+    : null;
   return info;
 }
 

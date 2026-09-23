@@ -99,14 +99,13 @@ function useOpenQuestCount(): number {
     const read = () => {
       try {
         const store = QuestsStore as any;
-        const raw = store?.quests;
-        const list: any[] = raw instanceof Map
-          ? [...raw.values()]
-          : Array.isArray(raw)
-            ? raw
-            : Array.isArray(store?.getQuests?.())
-              ? store.getQuests()
-              : [];
+        // `.quests` is a getter returning a Map; older/other builds expose it
+        // through a method instead, so fall back to those.
+        let raw = store?.quests;
+        if (!(raw instanceof Map) && !Array.isArray(raw)) {
+          raw = store?.getQuests?.() ?? store?.getAllQuests?.();
+        }
+        const list: any[] = raw instanceof Map ? [...raw.values()] : Array.isArray(raw) ? raw : [];
         setCount(
           list.filter((q) => q && !q.userStatus?.completedAt && !isQuestExpired(q)).length
         );
