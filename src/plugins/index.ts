@@ -20,7 +20,6 @@ import consoleCleaner from "./console-cleaner";
 import emoteCloner from "./emote-cloner";
 import markAllRead from "./mark-all-read";
 import silentTyping from "./silent-typing";
-import customTyping from "./custom-typing";
 import memberCount from "./member-count";
 import whoReacted from "./who-reacted";
 import platformIndicators from "./platform-indicators";
@@ -41,7 +40,6 @@ export const plugins: Plugin[] = [
   emoteCloner,
   markAllRead,
   silentTyping,
-  customTyping,
   memberCount,
   whoReacted,
   platformIndicators

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.7
+// @version      0.7.8
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-27 05:57:25" : "dev";
-      const version2 = true ? "0.7.7" : "dev";
+      const build = true ? "2026-09-27 06:07:43" : "dev";
+      const version2 = true ? "0.7.8" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4112,17 +4112,17 @@ ${components_default}`;
     }, []);
     return list;
   }
-  function useSettingsSnapshot(settings16) {
+  function useSettingsSnapshot(settings15) {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubscribes4 = Object.keys(settings16.schema).map(
-        (key) => settings16.subscribe(key, () => bump((n) => n + 1))
+      const unsubscribes4 = Object.keys(settings15.schema).map(
+        (key) => settings15.subscribe(key, () => bump((n) => n + 1))
       );
       return () => {
         for (const off of unsubscribes4) off();
       };
-    }, [settings16]);
-    return settings16.store;
+    }, [settings15]);
+    return settings15.store;
   }
 
   // src/ui/settings/SettingsForm.tsx
@@ -4138,16 +4138,16 @@ ${components_default}`;
       return false;
     }
   }
-  function SettingsForm({ settings: settings16 }) {
-    const store = useSettingsSnapshot(settings16);
+  function SettingsForm({ settings: settings15 }) {
+    const store = useSettingsSnapshot(settings15);
     const keys = useMemo(
-      () => Object.keys(settings16.schema).filter((key) => !settings16.schema[key].hidden),
-      [settings16]
+      () => Object.keys(settings15.schema).filter((key) => !settings15.schema[key].hidden),
+      [settings15]
     );
     const [draft, setDraft] = useState(() => seed(store, keys));
     useEffect(() => {
       setDraft(seed(store, keys));
-    }, [settings16]);
+    }, [settings15]);
     if (keys.length === 0) return null;
     const dirty = keys.filter((key) => !equal(draft[key], store[key]));
     const save = () => {
@@ -4156,7 +4156,7 @@ ${components_default}`;
     const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
-      const title = settings16.schema[key].group ?? "\u8BBE\u7F6E";
+      const title = settings15.schema[key].group ?? "\u8BBE\u7F6E";
       const last = sections[sections.length - 1];
       if (last && last.title === title) last.keys.push(key);
       else sections.push({ title, keys: [key] });
@@ -4165,7 +4165,7 @@ ${components_default}`;
       SettingField,
       {
         key,
-        def: settings16.schema[key],
+        def: settings15.schema[key],
         value: draft[key],
         onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
@@ -4461,7 +4461,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.7" : "dev";
+    return true ? "0.7.8" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4539,7 +4539,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.7" : "dev";
+    const version2 = true ? "0.7.8" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -6410,7 +6410,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         log12.warn("[jump] \u8DF3\u8F6C\u5931\u8D25\uFF1AJumpActions \u4E0E NavigationRouter \u5747\u672A\u89E3\u6790\u5230");
       }
     };
-    const schedule3 = [80, 220, 450, 800];
+    const schedule2 = [80, 220, 450, 800];
     let i = 0;
     const tick = () => {
       doJump();
@@ -6418,11 +6418,11 @@ ${loc.channel ?? ""}`.toLowerCase();
       const ok = now === channelId;
       log12.info(`[jump] \u7B2C ${i + 1} \u6B21 \xB7 now=${now ?? "?"} wanted=${channelId} ok=${ok}`);
       i++;
-      if (!ok && i < schedule3.length) {
-        setTimeout(tick, schedule3[i] - schedule3[i - 1]);
+      if (!ok && i < schedule2.length) {
+        setTimeout(tick, schedule2[i] - schedule2[i - 1]);
       }
     };
-    setTimeout(tick, schedule3[0]);
+    setTimeout(tick, schedule2[0]);
   }
   function dismissSettingsSurface() {
     try {
@@ -7363,8 +7363,8 @@ ${loc.channel ?? ""}`.toLowerCase();
   function useMlogSettings() {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubs2 = MARKER_SETTING_KEYS.map((key) => settings.subscribe(key, () => bump((n) => n + 1)));
-      return () => unsubs2.forEach((unsub) => unsub());
+      const unsubs = MARKER_SETTING_KEYS.map((key) => settings.subscribe(key, () => bump((n) => n + 1)));
+      return () => unsubs.forEach((unsub) => unsub());
     }, []);
   }
   function collectDeletedMedia(attachments, embeds) {
@@ -9586,11 +9586,11 @@ ${loc.channel ?? ""}`.toLowerCase();
         if (hadContent.current && !has) onEmptied();
         hadContent.current = has;
       };
-      const schedule3 = () => {
+      const schedule2 = () => {
         if (timer3) clearTimeout(timer3);
         timer3 = setTimeout(sample2, DEBOUNCE_MS);
       };
-      const { attached, off } = subscribeToDraft(schedule3);
+      const { attached, off } = subscribeToDraft(schedule2);
       poll = setInterval(sample2, attached ? POLL_MS * 4 : POLL_MS);
       return () => {
         disposed = true;
@@ -10106,21 +10106,21 @@ ${tail}`;
     return cache2.get(url);
   }
   async function resolveAssets(appId, urls) {
-    const pending2 = urls.filter((u) => u && !cache2.has(u));
-    if (!appId || pending2.length === 0) return;
+    const pending = urls.filter((u) => u && !cache2.has(u));
+    if (!appId || pending.length === 0) return;
     try {
       const response = await RestAPI.post({
         url: endpoint(appId),
-        body: { urls: pending2 }
+        body: { urls: pending }
       });
       const list = response?.body ?? [];
-      pending2.forEach((url, i) => {
+      pending.forEach((url, i) => {
         const path = list[i]?.external_asset_path;
         if (typeof path === "string" && path) cache2.set(url, `mp:${path}`);
         else cache2.set(url, null);
       });
     } catch (err) {
-      for (const url of pending2) cache2.set(url, null);
+      for (const url of pending) cache2.set(url, null);
       log26.debug("\u56FE\u7247\u6362\u53D6\u8D44\u6E90 id \u5931\u8D25\uFF08\u5E94\u7528 ID \u662F\u5426\u6B63\u786E\uFF1F\u56FE\u7247\u80FD\u516C\u5F00\u8BBF\u95EE\u5417\uFF1F\uFF09", err);
     }
   }
@@ -11902,328 +11902,8 @@ ${tail}`;
     return [...out];
   }
 
-  // src/plugins/custom-typing/index.ts
-  var log38 = logger("custom-typing");
-  var settings12 = defineSettings({
-    verb: {
-      group: "\u6587\u5B57",
-      type: "string",
-      default: "\u6B63\u5728\u53FD\u91CC\u5495\u565C",
-      label: "\u81EA\u5B9A\u4E49\u5B57\u6837",
-      description: "\u628A\u8F93\u5165\u72B6\u6001\u91CC\u300C\u6B63\u5728\u8F93\u5165\u300D\u6362\u6210\u8FD9\u53E5\u3002\u7559\u7A7A\u5219\u4E0D\u6539\u6587\u5B57\u3002\u53EA\u6709\u4F60\u81EA\u5DF1\u770B\u5F97\u5230\u3002",
-      placeholder: "\u4F8B\u5982 \u6B63\u5728\u53FD\u91CC\u5495\u565C",
-      maxLength: 64
-    },
-    match: {
-      group: "\u6587\u5B57",
-      type: "string-list",
-      default: ["\u6B63\u5728\u8F93\u5165", "is typing", "are typing"],
-      label: "\u8981\u66FF\u6362\u7684\u539F\u6587",
-      description: "\u5728\u8F93\u5165\u72B6\u6001\u91CC\u627E\u8FD9\u4E9B\u77ED\u8BED\uFF0C\u627E\u5230\u5C31\u6362\u6210\u4E0A\u9762\u7684\u5B57\u6837\uFF0C\u5FFD\u7565\u5927\u5C0F\u5199\u3002\u6362\u4E86\u8BED\u8A00\u5C31\u7528 HalcyonAPI.probe() \u770B custom-typing.sampleText \u91CC\u7684\u539F\u6587\u7167\u6284\u8FDB\u6765\u3002",
-      itemPlaceholder: "\u4F8B\u5982 \u6B63\u5728\u8F93\u5165"
-    },
-    emoji: {
-      group: "\u8868\u60C5",
-      type: "string-list",
-      default: ["\u{1F636}", "\u{1F426}", "\u{1F636}"],
-      label: "\u81EA\u5B9A\u4E49\u8868\u60C5",
-      description: "\u663E\u793A\u5728\u540D\u5B57\u524D\u9762\u3001\u66FF\u6362\u6389\u539F\u6765\u8DF3\u52A8\u7684\u5C0F\u5706\u70B9\u3002\u6BCF\u4E00\u9879\u53EF\u4EE5\u662F\uFF1A\u666E\u901A emoji\uFF08\u{1F600}\uFF09\u3001\u56FE\u7247\u76F4\u94FE\uFF08https \u5F00\u5934\uFF09\uFF0C\u6216 Discord \u8868\u60C5\u4EE3\u7801 <:name:id> / \u52A8\u56FE <a:name:id>\u3002\u7559\u7A7A\u5219\u4FDD\u7559\u539F\u6765\u7684\u5C0F\u5706\u70B9\u3002",
-      itemPlaceholder: "\u{1F600} \u6216 https://\u2026 \u6216 <a:name:id>"
-    },
-    animation: {
-      group: "\u8868\u60C5",
-      type: "select",
-      default: "wobble",
-      label: "\u52A8\u6548",
-      description: "\u8868\u60C5\u7684\u8DF3\u52A8\u65B9\u5F0F\u3002",
-      options: [
-        { value: "wobble", label: "\u6643\u52A8" },
-        { value: "bounce", label: "\u5F39\u8DF3" },
-        { value: "spin", label: "\u65CB\u8F6C" },
-        { value: "none", label: "\u4E0D\u52A8" }
-      ]
-    },
-    emojiSize: {
-      group: "\u8868\u60C5",
-      type: "number",
-      default: 20,
-      min: 12,
-      max: 48,
-      step: 1,
-      label: "\u8868\u60C5\u5927\u5C0F\uFF08px\uFF09",
-      description: "\u81EA\u5B9A\u4E49\u8868\u60C5\u7684\u8FB9\u957F\u3002"
-    }
-  });
-  var CONTAINER_SELECTORS = ['[class*="typing_"]', '[class*="typing"]'];
-  var COALESCE_MS = 100;
-  var SWEEP_MS = 1e3;
-  var STYLE_ID2 = "halcyon-custom-typing";
-  var HOST_MARK = "custom-typing";
-  var DOTS_HIDDEN = "hc-ct-dots-hidden";
-  var CSS = `
-.hc-ct-emoji{display:inline-flex;align-items:center;gap:3px;margin-right:5px;vertical-align:middle}
-.hc-ct-face{width:var(--hc-ct-size,20px);height:var(--hc-ct-size,20px);display:inline-block;object-fit:contain;vertical-align:middle}
-.hc-ct-face-text{width:auto;height:auto;font-size:var(--hc-ct-size,20px);line-height:1}
-.${DOTS_HIDDEN}{display:none!important}
-@keyframes hc-ct-wobble{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
-@keyframes hc-ct-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-30%)}}
-@keyframes hc-ct-spin{to{transform:rotate(360deg)}}
-.hc-ct-anim-wobble{animation:hc-ct-wobble .5s ease-in-out infinite}
-.hc-ct-anim-bounce{animation:hc-ct-bounce .5s ease-in-out infinite}
-.hc-ct-anim-spin{animation:hc-ct-spin 1s linear infinite}
-.hc-ct-emoji .hc-ct-face:nth-child(2){animation-delay:.12s}
-.hc-ct-emoji .hc-ct-face:nth-child(3){animation-delay:.24s}
-.hc-ct-emoji .hc-ct-face:nth-child(n+4){animation-delay:.36s}
-@media (prefers-reduced-motion:reduce){.hc-ct-face{animation:none!important}}
-`;
-  var observer;
-  var sweepTimer;
-  var pending;
-  var unsubs = [];
-  var rewrites = 0;
-  var emojiVersion = 0;
-  var parsedEmoji = [];
-  var originals = /* @__PURE__ */ new Map();
-  function escapeRegex(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-  function buildVerbRegex(verb) {
-    const verbLower = verb.toLowerCase();
-    const parts = settings12.store.match.map((s) => s.trim()).filter(Boolean).filter((s) => !verbLower.includes(s.toLowerCase())).sort((a, b) => b.length - a.length).map(escapeRegex);
-    return parts.length ? new RegExp(parts.join("|"), "gi") : null;
-  }
-  function firstContainerSet() {
-    for (const selector of CONTAINER_SELECTORS) {
-      try {
-        const nodes = document.querySelectorAll(selector);
-        if (nodes.length > 0) return Array.from(nodes);
-      } catch {
-      }
-    }
-    return [];
-  }
-  function parseEmoji() {
-    const size2 = settings12.store.emojiSize * 2;
-    const out = [];
-    for (const raw of settings12.store.emoji) {
-      const s = raw.trim();
-      if (!s) continue;
-      const token = /^<(a)?:\w+:(\d+)>$/.exec(s);
-      if (token) {
-        out.push({ kind: "img", value: emojiCdnUrl(token[2], token[1] === "a", size2) });
-      } else if (/^https?:\/\//i.test(s)) {
-        out.push({ kind: "img", value: s });
-      } else {
-        out.push({ kind: "text", value: s });
-      }
-    }
-    return out;
-  }
-  function refreshParsed() {
-    parsedEmoji = parseEmoji();
-    emojiVersion++;
-  }
-  function rewriteVerb(root, re, verb) {
-    let walker;
-    try {
-      walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    } catch {
-      return;
-    }
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const text = node.nodeValue;
-      if (!text) continue;
-      const next = text.replace(re, verb);
-      if (next === text) continue;
-      const textNode = node;
-      if (!originals.has(textNode)) originals.set(textNode, text);
-      textNode.nodeValue = next;
-      rewrites++;
-    }
-  }
-  function pruneDetached() {
-    for (const node of [...originals.keys()]) {
-      if (!node.isConnected) originals.delete(node);
-    }
-  }
-  function findDotsEl(container) {
-    for (const child of Array.from(container.children)) {
-      if (child.getAttribute("data-hc-plugin") === HOST_MARK) continue;
-      if ((child.textContent ?? "").trim() === "") return child;
-    }
-    return null;
-  }
-  function findHost(container) {
-    for (const child of Array.from(container.children)) {
-      if (child.getAttribute("data-hc-plugin") === HOST_MARK) return child;
-    }
-    return null;
-  }
-  function buildHost() {
-    const host5 = document.createElement("span");
-    host5.className = "hc-ct-emoji";
-    host5.setAttribute("data-hc-plugin", HOST_MARK);
-    host5.setAttribute("aria-hidden", "true");
-    host5.dataset.hcVer = String(emojiVersion);
-    host5.style.setProperty("--hc-ct-size", `${settings12.store.emojiSize}px`);
-    const anim = settings12.store.animation;
-    const animClass = anim && anim !== "none" ? `hc-ct-anim-${anim}` : "";
-    for (const face of parsedEmoji) {
-      let el;
-      if (face.kind === "img") {
-        const img = document.createElement("img");
-        img.src = face.value;
-        img.className = "hc-ct-face";
-        el = img;
-      } else {
-        el = document.createElement("span");
-        el.className = "hc-ct-face hc-ct-face-text";
-        el.textContent = face.value;
-      }
-      if (animClass) el.classList.add(animClass);
-      host5.appendChild(el);
-    }
-    return host5;
-  }
-  function applyEmoji(container) {
-    const existing = findHost(container);
-    if (parsedEmoji.length === 0) {
-      existing?.remove();
-      for (const el of Array.from(container.querySelectorAll(`.${DOTS_HIDDEN}`))) {
-        el.classList.remove(DOTS_HIDDEN);
-      }
-      return;
-    }
-    const dots = findDotsEl(container);
-    if (!dots && !existing) return;
-    if (dots) dots.classList.add(DOTS_HIDDEN);
-    if (existing && existing.dataset.hcVer === String(emojiVersion)) return;
-    existing?.remove();
-    container.insertBefore(buildHost(), container.firstChild);
-  }
-  function scan() {
-    pruneDetached();
-    const containers = firstContainerSet();
-    if (containers.length === 0) return;
-    const verb = settings12.store.verb;
-    const re = verb ? buildVerbRegex(verb) : null;
-    for (const container of containers) {
-      if (re && verb) rewriteVerb(container, re, verb);
-      applyEmoji(container);
-    }
-  }
-  function schedule2() {
-    if (pending) return;
-    pending = setTimeout(() => {
-      pending = void 0;
-      scan();
-    }, COALESCE_MS);
-  }
-  function injectStyle() {
-    if (document.getElementById(STYLE_ID2)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID2;
-    style.textContent = CSS;
-    document.head.appendChild(style);
-  }
-  function cleanupDom() {
-    for (const host5 of Array.from(document.querySelectorAll(`[data-hc-plugin="${HOST_MARK}"]`))) {
-      host5.remove();
-    }
-    for (const el of Array.from(document.querySelectorAll(`.${DOTS_HIDDEN}`))) {
-      el.classList.remove(DOTS_HIDDEN);
-    }
-  }
-  var custom_typing_default = definePlugin({
-    id: "custom-typing",
-    name: "\u81EA\u5B9A\u4E49\u8F93\u5165\u72B6\u6001",
-    description: "\u628A\u9891\u9053\u5E95\u90E8\u300CX \u6B63\u5728\u8F93\u5165\u2026\u300D\u6362\u6210\u4F60\u5199\u7684\u5B57\u6837\uFF08\u9ED8\u8BA4\u300C\u6B63\u5728\u53FD\u91CC\u5495\u565C\u300D\uFF09\uFF0C\u5E76\u628A\u524D\u9762\u8DF3\u52A8\u7684\u5C0F\u5706\u70B9\u6362\u6210\u4F1A\u6643\u52A8\u7684\u81EA\u5B9A\u4E49\u8868\u60C5\u3002\u5BF9\u4E0A Discord \u6B63\u5728\u7070\u5EA6\u7684\u529F\u80FD\uFF0C\u53EA\u6539\u4F60\u81EA\u5DF1\u770B\u5230\u7684\u753B\u9762\u3002",
-    authors: [{ name: "caitemm" }],
-    category: "appearance",
-    settings: settings12,
-    start() {
-      rewrites = 0;
-      originals.clear();
-      refreshParsed();
-      injectStyle();
-      if (typeof document !== "undefined" && document.body) {
-        try {
-          observer = new MutationObserver(schedule2);
-          observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-        } catch (err) {
-          log38.warn("MutationObserver \u6302\u63A5\u5931\u8D25\uFF0C\u6539\u7528\u8F6E\u8BE2\u515C\u5E95", err);
-        }
-      }
-      sweepTimer = setInterval(schedule2, SWEEP_MS);
-      unsubs = [
-        settings12.subscribe("verb", () => schedule2()),
-        settings12.subscribe("match", () => schedule2()),
-        settings12.subscribe("emoji", () => {
-          refreshParsed();
-          schedule2();
-        }),
-        settings12.subscribe("animation", () => {
-          refreshParsed();
-          schedule2();
-        }),
-        settings12.subscribe("emojiSize", () => {
-          refreshParsed();
-          schedule2();
-        })
-      ];
-      scan();
-      log38.info(`\u5DF2\u542F\u7528\uFF08\u5B57\u6837\u300C${settings12.store.verb}\u300D\uFF0C\u8868\u60C5 ${parsedEmoji.length} \u4E2A\uFF09`);
-    },
-    stop() {
-      observer?.disconnect();
-      observer = void 0;
-      if (sweepTimer) {
-        clearInterval(sweepTimer);
-        sweepTimer = void 0;
-      }
-      if (pending) {
-        clearTimeout(pending);
-        pending = void 0;
-      }
-      for (const off of unsubs) {
-        try {
-          off();
-        } catch {
-        }
-      }
-      unsubs = [];
-      for (const [node, original] of originals) {
-        try {
-          if (node.isConnected) node.nodeValue = original;
-        } catch {
-        }
-      }
-      originals.clear();
-      cleanupDom();
-      document.getElementById(STYLE_ID2)?.remove();
-      log38.info(`\u5DF2\u505C\u7528\uFF08\u672C\u6B21\u5171\u66FF\u6362\u6587\u5B57 ${rewrites} \u6B21\uFF09`);
-    },
-    /** 诊断快照。通过 HalcyonAPI.probe() 输出。 */
-    probe() {
-      const containers = firstContainerSet();
-      return {
-        active: observer != null || sweepTimer != null,
-        verb: settings12.store.verb,
-        match: settings12.store.match,
-        emoji: settings12.store.emoji,
-        parsedEmojiCount: parsedEmoji.length,
-        animation: settings12.store.animation,
-        rewrites,
-        trackedNodes: originals.size,
-        containerSelectors: probeSelectors(CONTAINER_SELECTORS),
-        // 第一个输入状态容器的原始文本——替换没生效时照这里往 match 里加。
-        sampleText: containers.length ? containers[0].textContent ?? "" : null
-      };
-    }
-  });
-
   // src/plugins/member-count/settings.ts
-  var settings13 = defineSettings({
+  var settings12 = defineSettings({
     placement: {
       group: "\u4F4D\u7F6E",
       type: "select",
@@ -12274,7 +11954,7 @@ ${tail}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log39 = logger("member-count");
+  var log38 = logger("member-count");
   function memo(resolve) {
     let cached4;
     return () => cached4 ??= resolve();
@@ -12360,7 +12040,7 @@ ${tail}`;
   }
   var nudged = /* @__PURE__ */ new Set();
   function nudge(guildId, channelId) {
-    if (!settings13.store.preloadCounts) return;
+    if (!settings12.store.preloadCounts) return;
     if (nudged.has(guildId)) return;
     nudged.add(guildId);
     try {
@@ -12368,9 +12048,9 @@ ${tail}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log39.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log38.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log39.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log38.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -12500,7 +12180,7 @@ ${tail}`;
   }
   function MemberCountChip({ variant }) {
     const { total, online } = useMemberCounts();
-    const s = settings13.store;
+    const s = settings12.store;
     const showOnline = s.showOnline && online != null;
     const showTotal = s.showTotal && total != null;
     if (!showOnline && !showTotal) return null;
@@ -12522,7 +12202,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log40 = logger("member-count");
+  var log39 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -12565,7 +12245,7 @@ ${tail}`;
     return null;
   }
   function wantedVariants() {
-    const placement = settings13.store.placement;
+    const placement = settings12.store.placement;
     const want = /* @__PURE__ */ new Set();
     if (placement === "header" || placement === "both") want.add("header");
     if (placement === "member-list" || placement === "both") want.add("list");
@@ -12588,7 +12268,7 @@ ${tail}`;
     try {
       hit.element.insertBefore(host5, hit.element.firstChild);
     } catch (err) {
-      log40.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log39.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
@@ -12596,11 +12276,11 @@ ${tail}`;
       mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log40.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log39.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
       host5.remove();
-      log40.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      log39.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
   function ensureMounted2() {
@@ -12621,7 +12301,7 @@ ${tail}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log40.warn(
+      log39.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -12638,7 +12318,7 @@ ${tail}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log40.warn(
+    log39.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -12649,7 +12329,7 @@ ${tail}`;
     description: "\u5728\u9891\u9053\u9876\u680F\u6216\u6210\u5458\u5217\u8868\u9876\u90E8\u663E\u793A\u5F53\u524D\u670D\u52A1\u5668\u7684\u5728\u7EBF\u4EBA\u6570\u4E0E\u603B\u6210\u5458\u6570\u3002\u6570\u5B57\u53D6\u81EA Discord \u81EA\u5DF1\u7684 store\uFF1B\u82E5\u67D0\u670D\u52A1\u5668\u8FD8\u6CA1\u6709\u6210\u5458\u5217\u8868\u6570\u636E\uFF0C\u4F1A\u8C03\u7528\u4E00\u6B21 Discord \u81EA\u8EAB\u7684\u9891\u9053\u9884\u52A0\u8F7D\u6765\u53D6\uFF08\u53EF\u5728\u8BBE\u7F6E\u91CC\u5173\u95ED\uFF09\u3002\u5207\u6362\u670D\u52A1\u5668\u81EA\u52A8\u66F4\u65B0\u3002",
     authors: [{ name: "caitemm" }],
     category: "utility",
-    settings: settings13,
+    settings: settings12,
     start() {
       injectStyles();
       warnedNoAnchor = false;
@@ -12657,12 +12337,12 @@ ${tail}`;
       startCountTracking();
       ensureMounted2();
       ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
-      unsubscribePlacement = settings13.subscribe("placement", () => {
+      unsubscribePlacement = settings12.subscribe("placement", () => {
         warnedNoAnchor = false;
         ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log40.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
+      log39.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings12.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -12678,13 +12358,13 @@ ${tail}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log40.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log39.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
       const channelId = currentChannelId2();
       return {
-        placement: settings13.store.placement,
+        placement: settings12.store.placement,
         mounted: [...mounted2.entries()].map(([variant, entry]) => ({
           variant,
           selector: entry.selector,
@@ -12706,7 +12386,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/settings.ts
-  var settings14 = defineSettings({
+  var settings13 = defineSettings({
     inlineAvatars: {
       group: "\u5E38\u9A7B\u663E\u793A",
       type: "boolean",
@@ -12779,7 +12459,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log41 = logger("who-reacted");
+  var log40 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -12841,8 +12521,8 @@ ${tail}`;
     const key = cacheKey(target);
     const fresh = cachedReactors(target);
     if (fresh) return Promise.resolve(fresh);
-    const pending2 = inFlight2.get(key);
-    if (pending2) return pending2;
+    const pending = inFlight2.get(key);
+    if (pending) return pending;
     const capped = Math.max(1, Math.min(100, Math.trunc(limit) || 20));
     const url = `/channels/${target.channelId}/messages/${target.messageId}/reactions/${encodeURIComponent(emojiParam(target.emoji))}?limit=${capped}` + (target.type === 1 ? "&type=1" : "");
     const request = (async () => {
@@ -12862,7 +12542,7 @@ ${tail}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log41.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log40.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight2.set(key, guarded);
@@ -12890,7 +12570,7 @@ ${tail}`;
     return /* @__PURE__ */ React.createElement("span", { className: "hc-whoreacted__emoji-char" }, emoji.name ?? "");
   }
   function ReactorCard({ target }) {
-    const s = settings14.store;
+    const s = settings13.store;
     const [state, setState] = useState(() => {
       const cached4 = cachedReactors(target);
       return cached4 ? { kind: "ready", reactors: cached4 } : { kind: "loading" };
@@ -12924,7 +12604,7 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log42 = logger("who-reacted");
+  var log41 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
@@ -12937,7 +12617,7 @@ ${tail}`;
     return host5;
   }
   function fillHost(host5, reactors, totalHint) {
-    const max = Math.max(1, Math.min(6, Math.trunc(settings14.store.inlineAvatarCount) || 3));
+    const max = Math.max(1, Math.min(6, Math.trunc(settings13.store.inlineAvatarCount) || 3));
     const shown = reactors.slice(0, max);
     const total = totalHint ?? reactors.length;
     const overflow = Math.max(0, total - shown.length);
@@ -12979,7 +12659,7 @@ ${tail}`;
       return;
     }
     try {
-      const wanted = Math.min(12, Math.max(6, (settings14.store.inlineAvatarCount || 3) + 3));
+      const wanted = Math.min(12, Math.max(6, (settings13.store.inlineAvatarCount || 3) + 3));
       const reactors = await fetchReactors(target, wanted);
       if (!host5.isConnected) return;
       if (reactors.length === 0) {
@@ -12993,13 +12673,13 @@ ${tail}`;
       }
       fillHost(host5, reactors, target.count);
     } catch (err) {
-      log42.debug("inline avatars: fetch failed", err);
+      log41.debug("inline avatars: fetch failed", err);
       host5.remove();
       DECORATED.delete(pill);
     }
   }
-  function scan2() {
-    if (!settings14.store.inlineAvatars) return;
+  function scan() {
+    if (!settings13.store.inlineAvatars) return;
     let pills;
     try {
       pills = document.querySelectorAll(REACTION_SELECTOR);
@@ -13013,10 +12693,10 @@ ${tail}`;
     });
   }
   function startInlineAvatars() {
-    if (!settings14.store.inlineAvatars) return;
+    if (!settings13.store.inlineAvatars) return;
     stopInlineAvatars();
-    scan2();
-    scanTimer = setInterval(scan2, 1500);
+    scan();
+    scanTimer = setInterval(scan, 1500);
     if (typeof MutationObserver === "function") {
       mutationObserver = new MutationObserver((records) => {
         for (const record2 of records) {
@@ -13032,7 +12712,7 @@ ${tail}`;
       } catch {
       }
     }
-    log42.info("inline reactor avatars: enabled");
+    log41.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -13053,14 +12733,14 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log43 = logger("who-reacted");
+  var log42 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
   var host4 = null;
   var unmount4 = null;
   var anchor = null;
-  var observer2 = null;
+  var observer = null;
   var anchorTimer;
   var hovered = null;
   var showTimer;
@@ -13093,12 +12773,12 @@ ${tail}`;
       clearInterval(anchorTimer);
       anchorTimer = void 0;
     }
-    if (observer2) {
+    if (observer) {
       try {
-        observer2.disconnect();
+        observer.disconnect();
       } catch {
       }
-      observer2 = null;
+      observer = null;
     }
     if (unmount4) {
       try {
@@ -13136,14 +12816,14 @@ ${tail}`;
     try {
       unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
     } catch (err) {
-      log43.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log42.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide2();
       return;
     }
     reposition2();
     if (typeof ResizeObserver === "function") {
-      observer2 = new ResizeObserver(() => reposition2());
-      observer2.observe(host4);
+      observer = new ResizeObserver(() => reposition2());
+      observer.observe(host4);
     } else {
       setTimeout(reposition2, 120);
       setTimeout(reposition2, 400);
@@ -13153,7 +12833,7 @@ ${tail}`;
     }, ANCHOR_CHECK_MS);
   }
   function triggerOpen() {
-    return settings14.store.trigger !== "alt-hover" || altDown;
+    return settings13.store.trigger !== "alt-hover" || altDown;
   }
   function tryShow(element) {
     if (!triggerOpen()) return;
@@ -13184,7 +12864,7 @@ ${tail}`;
     hovered = pill;
     clearShowTimer();
     cancelHide();
-    const delay = Math.max(0, Math.min(2e3, settings14.store.delay));
+    const delay = Math.max(0, Math.min(2e3, settings13.store.delay));
     showTimer = setTimeout(() => {
       showTimer = void 0;
       if (hovered === pill && document.contains(pill)) tryShow(pill);
@@ -13198,14 +12878,14 @@ ${tail}`;
   function onKeyDown3(event) {
     if (!event.altKey) return;
     altDown = true;
-    if (settings14.store.trigger === "alt-hover" && hovered && !host4) {
+    if (settings13.store.trigger === "alt-hover" && hovered && !host4) {
       if (document.contains(hovered)) tryShow(hovered);
     }
   }
   function onKeyUp(event) {
     if (event.key === "Alt" || !event.altKey) {
       altDown = false;
-      if (settings14.store.trigger === "alt-hover") hide2();
+      if (settings13.store.trigger === "alt-hover") hide2();
     }
   }
   function onScrollOrResize() {
@@ -13246,26 +12926,26 @@ ${tail}`;
     description: "\u5728\u6BCF\u4E2A\u53CD\u5E94\u56DE\u5E94\u5185\u5D4C\u4E00\u5C0F\u884C\u5934\u50CF\uFF08\u524D\u51E0\u4E2A\u53CD\u5E94\u8005\uFF09\uFF0C\u50CF Discord \u684C\u9762\u8FD1\u7248\u7684 Reaction Preview \u4E00\u6837\uFF0C\u4E0D\u7528\u60AC\u505C\u5C31\u770B\u5F97\u5230\u3002\u540D\u5355\u6309\u9700\u67E5\u8BE2\u3001\u7F13\u5B58 30 \u79D2\u3002\u60AC\u505C\u5B8C\u6574\u540D\u5355\u6D6E\u5C42\u9ED8\u8BA4\u5173\u95ED\uFF0C\u9700\u8981\u65F6\u53EF\u5728\u8BBE\u7F6E\u91CC\u5F00\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "utility",
-    settings: settings14,
+    settings: settings13,
     start() {
       injectStyles();
       clearCache();
       startInlineAvatars();
-      inlineToggleUnsub = settings14.subscribe("inlineAvatars", (on) => {
+      inlineToggleUnsub = settings13.subscribe("inlineAvatars", (on) => {
         if (on) startInlineAvatars();
         else stopInlineAvatars();
       });
-      inlineCountUnsub = settings14.subscribe("inlineAvatarCount", () => {
+      inlineCountUnsub = settings13.subscribe("inlineAvatarCount", () => {
         stopInlineAvatars();
         startInlineAvatars();
       });
-      if (settings14.store.hoverPopout) attachHoverListeners();
-      hoverToggleUnsub = settings14.subscribe("hoverPopout", (on) => {
+      if (settings13.store.hoverPopout) attachHoverListeners();
+      hoverToggleUnsub = settings13.subscribe("hoverPopout", (on) => {
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log43.info(
-        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings14.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings14.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
+      log42.info(
+        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings13.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings13.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
     stop() {
@@ -13282,7 +12962,7 @@ ${tail}`;
       altDown = false;
       hide2();
       clearCache();
-      log43.info("\u5DF2\u505C\u7528");
+      log42.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13304,7 +12984,7 @@ ${tail}`;
         } : "fiber props \u91CC\u6CA1\u6709 message + emoji \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A\u7248\u672C\u7684 reaction \u7EC4\u4EF6 props \u53D8\u4E86";
       }
       return {
-        trigger: settings14.store.trigger,
+        trigger: settings13.store.trigger,
         cardShown: host4 != null,
         reactionNodes: nodes?.length ?? -1,
         sample: sample2,
@@ -13402,7 +13082,7 @@ ${tail}`;
     }
     return fromClientStatuses(userId);
   }
-  var COALESCE_MS2 = 400;
+  var COALESCE_MS = 400;
   var version = 0;
   var scheduled;
   var subscribers2 = /* @__PURE__ */ new Set();
@@ -13426,7 +13106,7 @@ ${tail}`;
         } catch {
         }
       }
-    }, COALESCE_MS2);
+    }, COALESCE_MS);
   }
   function resetPresenceBus() {
     if (scheduled) {
@@ -13467,7 +13147,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/settings.ts
-  var settings15 = defineSettings({
+  var settings14 = defineSettings({
     inMessages: {
       group: "\u663E\u793A\u4F4D\u7F6E",
       type: "boolean",
@@ -13550,7 +13230,7 @@ ${tail}`;
     isSelf
   }) {
     usePresenceVersion();
-    const s = settings15.store;
+    const s = settings14.store;
     if (s.ignoreSelf && isSelf) return null;
     if (s.ignoreBots && isBot(userId)) return null;
     const platforms = readPlatforms(userId);
@@ -13573,7 +13253,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log44 = logger("platform-indicators");
+  var log43 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -13641,7 +13321,7 @@ ${tail}`;
       return true;
     } catch (err) {
       host5.remove();
-      log44.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      log43.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -13697,21 +13377,21 @@ ${tail}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log44.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log43.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
   }
-  function scan3() {
+  function scan2() {
     prune();
-    const s = settings15.store;
+    const s = settings14.store;
     const selfId = currentUserId3();
     let anyAnchor = false;
     if (s.inMessages && scanKind("message", MESSAGE_SELECTORS, selfId)) anyAnchor = true;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log44.warn(
+      log43.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -13730,29 +13410,29 @@ ${tail}`;
     description: "\u5728\u6D88\u606F\u4F5C\u8005\u4E0E\u6210\u5458\u5217\u8868\u65C1\u663E\u793A\u5BF9\u65B9\u5F53\u524D\u6240\u5728\u7684\u5E73\u53F0\uFF08\u684C\u9762\u7AEF / \u624B\u673A / \u7F51\u9875 / \u6E38\u620F\u4E3B\u673A\uFF09\uFF0C\u56FE\u6807\u6309\u5728\u7EBF\u72B6\u6001\u7740\u8272\u3002\u6570\u636E\u53D6\u81EA Discord \u81EA\u5DF1\u7684\u72B6\u6001 store\uFF0C\u4E0D\u53D1\u4EFB\u4F55\u8BF7\u6C42\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "appearance",
-    settings: settings15,
+    settings: settings14,
     start() {
       injectStyles();
       warnedNoAnchor2 = false;
       lastSelector2.clear();
-      scan3();
-      scanTimer2 = setInterval(scan3, SCAN_MS);
+      scan2();
+      scanTimer2 = setInterval(scan2, SCAN_MS);
       unsubscribes3 = WATCHED_ACTIONS2.map((type) => flux.subscribe(type, bumpPresence));
       unsubscribes3.push(
-        settings15.subscribe("inMessages", (on) => {
+        settings14.subscribe("inMessages", (on) => {
           if (!on) detachKind("message");
-          else scan3();
+          else scan2();
         }),
-        settings15.subscribe("inMemberList", (on) => {
+        settings14.subscribe("inMemberList", (on) => {
           if (!on) detachKind("member");
-          else scan3();
+          else scan2();
         }),
-        settings15.subscribe("colorize", () => bumpPresence()),
-        settings15.subscribe("iconSize", () => bumpPresence()),
-        settings15.subscribe("ignoreBots", () => bumpPresence()),
-        settings15.subscribe("ignoreSelf", () => bumpPresence())
+        settings14.subscribe("colorize", () => bumpPresence()),
+        settings14.subscribe("iconSize", () => bumpPresence()),
+        settings14.subscribe("ignoreBots", () => bumpPresence()),
+        settings14.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log44.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log43.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -13770,7 +13450,7 @@ ${tail}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log44.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log43.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13791,9 +13471,9 @@ ${tail}`;
       };
       return {
         settings: {
-          inMessages: settings15.store.inMessages,
-          inMemberList: settings15.store.inMemberList,
-          ignoreBots: settings15.store.ignoreBots
+          inMessages: settings14.store.inMessages,
+          inMemberList: settings14.store.inMemberList,
+          ignoreBots: settings14.store.ignoreBots
         },
         mountedCount: mounted3.size,
         selfId,
@@ -13830,14 +13510,13 @@ ${tail}`;
     emote_cloner_default,
     mark_all_read_default,
     silent_typing_default,
-    custom_typing_default,
     member_count_default,
     who_reacted_default,
     platform_indicators_default
   ];
 
   // src/core/probe.ts
-  var log45 = logger("probe");
+  var log44 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -13860,8 +13539,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.7" : "dev",
-      build: true ? "2026-09-27 05:57:25" : "dev",
+      version: true ? "0.7.8" : "dev",
+      build: true ? "2026-09-27 06:07:43" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13874,14 +13553,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log45.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log44.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log46 = logger("userscript");
+  var log45 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -13892,8 +13571,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.7" : "dev",
-        build: true ? "2026-09-27 05:57:25" : "dev",
+        version: true ? "0.7.8" : "dev",
+        build: true ? "2026-09-27 06:07:43" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -13910,6 +13589,6 @@ ${tail}`;
       };
     } catch {
     }
-    log46.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log46.error("userscript boot failed", err));
+    log45.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log45.error("userscript boot failed", err));
 })();
