@@ -1,17 +1,19 @@
-// The "pick reactions from your servers" overlay — server first, then that
-// server's emoji.
+// The "pick reactions from your servers" picker — rendered INLINE in the
+// settings page, not as a floating overlay.
 //
-// A self-contained overlay (createRoot into a div we append), same shape as
-// emote-cloner's picker. Step 1 is a searchable list of the servers you're in
-// (icon + name + how many custom emoji). Step 2 is that one server's emoji as a
-// grid — far fewer than the everything-at-once list, and searchable. Selection
-// is by (name+id) and PERSISTS as you move between servers, so you can gather
-// the same "BAKA" from several servers and add them all at once.
+// Why inline: the settings surface holds a focus lock. A picker mounted on
+// document.body sits outside that lock, so clicks on tiles work but the lock
+// steals focus back from any <input> — you can't type in the search box. Living
+// inside the settings React tree (like the manual-add field, which works) puts
+// the search inputs inside the lock, so they focus normally.
+//
+// Two steps: a searchable server list, then that one server's emoji as a
+// searchable grid. Selection is by (name+id) and PERSISTS across servers, so the
+// same "BAKA" from several servers can be gathered and added together.
 
-import { React, mountDetached, useMemo, useState } from "../../../core/common/react";
+import { React, useMemo, useState } from "../../../core/common/react";
 import { injectStyles } from "../../../ui/inject-styles";
-import { logger } from "../../../core/logger";
-import { XmarkIcon, ChevronLeftIcon } from "@halcyon/icons";
+import { ChevronLeftIcon } from "@halcyon/icons";
 import {
   collectGuildEmojis,
   emojiImageUrl,
@@ -21,11 +23,11 @@ import {
   type ReactionEmoji
 } from "../emoji";
 
-const log = logger("quick-react");
-
 export const STYLE_ID = "halcyon-quick-react";
 
 const PICKER_CSS = `
+.hc-qr-inline{display:flex;flex-direction:column;max-height:340px;margin-top:8px;border:1px solid var(--hc-separator-opaque,rgba(255,255,255,.08));border-radius:8px;overflow:hidden;background:var(--hc-bg-secondary,rgba(0,0,0,.12))}
+.hc-qr-inline-head{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--hc-separator-opaque,rgba(255,255,255,.08))}
 .hc-qr-grid{display:flex;flex-wrap:wrap;gap:6px;padding:2px}
 .hc-qr-tile{position:relative;width:42px;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent;background:var(--background-secondary,rgba(255,255,255,.04))}
 .hc-qr-tile:hover{background:var(--background-modifier-hover,rgba(255,255,255,.08))}
@@ -33,11 +35,9 @@ const PICKER_CSS = `
 .hc-qr-tile img{width:28px;height:28px;object-fit:contain}
 .hc-qr-tile__uni{font-size:24px;line-height:1}
 .hc-qr-tile__badge{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--brand-500,#5865f2);color:#fff;font-size:10px;line-height:15px;text-align:center}
-.hc-qr-note{opacity:.55;font-size:12px;padding:6px 2px}
-.hc-qr-count{margin-right:auto;opacity:.7;font-size:13px}
-.hc-qr-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding:10px var(--hc-space-4,16px)}
-.hc-qr-guildcount{margin-left:auto;opacity:.5;font-size:12px}
+.hc-qr-count{opacity:.7;font-size:13px}
 .hc-qr-back{display:inline-flex;align-items:center;gap:4px;cursor:pointer;background:none;border:none;color:var(--hc-label-secondary,#b5bac1);font-size:13px;padding:0}
+.hc-qr-guildcount{margin-left:auto;opacity:.5;font-size:12px}
 .hc-qr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .hc-qr-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 6px 3px 5px;border-radius:8px;background:var(--background-secondary,rgba(255,255,255,.05));font-size:12px}
 .hc-qr-chip img{width:18px;height:18px;object-fit:contain}
@@ -60,62 +60,13 @@ export function ensureQuickReactStyles(): void {
   document.head.appendChild(style);
 }
 
-let host: HTMLDivElement | null = null;
-let unmount: (() => void) | null = null;
-let keyHandler: ((event: KeyboardEvent) => void) | null = null;
-
-export function closeReactionPicker(): void {
-  if (keyHandler) {
-    document.removeEventListener("keydown", keyHandler);
-    keyHandler = null;
-  }
-  if (unmount) {
-    try {
-      unmount();
-    } catch {
-      // already torn down
-    }
-    unmount = null;
-  }
-  if (host) {
-    host.remove();
-    host = null;
-  }
-}
-
-/** Open the picker. `onAdd` gets the chosen emoji when the user confirms. */
-export function openReactionPicker(onAdd: (emojis: ReactionEmoji[]) => void): void {
-  ensureQuickReactStyles();
-  closeReactionPicker();
-
-  host = document.createElement("div");
-  host.className = "halcyon";
-  document.body.appendChild(host);
-
-  keyHandler = (event: KeyboardEvent) => {
-    if (event.key === "Escape") closeReactionPicker();
-  };
-  document.addEventListener("keydown", keyHandler);
-
-  try {
-    unmount = mountDetached(
-      React.createElement(PickerModal, { onAdd, onClose: closeReactionPicker }),
-      host
-    );
-  } catch (err) {
-    log.error("无法打开表情选择器", err);
-    closeReactionPicker();
-  }
-}
-
 type View = { mode: "guilds" } | { mode: "emojis"; guildId: string; guildName: string };
 
-function PickerModal({
-  onAdd,
-  onClose
+/** Inline picker. `onAdd` receives the chosen emoji when "添加" is pressed. */
+export function ReactionPicker({
+  onAdd
 }: {
   onAdd: (emojis: ReactionEmoji[]) => void;
-  onClose: () => void;
 }): React.ReactElement {
   const groups = useMemo(() => collectGuildEmojis(), []);
   const [view, setView] = useState<View>({ mode: "guilds" });
@@ -138,67 +89,53 @@ function PickerModal({
       for (const e of list) next[reactionKey(e)] = e;
       return next;
     });
-  const confirm = (): void => {
+  const commit = (): void => {
     const list = Object.values(selected);
-    if (list.length) onAdd(list);
-    onClose();
+    if (list.length) {
+      onAdd(list);
+      setSelected({});
+    }
   };
   const openGuild = (g: GuildEmojiGroup): void => {
     setEmojiQuery("");
     setView({ mode: "emojis", guildId: g.guildId, guildName: g.guildName });
   };
-
   const current = view.mode === "emojis" ? groups.find((g) => g.guildId === view.guildId) : undefined;
 
   return (
-    <div
-      className="hc-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label="挑选反应表情"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="hc-emote-picker">
-        <div className="hc-emote-picker__head">
-          {view.mode === "emojis" ? (
-            <button className="hc-qr-back" onClick={() => setView({ mode: "guilds" })}>
-              <ChevronLeftIcon size={16} /> 服务器
-            </button>
-          ) : (
-            <span className="hc-emote-picker__title">挑选反应表情</span>
-          )}
-          <button className="hc-emote-picker__close" onClick={onClose} aria-label="关闭">
-            <XmarkIcon size={18} />
+    <div className="hc-qr-inline">
+      <div className="hc-qr-inline-head">
+        {view.mode === "emojis" ? (
+          <button className="hc-qr-back" onClick={() => setView({ mode: "guilds" })}>
+            <ChevronLeftIcon size={16} /> 服务器
           </button>
-        </div>
-
-        {view.mode === "guilds" ? (
-          <GuildList groups={groups} query={guildQuery} setQuery={setGuildQuery} onOpen={openGuild} />
         ) : (
-          <EmojiList
-            group={current}
-            guildName={view.guildName}
-            query={emojiQuery}
-            setQuery={setEmojiQuery}
-            selected={selected}
-            toggle={toggle}
-            addMany={addMany}
-          />
+          <span className="hc-qr-count">选服务器</span>
         )}
-
-        <div className="hc-qr-foot">
-          <span className="hc-qr-count">已选 {selectedCount} 个</span>
-          <button
-            className="hc-btn hc-btn--primary hc-btn--sm"
-            onClick={confirm}
-            disabled={selectedCount === 0}
-          >
-            添加 {selectedCount} 个
-          </button>
-        </div>
+        <span className="hc-qr-count" style={{ marginLeft: "auto" }}>
+          已选 {selectedCount}
+        </span>
+        <button
+          className="hc-btn hc-btn--primary hc-btn--sm"
+          onClick={commit}
+          disabled={selectedCount === 0}
+        >
+          添加 {selectedCount} 个
+        </button>
       </div>
+      {view.mode === "guilds" ? (
+        <GuildList groups={groups} query={guildQuery} setQuery={setGuildQuery} onOpen={openGuild} />
+      ) : (
+        <EmojiList
+          group={current}
+          guildName={view.guildName}
+          query={emojiQuery}
+          setQuery={setEmojiQuery}
+          selected={selected}
+          toggle={toggle}
+          addMany={addMany}
+        />
+      )}
     </div>
   );
 }
@@ -289,12 +226,13 @@ function EmojiList({
           onChange={(e) => setQuery(e.currentTarget.value)}
         />
       </div>
-      <div className="hc-qr-add">
+      <div className="hc-qr-add" style={{ padding: "0 8px" }}>
         <span className="hc-qr-count">{filtered.length} 个</span>
         <button
           className="hc-btn hc-btn--secondary hc-btn--sm"
           onClick={() => addMany(filtered)}
           disabled={filtered.length === 0}
+          style={{ marginLeft: "auto" }}
         >
           全选这些
         </button>

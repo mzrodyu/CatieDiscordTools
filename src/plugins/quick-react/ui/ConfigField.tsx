@@ -10,7 +10,7 @@ import { React, useState } from "../../../core/common/react";
 import { Button, TextInput } from "@halcyon/ui";
 import { TrashIcon, XmarkIcon, ReactionIcon } from "@halcyon/icons";
 import { emojiImageUrl, parseManualEmoji, reactionKey, type ReactionEmoji } from "../emoji";
-import { ensureQuickReactStyles, openReactionPicker } from "./EmojiPicker";
+import { ensureQuickReactStyles, ReactionPicker } from "./EmojiPicker";
 
 /** Append `additions` to `list`, dropping ones already present by key. */
 function merge(list: ReactionEmoji[], additions: ReactionEmoji[]): ReactionEmoji[] {
@@ -36,6 +36,7 @@ export function ReactionConfigField({
   ensureQuickReactStyles();
   const list = Array.isArray(value) ? value : [];
   const [manual, setManual] = useState("");
+  const [picking, setPicking] = useState(false);
 
   const removeAt = (index: number): void => onChange(list.filter((_, i) => i !== index));
 
@@ -93,12 +94,8 @@ export function ReactionConfigField({
       </div>
 
       <div className="hc-qr-add">
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() => openReactionPicker((picked) => onChange(merge(list, picked)))}
-        >
-          <ReactionIcon size={16} /> 从服务器挑选
+        <Button size="sm" variant={picking ? "secondary" : "primary"} onClick={() => setPicking((p) => !p)}>
+          <ReactionIcon size={16} /> {picking ? "收起" : "从服务器挑选"}
         </Button>
         {list.length > 0 && (
           <Button size="sm" variant="destructive" onClick={() => onChange([])}>
@@ -106,6 +103,8 @@ export function ReactionConfigField({
           </Button>
         )}
       </div>
+
+      {picking && <ReactionPicker onAdd={(picked) => onChange(merge(list, picked))} />}
     </div>
   );
 }

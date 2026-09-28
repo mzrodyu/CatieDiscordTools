@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.10
+// @version      0.7.11
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-28 10:19:42" : "dev";
-      const version2 = true ? "0.7.10" : "dev";
+      const build = true ? "2026-09-28 10:27:43" : "dev";
+      const version2 = true ? "0.7.11" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4464,7 +4464,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.10" : "dev";
+    return true ? "0.7.11" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4542,7 +4542,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.10" : "dev";
+    const version2 = true ? "0.7.11" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -11477,9 +11477,10 @@ ${tail}`;
   }
 
   // src/plugins/quick-react/ui/EmojiPicker.tsx
-  var log34 = logger("quick-react");
   var STYLE_ID2 = "halcyon-quick-react";
   var PICKER_CSS = `
+.hc-qr-inline{display:flex;flex-direction:column;max-height:340px;margin-top:8px;border:1px solid var(--hc-separator-opaque,rgba(255,255,255,.08));border-radius:8px;overflow:hidden;background:var(--hc-bg-secondary,rgba(0,0,0,.12))}
+.hc-qr-inline-head{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--hc-separator-opaque,rgba(255,255,255,.08))}
 .hc-qr-grid{display:flex;flex-wrap:wrap;gap:6px;padding:2px}
 .hc-qr-tile{position:relative;width:42px;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent;background:var(--background-secondary,rgba(255,255,255,.04))}
 .hc-qr-tile:hover{background:var(--background-modifier-hover,rgba(255,255,255,.08))}
@@ -11487,11 +11488,9 @@ ${tail}`;
 .hc-qr-tile img{width:28px;height:28px;object-fit:contain}
 .hc-qr-tile__uni{font-size:24px;line-height:1}
 .hc-qr-tile__badge{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--brand-500,#5865f2);color:#fff;font-size:10px;line-height:15px;text-align:center}
-.hc-qr-note{opacity:.55;font-size:12px;padding:6px 2px}
-.hc-qr-count{margin-right:auto;opacity:.7;font-size:13px}
-.hc-qr-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding:10px var(--hc-space-4,16px)}
-.hc-qr-guildcount{margin-left:auto;opacity:.5;font-size:12px}
+.hc-qr-count{opacity:.7;font-size:13px}
 .hc-qr-back{display:inline-flex;align-items:center;gap:4px;cursor:pointer;background:none;border:none;color:var(--hc-label-secondary,#b5bac1);font-size:13px;padding:0}
+.hc-qr-guildcount{margin-left:auto;opacity:.5;font-size:12px}
 .hc-qr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .hc-qr-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 6px 3px 5px;border-radius:8px;background:var(--background-secondary,rgba(255,255,255,.05));font-size:12px}
 .hc-qr-chip img{width:18px;height:18px;object-fit:contain}
@@ -11511,49 +11510,8 @@ ${tail}`;
     style.textContent = PICKER_CSS;
     document.head.appendChild(style);
   }
-  var host4 = null;
-  var unmount4 = null;
-  var keyHandler3 = null;
-  function closeReactionPicker() {
-    if (keyHandler3) {
-      document.removeEventListener("keydown", keyHandler3);
-      keyHandler3 = null;
-    }
-    if (unmount4) {
-      try {
-        unmount4();
-      } catch {
-      }
-      unmount4 = null;
-    }
-    if (host4) {
-      host4.remove();
-      host4 = null;
-    }
-  }
-  function openReactionPicker(onAdd) {
-    ensureQuickReactStyles();
-    closeReactionPicker();
-    host4 = document.createElement("div");
-    host4.className = "halcyon";
-    document.body.appendChild(host4);
-    keyHandler3 = (event) => {
-      if (event.key === "Escape") closeReactionPicker();
-    };
-    document.addEventListener("keydown", keyHandler3);
-    try {
-      unmount4 = mountDetached(
-        React.createElement(PickerModal2, { onAdd, onClose: closeReactionPicker }),
-        host4
-      );
-    } catch (err) {
-      log34.error("\u65E0\u6CD5\u6253\u5F00\u8868\u60C5\u9009\u62E9\u5668", err);
-      closeReactionPicker();
-    }
-  }
-  function PickerModal2({
-    onAdd,
-    onClose
+  function ReactionPicker({
+    onAdd
   }) {
     const groups = useMemo(() => collectGuildEmojis(), []);
     const [view, setView] = useState({ mode: "guilds" });
@@ -11573,50 +11531,40 @@ ${tail}`;
       for (const e of list) next[reactionKey(e)] = e;
       return next;
     });
-    const confirm = () => {
+    const commit = () => {
       const list = Object.values(selected);
-      if (list.length) onAdd(list);
-      onClose();
+      if (list.length) {
+        onAdd(list);
+        setSelected({});
+      }
     };
     const openGuild = (g2) => {
       setEmojiQuery("");
       setView({ mode: "emojis", guildId: g2.guildId, guildName: g2.guildName });
     };
     const current2 = view.mode === "emojis" ? groups.find((g2) => g2.guildId === view.guildId) : void 0;
-    return /* @__PURE__ */ React.createElement(
-      "div",
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-qr-inline" }, /* @__PURE__ */ React.createElement("div", { className: "hc-qr-inline-head" }, view.mode === "emojis" ? /* @__PURE__ */ React.createElement("button", { className: "hc-qr-back", onClick: () => setView({ mode: "guilds" }) }, /* @__PURE__ */ React.createElement(ChevronLeftIcon, { size: 16 }), " \u670D\u52A1\u5668") : /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, "\u9009\u670D\u52A1\u5668"), /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count", style: { marginLeft: "auto" } }, "\u5DF2\u9009 ", selectedCount), /* @__PURE__ */ React.createElement(
+      "button",
       {
-        className: "hc-overlay",
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "\u6311\u9009\u53CD\u5E94\u8868\u60C5",
-        onMouseDown: (e) => {
-          if (e.target === e.currentTarget) onClose();
-        }
+        className: "hc-btn hc-btn--primary hc-btn--sm",
+        onClick: commit,
+        disabled: selectedCount === 0
       },
-      /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker" }, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__head" }, view.mode === "emojis" ? /* @__PURE__ */ React.createElement("button", { className: "hc-qr-back", onClick: () => setView({ mode: "guilds" }) }, /* @__PURE__ */ React.createElement(ChevronLeftIcon, { size: 16 }), " \u670D\u52A1\u5668") : /* @__PURE__ */ React.createElement("span", { className: "hc-emote-picker__title" }, "\u6311\u9009\u53CD\u5E94\u8868\u60C5"), /* @__PURE__ */ React.createElement("button", { className: "hc-emote-picker__close", onClick: onClose, "aria-label": "\u5173\u95ED" }, /* @__PURE__ */ React.createElement(XmarkIcon, { size: 18 }))), view.mode === "guilds" ? /* @__PURE__ */ React.createElement(GuildList, { groups, query: guildQuery, setQuery: setGuildQuery, onOpen: openGuild }) : /* @__PURE__ */ React.createElement(
-        EmojiList,
-        {
-          group: current2,
-          guildName: view.guildName,
-          query: emojiQuery,
-          setQuery: setEmojiQuery,
-          selected,
-          toggle,
-          addMany
-        }
-      ), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-foot" }, /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, "\u5DF2\u9009 ", selectedCount, " \u4E2A"), /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          className: "hc-btn hc-btn--primary hc-btn--sm",
-          onClick: confirm,
-          disabled: selectedCount === 0
-        },
-        "\u6DFB\u52A0 ",
-        selectedCount,
-        " \u4E2A"
-      )))
-    );
+      "\u6DFB\u52A0 ",
+      selectedCount,
+      " \u4E2A"
+    )), view.mode === "guilds" ? /* @__PURE__ */ React.createElement(GuildList, { groups, query: guildQuery, setQuery: setGuildQuery, onOpen: openGuild }) : /* @__PURE__ */ React.createElement(
+      EmojiList,
+      {
+        group: current2,
+        guildName: view.guildName,
+        query: emojiQuery,
+        setQuery: setEmojiQuery,
+        selected,
+        toggle,
+        addMany
+      }
+    ));
   }
   function GuildList({
     groups,
@@ -11674,12 +11622,13 @@ ${tail}`;
         value: query,
         onChange: (e) => setQuery(e.currentTarget.value)
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-add" }, /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, filtered.length, " \u4E2A"), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-add", style: { padding: "0 8px" } }, /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, filtered.length, " \u4E2A"), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "hc-btn hc-btn--secondary hc-btn--sm",
         onClick: () => addMany(filtered),
-        disabled: filtered.length === 0
+        disabled: filtered.length === 0,
+        style: { marginLeft: "auto" }
       },
       "\u5168\u9009\u8FD9\u4E9B"
     )), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__list" }, filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__empty" }, "\u6CA1\u6709\u5339\u914D\u7684\u8868\u60C5") : /* @__PURE__ */ React.createElement("div", { className: "hc-qr-grid" }, filtered.map((e) => {
@@ -11706,7 +11655,7 @@ ${tail}`;
   }
 
   // src/plugins/quick-react/toolbar.ts
-  var log35 = logger("quick-react");
+  var log34 = logger("quick-react");
   var BTN_CLASS = "hc-qr-msgbtn";
   var COALESCE_MS = 120;
   var SWEEP_MS = 1500;
@@ -11769,7 +11718,7 @@ ${tail}`;
         if (!msg) continue;
         bar.insertBefore(makeButton(msg.channelId, msg.messageId), bar.firstChild);
       } catch (err) {
-        log35.debug("\u6CE8\u5165 hover \u6309\u94AE\u5931\u8D25", err);
+        log34.debug("\u6CE8\u5165 hover \u6309\u94AE\u5931\u8D25", err);
       }
     }
   }
@@ -11789,7 +11738,7 @@ ${tail}`;
         observer = new MutationObserver(schedule2);
         observer.observe(document.body, { childList: true, subtree: true });
       } catch (err) {
-        log35.warn("MutationObserver \u6302\u63A5\u5931\u8D25\uFF0C\u6539\u7528\u8F6E\u8BE2\u515C\u5E95", err);
+        log34.warn("MutationObserver \u6302\u63A5\u5931\u8D25\uFF0C\u6539\u7528\u8F6E\u8BE2\u515C\u5E95", err);
       }
     }
     sweepTimer = setInterval(schedule2, SWEEP_MS);
@@ -11834,6 +11783,7 @@ ${tail}`;
     ensureQuickReactStyles();
     const list = Array.isArray(value) ? value : [];
     const [manual, setManual] = useState("");
+    const [picking, setPicking] = useState(false);
     const removeAt2 = (index) => onChange2(list.filter((_, i) => i !== index));
     const addManual = () => {
       const parsed = parseManualEmoji(manual);
@@ -11869,20 +11819,11 @@ ${tail}`;
           }
         }
       }
-    ), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", onClick: addManual, disabled: !manual.trim() }, "\u6DFB\u52A0")), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-add" }, /* @__PURE__ */ React.createElement(
-      Button,
-      {
-        size: "sm",
-        variant: "primary",
-        onClick: () => openReactionPicker((picked) => onChange2(merge(list, picked)))
-      },
-      /* @__PURE__ */ React.createElement(ReactionIcon, { size: 16 }),
-      " \u4ECE\u670D\u52A1\u5668\u6311\u9009"
-    ), list.length > 0 && /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "destructive", onClick: () => onChange2([]) }, /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }), " \u6E05\u7A7A")));
+    ), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", onClick: addManual, disabled: !manual.trim() }, "\u6DFB\u52A0")), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-add" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: picking ? "secondary" : "primary", onClick: () => setPicking((p) => !p) }, /* @__PURE__ */ React.createElement(ReactionIcon, { size: 16 }), " ", picking ? "\u6536\u8D77" : "\u4ECE\u670D\u52A1\u5668\u6311\u9009"), list.length > 0 && /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "destructive", onClick: () => onChange2([]) }, /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }), " \u6E05\u7A7A")), picking && /* @__PURE__ */ React.createElement(ReactionPicker, { onAdd: (picked) => onChange2(merge(list, picked)) }));
   }
 
   // src/plugins/quick-react/index.tsx
-  var log36 = logger("quick-react");
+  var log35 = logger("quick-react");
   var settings11 = defineSettings({
     reactions: {
       group: "\u53CD\u5E94",
@@ -11935,7 +11876,7 @@ ${tail}`;
       }
       refreshToolbarButtons();
     } catch (err) {
-      log36.error("\u4E00\u952E\u53CD\u5E94\u5931\u8D25", err);
+      log35.error("\u4E00\u952E\u53CD\u5E94\u5931\u8D25", err);
       showToast("\u4E00\u952E\u53CD\u5E94\u5931\u8D25\uFF0C\u770B\u63A7\u5236\u53F0\u65E5\u5FD7", "failure");
     } finally {
       running = false;
@@ -11972,9 +11913,9 @@ ${tail}`;
       );
       unpatchers3.push(settings11.subscribe("reactions", () => refreshToolbarButtons()));
       if (!reactionBackendReady()) {
-        log36.warn("\u6CA1\u89E3\u6790\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF0C\u70B9\u51FB\u65F6\u4F1A\u8D70\u515C\u5E95\u6216\u62A5\u9519\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
+        log35.warn("\u6CA1\u89E3\u6790\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF0C\u70B9\u51FB\u65F6\u4F1A\u8D70\u515C\u5E95\u6216\u62A5\u9519\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
       }
-      log36.info("\u4E00\u952E\u53CD\u5E94\u5C31\u7EEA \u2014 \u53F3\u952E\u6D88\u606F\u6216\u70B9\u60AC\u505C\u5DE5\u5177\u680F\u7684\u5C0F\u7B11\u8138");
+      log35.info("\u4E00\u952E\u53CD\u5E94\u5C31\u7EEA \u2014 \u53F3\u952E\u6D88\u606F\u6216\u70B9\u60AC\u505C\u5DE5\u5177\u680F\u7684\u5C0F\u7B11\u8138");
     },
     stop() {
       stopToolbarButton2();
@@ -11997,12 +11938,12 @@ ${tail}`;
   });
 
   // src/core/flux/index.ts
-  var log37 = logger("flux");
+  var log36 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log37.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log36.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -12014,7 +11955,7 @@ ${tail}`;
         try {
           listener(action);
         } catch (err) {
-          log37.error(`listener for ${type} threw`, err);
+          log36.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -12023,7 +11964,7 @@ ${tail}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log37.error(`could not subscribe to ${type}`, err);
+      log36.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -12034,7 +11975,7 @@ ${tail}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log37.error(`could not unsubscribe from ${type}`, err);
+      log36.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -12065,13 +12006,13 @@ ${tail}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log37.error("dispatch failed", action?.type, err);
+        log36.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log38 = logger("mark-all-read");
+  var log37 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -12085,7 +12026,7 @@ ${tail}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log38.warn(`could not read channels for guild ${guildId}`, err);
+        log37.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -12111,16 +12052,16 @@ ${tail}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log38.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log37.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log38.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log37.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log38.warn("could not describe getChannels shape", err);
+          log37.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -12140,14 +12081,14 @@ ${tail}`;
           }
         }
       } catch (err) {
-        log38.warn(`could not read joined threads for guild ${guildId}`, err);
+        log37.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log38.info(
+    log37.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -12164,9 +12105,9 @@ ${tail}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log38.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log37.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log38.info("nothing unread; skipping BULK_ACK");
+      log37.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -12174,12 +12115,12 @@ ${tail}`;
       context: "APP",
       channels
     });
-    log38.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log37.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log39 = logger("mark-all-read");
+  var log38 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -12204,7 +12145,7 @@ ${tail}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log39.error("mark all read failed", err);
+        log38.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -12213,7 +12154,7 @@ ${tail}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log40 = logger("mark-all-read");
+  var log39 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -12224,7 +12165,7 @@ ${tail}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log40.error("mark all read failed", err);
+      log39.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -12274,7 +12215,7 @@ ${tail}`;
   }
   function openQuestHub() {
     if (navigate("/quest-home")) return;
-    log40.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
+    log39.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
   }
   function QuestRailButton() {
     const count2 = useOpenQuestCount();
@@ -12345,7 +12286,7 @@ ${tail}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log40.info("mark-all-read ready");
+      log39.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -12353,7 +12294,7 @@ ${tail}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log41 = logger("silent-typing");
+  var log40 = logger("silent-typing");
   var settings12 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
@@ -12415,7 +12356,7 @@ ${tail}`;
         return void 0;
       }
     } catch (err) {
-      log41.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log40.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
@@ -12439,9 +12380,9 @@ ${tail}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log41.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log40.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log41.warn(
+      log40.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -12474,7 +12415,7 @@ ${tail}`;
       active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log41.warn(
+        log40.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -12484,17 +12425,17 @@ ${tail}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log41.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log40.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log41.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log40.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log41.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings12.store.scope}\uFF09`);
+      log40.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings12.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -12504,7 +12445,7 @@ ${tail}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log41.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log40.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -12644,7 +12585,7 @@ ${tail}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log42 = logger("member-count");
+  var log41 = logger("member-count");
   function memo(resolve) {
     let cached4;
     return () => cached4 ??= resolve();
@@ -12738,9 +12679,9 @@ ${tail}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log42.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log41.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log42.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log41.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -12892,7 +12833,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log43 = logger("member-count");
+  var log42 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -12952,25 +12893,25 @@ ${tail}`;
     entry.host.remove();
   }
   function attach2(variant, hit) {
-    const host6 = document.createElement("div");
-    host6.className = "hc-membercount-host";
-    host6.setAttribute("data-hc-plugin", "member-count");
+    const host5 = document.createElement("div");
+    host5.className = "hc-membercount-host";
+    host5.setAttribute("data-hc-plugin", "member-count");
     try {
-      hit.element.insertBefore(host6, hit.element.firstChild);
+      hit.element.insertBefore(host5, hit.element.firstChild);
     } catch (err) {
-      log43.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log42.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
-      const unmount6 = mountDetached(React.createElement(MemberCountChip, { variant }), host6);
-      mounted2.set(variant, { host: host6, unmount: unmount6, selector: hit.selector });
+      const unmount5 = mountDetached(React.createElement(MemberCountChip, { variant }), host5);
+      mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log43.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log42.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
-      host6.remove();
-      log43.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      host5.remove();
+      log42.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
   function ensureMounted2() {
@@ -12991,7 +12932,7 @@ ${tail}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log43.warn(
+      log42.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -13008,7 +12949,7 @@ ${tail}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log43.warn(
+    log42.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -13032,7 +12973,7 @@ ${tail}`;
         ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log43.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
+      log42.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -13048,7 +12989,7 @@ ${tail}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log43.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log42.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13149,7 +13090,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log44 = logger("who-reacted");
+  var log43 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -13232,7 +13173,7 @@ ${tail}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log44.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log43.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight2.set(key, guarded);
@@ -13294,24 +13235,24 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log45 = logger("who-reacted");
+  var log44 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
   var mutationObserver;
   var REACTION_SELECTOR = '[class*="reactionInner"], [class*="reaction_"]';
   function makeHost() {
-    const host6 = document.createElement("span");
-    host6.className = "hc-inline-reactors";
-    host6.setAttribute(HOST_ATTR, "1");
-    return host6;
+    const host5 = document.createElement("span");
+    host5.className = "hc-inline-reactors";
+    host5.setAttribute(HOST_ATTR, "1");
+    return host5;
   }
-  function fillHost(host6, reactors, totalHint) {
+  function fillHost(host5, reactors, totalHint) {
     const max = Math.max(1, Math.min(6, Math.trunc(settings14.store.inlineAvatarCount) || 3));
     const shown = reactors.slice(0, max);
     const total = totalHint ?? reactors.length;
     const overflow = Math.max(0, total - shown.length);
-    host6.textContent = "";
+    host5.textContent = "";
     for (const reactor of shown) {
       const img = document.createElement("img");
       img.className = "hc-inline-reactors__avatar";
@@ -13320,13 +13261,13 @@ ${tail}`;
       img.loading = "lazy";
       img.title = reactor.name;
       img.referrerPolicy = "no-referrer";
-      host6.appendChild(img);
+      host5.appendChild(img);
     }
     if (shown.length > 0 && overflow > 0) {
       const more = document.createElement("span");
       more.className = "hc-inline-reactors__more";
       more.textContent = `+${overflow}`;
-      host6.appendChild(more);
+      host5.appendChild(more);
     }
   }
   function pillHasNativePreview(pill) {
@@ -13342,29 +13283,29 @@ ${tail}`;
     const target = resolveReaction(pill);
     if (!target) return;
     if (target.count != null && target.count <= 0) return;
-    const host6 = makeHost();
+    const host5 = makeHost();
     try {
-      pill.appendChild(host6);
+      pill.appendChild(host5);
     } catch {
       return;
     }
     try {
       const wanted = Math.min(12, Math.max(6, (settings14.store.inlineAvatarCount || 3) + 3));
       const reactors = await fetchReactors(target, wanted);
-      if (!host6.isConnected) return;
+      if (!host5.isConnected) return;
       if (reactors.length === 0) {
-        host6.remove();
+        host5.remove();
         DECORATED.delete(pill);
         return;
       }
       if (pillHasNativePreview(pill)) {
-        host6.remove();
+        host5.remove();
         return;
       }
-      fillHost(host6, reactors, target.count);
+      fillHost(host5, reactors, target.count);
     } catch (err) {
-      log45.debug("inline avatars: fetch failed", err);
-      host6.remove();
+      log44.debug("inline avatars: fetch failed", err);
+      host5.remove();
       DECORATED.delete(pill);
     }
   }
@@ -13402,7 +13343,7 @@ ${tail}`;
       } catch {
       }
     }
-    log45.info("inline reactor avatars: enabled");
+    log44.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -13417,18 +13358,18 @@ ${tail}`;
       mutationObserver = void 0;
     }
     try {
-      document.querySelectorAll(`[${HOST_ATTR}]`).forEach((host6) => host6.remove());
+      document.querySelectorAll(`[${HOST_ATTR}]`).forEach((host5) => host5.remove());
     } catch {
     }
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log46 = logger("who-reacted");
+  var log45 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
-  var host5 = null;
-  var unmount5 = null;
+  var host4 = null;
+  var unmount4 = null;
   var anchor = null;
   var observer2 = null;
   var anchorTimer;
@@ -13441,18 +13382,18 @@ ${tail}`;
   var hoverToggleUnsub;
   var hoverListenersAttached = false;
   function reposition2() {
-    if (!host5 || !anchor) return;
+    if (!host4 || !anchor) return;
     const rect = anchor.getBoundingClientRect();
-    const width = host5.offsetWidth || 220;
-    const height = host5.offsetHeight || 110;
+    const width = host4.offsetWidth || 220;
+    const height = host4.offsetHeight || 110;
     const margin = 8;
     let left = rect.left + rect.width / 2 - width / 2;
     let top = rect.top - height - margin;
     if (top < margin) top = rect.bottom + margin;
     left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
     top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
-    host5.style.left = `${Math.round(left)}px`;
-    host5.style.top = `${Math.round(top)}px`;
+    host4.style.left = `${Math.round(left)}px`;
+    host4.style.top = `${Math.round(top)}px`;
   }
   function hide2() {
     if (hideTimer) {
@@ -13470,21 +13411,21 @@ ${tail}`;
       }
       observer2 = null;
     }
-    if (unmount5) {
+    if (unmount4) {
       try {
-        unmount5();
+        unmount4();
       } catch {
       }
-      unmount5 = null;
+      unmount4 = null;
     }
-    if (host5) {
-      host5.remove();
-      host5 = null;
+    if (host4) {
+      host4.remove();
+      host4 = null;
     }
     anchor = null;
   }
   function scheduleHide() {
-    if (!host5 || hideTimer) return;
+    if (!host4 || hideTimer) return;
     hideTimer = setTimeout(() => {
       hideTimer = void 0;
       hide2();
@@ -13498,22 +13439,22 @@ ${tail}`;
   }
   function show(element, target) {
     hide2();
-    host5 = document.createElement("div");
-    host5.className = "halcyon hc-whoreacted-host";
-    host5.setAttribute("data-hc-plugin", "who-reacted");
-    document.body.appendChild(host5);
+    host4 = document.createElement("div");
+    host4.className = "halcyon hc-whoreacted-host";
+    host4.setAttribute("data-hc-plugin", "who-reacted");
+    document.body.appendChild(host4);
     anchor = element;
     try {
-      unmount5 = mountDetached(React.createElement(ReactorCard, { target }), host5);
+      unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
     } catch (err) {
-      log46.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log45.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide2();
       return;
     }
     reposition2();
     if (typeof ResizeObserver === "function") {
       observer2 = new ResizeObserver(() => reposition2());
-      observer2.observe(host5);
+      observer2.observe(host4);
     } else {
       setTimeout(reposition2, 120);
       setTimeout(reposition2, 400);
@@ -13568,7 +13509,7 @@ ${tail}`;
   function onKeyDown3(event) {
     if (!event.altKey) return;
     altDown = true;
-    if (settings14.store.trigger === "alt-hover" && hovered && !host5) {
+    if (settings14.store.trigger === "alt-hover" && hovered && !host4) {
       if (document.contains(hovered)) tryShow(hovered);
     }
   }
@@ -13579,7 +13520,7 @@ ${tail}`;
     }
   }
   function onScrollOrResize() {
-    if (host5) hide2();
+    if (host4) hide2();
   }
   function onWindowBlur() {
     altDown = false;
@@ -13634,7 +13575,7 @@ ${tail}`;
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log46.info(
+      log45.info(
         `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings14.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings14.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
@@ -13652,7 +13593,7 @@ ${tail}`;
       altDown = false;
       hide2();
       clearCache();
-      log46.info("\u5DF2\u505C\u7528");
+      log45.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13675,7 +13616,7 @@ ${tail}`;
       }
       return {
         trigger: settings14.store.trigger,
-        cardShown: host5 != null,
+        cardShown: host4 != null,
         reactionNodes: nodes?.length ?? -1,
         sample: sample2,
         anchors: probeSelectors([REACTION_SELECTOR2, '[class*="reactionInner"]', '[class*="reaction_"]']),
@@ -13943,7 +13884,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log47 = logger("platform-indicators");
+  var log46 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -13994,24 +13935,24 @@ ${tail}`;
     return null;
   }
   function attach3(anchor2, kind, userId, selfId) {
-    const host6 = document.createElement("span");
-    host6.className = "hc-platform-host";
-    host6.setAttribute("data-hc-plugin", "platform-indicators");
+    const host5 = document.createElement("span");
+    host5.className = "hc-platform-host";
+    host5.setAttribute("data-hc-plugin", "platform-indicators");
     try {
-      anchor2.appendChild(host6);
+      anchor2.appendChild(host5);
     } catch {
       return false;
     }
     try {
-      const unmount6 = mountDetached(
+      const unmount5 = mountDetached(
         React.createElement(PlatformIndicator, { userId, isSelf: userId === selfId }),
-        host6
+        host5
       );
-      mounted3.set(host6, { kind, host: host6, anchor: anchor2, unmount: unmount6 });
+      mounted3.set(host5, { kind, host: host5, anchor: anchor2, unmount: unmount5 });
       return true;
     } catch (err) {
-      host6.remove();
-      log47.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      host5.remove();
+      log46.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -14067,7 +14008,7 @@ ${tail}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log47.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log46.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
@@ -14081,7 +14022,7 @@ ${tail}`;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log47.warn(
+      log46.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -14122,7 +14063,7 @@ ${tail}`;
         settings15.subscribe("ignoreBots", () => bumpPresence()),
         settings15.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log47.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -14140,7 +14081,7 @@ ${tail}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log47.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -14207,7 +14148,7 @@ ${tail}`;
   ];
 
   // src/core/probe.ts
-  var log48 = logger("probe");
+  var log47 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -14230,8 +14171,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.10" : "dev",
-      build: true ? "2026-09-28 10:19:42" : "dev",
+      version: true ? "0.7.11" : "dev",
+      build: true ? "2026-09-28 10:27:43" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14244,14 +14185,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log48.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log47.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log49 = logger("userscript");
+  var log48 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -14262,8 +14203,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.10" : "dev",
-        build: true ? "2026-09-28 10:19:42" : "dev",
+        version: true ? "0.7.11" : "dev",
+        build: true ? "2026-09-28 10:27:43" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -14280,6 +14221,6 @@ ${tail}`;
       };
     } catch {
     }
-    log49.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log49.error("userscript boot failed", err));
+    log48.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log48.error("userscript boot failed", err));
 })();
