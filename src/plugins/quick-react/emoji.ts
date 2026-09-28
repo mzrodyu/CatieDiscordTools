@@ -19,6 +19,8 @@ export interface ReactionEmoji {
 export interface GuildEmojiGroup {
   guildId: string;
   guildName: string;
+  /** Guild icon hash, or null when the server has no custom icon. */
+  guildIcon: string | null;
   emojis: ReactionEmoji[];
 }
 
@@ -27,17 +29,24 @@ export function emojiImageUrl(e: ReactionEmoji, size = 32): string | null {
   return e.id ? emojiCdnUrl(e.id, e.animated, size) : null;
 }
 
+/** CDN image for a guild's icon, or null when it has none. */
+export function guildIconUrl(guildId: string, icon: string | null, size = 48): string | null {
+  if (!icon) return null;
+  const ext = icon.startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/icons/${guildId}/${icon}.${ext}?size=${size}`;
+}
+
 /** Stable key for de-dup / selection: `name:id` for custom, the char otherwise. */
 export function reactionKey(e: ReactionEmoji): string {
   return e.id ? `${e.name}:${e.id}` : e.name;
 }
 
-function guildName(guildId: string): string {
+function guildMeta(guildId: string): { name: string; icon: string | null } {
   try {
     const g = GuildStore.getGuild?.(guildId) ?? (GuildStore.getGuilds?.() ?? {})[guildId];
-    return String(g?.name ?? guildId);
+    return { name: String(g?.name ?? guildId), icon: g?.icon ? String(g.icon) : null };
   } catch {
-    return guildId;
+    return { name: guildId, icon: null };
   }
 }
 
@@ -70,7 +79,10 @@ export function collectGuildEmojis(): GuildEmojiGroup[] {
       const r = fromRecord(e);
       if (r) emojis.push(r);
     }
-    if (emojis.length) groups.push({ guildId, guildName: guildName(guildId), emojis });
+    if (emojis.length) {
+      const meta = guildMeta(guildId);
+      groups.push({ guildId, guildName: meta.name, guildIcon: meta.icon, emojis });
+    }
   };
 
   const entries = Object.entries(byGuild);

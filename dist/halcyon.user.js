@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.9
+// @version      0.7.10
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-28 09:55:15" : "dev";
-      const version2 = true ? "0.7.9" : "dev";
+      const build = true ? "2026-09-28 10:19:42" : "dev";
+      const version2 = true ? "0.7.10" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3781,21 +3781,21 @@ ${components_default}`;
     title,
     subtitle,
     accessory,
-    onClick,
+    onClick: onClick2,
     showChevron
   }) {
-    const interactive = typeof onClick === "function";
+    const interactive = typeof onClick2 === "function";
     return /* @__PURE__ */ React.createElement(
       "div",
       {
         className: interactive ? "hc-row hc-row--button" : "hc-row",
-        onClick,
+        onClick: onClick2,
         role: interactive ? "button" : void 0,
         tabIndex: interactive ? 0 : void 0,
         onKeyDown: interactive ? (e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            onClick?.();
+            onClick2?.();
           }
         } : void 0
       },
@@ -4464,7 +4464,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.9" : "dev";
+    return true ? "0.7.10" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4541,8 +4541,8 @@ ${components_default}`;
   // src/ui/settings/AboutView.tsx
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
-    const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.9" : "dev";
+    const enabled2 = plugins2.filter((p) => p.enabled).length;
+    const version2 = true ? "0.7.10" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -4561,7 +4561,7 @@ ${components_default}`;
         onClick: () => window.open(PROJECT_URL, "_blank", "noopener,noreferrer")
       },
       "\u524D\u5F80\u4E0B\u8F7D"
-    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled) })), /* @__PURE__ */ React.createElement(
+    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled2) })), /* @__PURE__ */ React.createElement(
       Section,
       {
         title: "\u9879\u76EE",
@@ -6413,7 +6413,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         log12.warn("[jump] \u8DF3\u8F6C\u5931\u8D25\uFF1AJumpActions \u4E0E NavigationRouter \u5747\u672A\u89E3\u6790\u5230");
       }
     };
-    const schedule2 = [80, 220, 450, 800];
+    const schedule3 = [80, 220, 450, 800];
     let i = 0;
     const tick = () => {
       doJump();
@@ -6421,11 +6421,11 @@ ${loc.channel ?? ""}`.toLowerCase();
       const ok = now === channelId;
       log12.info(`[jump] \u7B2C ${i + 1} \u6B21 \xB7 now=${now ?? "?"} wanted=${channelId} ok=${ok}`);
       i++;
-      if (!ok && i < schedule2.length) {
-        setTimeout(tick, schedule2[i] - schedule2[i - 1]);
+      if (!ok && i < schedule3.length) {
+        setTimeout(tick, schedule3[i] - schedule3[i - 1]);
       }
     };
-    setTimeout(tick, schedule2[0]);
+    setTimeout(tick, schedule3[0]);
   }
   function dismissSettingsSurface() {
     try {
@@ -6498,16 +6498,16 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
     } catch {
     }
-    let guildName2;
+    let guildName;
     try {
       if (gid) {
         const guild = GuildStore.getGuild?.(gid);
-        if (guild?.name) guildName2 = String(guild.name);
+        if (guild?.name) guildName = String(guild.name);
       }
     } catch {
     }
     const channel = channelName ? `#${channelName}` : isDM ? "\u79C1\u4FE1" : `#${channelId}`;
-    return { guild: guildName2, channel };
+    return { guild: guildName, channel };
   }
   function Location({ channelId, guildId }) {
     const loc = resolveLocation(channelId, guildId);
@@ -8383,7 +8383,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const [pickerLoading, setPickerLoading] = useState(false);
     const [pickerError, setPickerError] = useState("");
     const ctrlRef = useRef({ stopped: false });
-    const running = mode !== "idle";
+    const running2 = mode !== "idle";
     useEffect(() => {
       const tok = extractToken();
       if (tok) {
@@ -8631,7 +8631,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, ch.name)
       ))));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u5220\u9664\u4E0D\u53EF\u6062\u590D\uFF0C\u4E14\u53EA\u4F1A\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u8BF7\u52A1\u5FC5\u5148\u9884\u89C8\u786E\u8BA4\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u5220\u9664\u4E0D\u53EF\u6062\u590D\uFF0C\u4E14\u53EA\u4F1A\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u8BF7\u52A1\u5FC5\u5148\u9884\u89C8\u786E\u8BA4\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running2 }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running2 }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
       Select,
       {
         value: order,
@@ -8641,18 +8641,18 @@ ${loc.channel ?? ""}`.toLowerCase();
           { value: "asc", label: "\u4ECE\u8001\u5230\u65B0" }
         ]
       }
-    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u786E\u8BA4", note: "\u5220\u9664\u662F\u4E0D\u53EF\u9006\u64CD\u4F5C\uFF0C\u8BF7\u5148\u9884\u89C8\u518D\u5220\u9664\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6211\u786E\u8BA4\u53EA\u5220\u9664\u81EA\u5DF1\u7684\u6D88\u606F\uFF0C\u4E14\u660E\u767D\u4E0D\u53EF\u6062\u590D")), /* @__PURE__ */ React.createElement(Toggle, { checked: disclaimer, onChange: setDisclaimer, "aria-label": "\u786E\u8BA4" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__actions" }, mode === "previewing" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u9884\u89C8") : /* @__PURE__ */ React.createElement(Button, { variant: "primary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running, onClick: onPreview }, "\u9884\u89C8"), mode === "deleting" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u5220\u9664") : /* @__PURE__ */ React.createElement(
+    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u786E\u8BA4", note: "\u5220\u9664\u662F\u4E0D\u53EF\u9006\u64CD\u4F5C\uFF0C\u8BF7\u5148\u9884\u89C8\u518D\u5220\u9664\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6211\u786E\u8BA4\u53EA\u5220\u9664\u81EA\u5DF1\u7684\u6D88\u606F\uFF0C\u4E14\u660E\u767D\u4E0D\u53EF\u6062\u590D")), /* @__PURE__ */ React.createElement(Toggle, { checked: disclaimer, onChange: setDisclaimer, "aria-label": "\u786E\u8BA4" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__actions" }, mode === "previewing" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u9884\u89C8") : /* @__PURE__ */ React.createElement(Button, { variant: "primary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onPreview }, "\u9884\u89C8"), mode === "deleting" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u5220\u9664") : /* @__PURE__ */ React.createElement(
       Button,
       {
         variant: "destructive",
         icon: /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }),
-        disabled: running || !disclaimer || previewed.length === 0,
+        disabled: running2 || !disclaimer || previewed.length === 0,
         onClick: onDelete
       },
       "\u5220\u9664\u9884\u89C8\uFF08",
       previewed.length,
       "\uFF09"
-    )), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-state" }, state), detail && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-detail" }, detail)), previewed.length > 0 && /* @__PURE__ */ React.createElement(Section, { title: `\u9884\u89C8\u7ED3\u679C\uFF08${previewed.length}\uFF09` }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__list" }, previewed.slice(0, 50).map((m) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__item", key: m.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-time" }, formatTs(m.timestamp)), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-text" }, m.content.trim() || "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09"))), previewed.length > 50 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u2026\u8FD8\u6709 ", previewed.length - 50, " \u6761\u672A\u5C55\u793A"))), /* @__PURE__ */ React.createElement(Section, { title: "\u7EDF\u8BA1", note: "\u7EDF\u8BA1\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u5386\u53F2\u53D1\u8A00\u603B\u6570\uFF08\u8C03\u7528\u641C\u7D22\u63A5\u53E3\uFF09\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running, onClick: onCount }, "\u7EDF\u8BA1\u6211\u7684\u53D1\u8A00\u6570")), statCount != null && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cleaner__stat" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-num" }, statCount), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-unit" }, "\u6761"))));
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-state" }, state), detail && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-detail" }, detail)), previewed.length > 0 && /* @__PURE__ */ React.createElement(Section, { title: `\u9884\u89C8\u7ED3\u679C\uFF08${previewed.length}\uFF09` }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__list" }, previewed.slice(0, 50).map((m) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__item", key: m.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-time" }, formatTs(m.timestamp)), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-text" }, m.content.trim() || "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09"))), previewed.length > 50 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u2026\u8FD8\u6709 ", previewed.length - 50, " \u6761\u672A\u5C55\u793A"))), /* @__PURE__ */ React.createElement(Section, { title: "\u7EDF\u8BA1", note: "\u7EDF\u8BA1\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u5386\u53F2\u53D1\u8A00\u603B\u6570\uFF08\u8C03\u7528\u641C\u7D22\u63A5\u53E3\uFF09\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onCount }, "\u7EDF\u8BA1\u6211\u7684\u53D1\u8A00\u6570")), statCount != null && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cleaner__stat" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-num" }, statCount), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-unit" }, "\u6761"))));
   }
 
   // src/plugins/message-cleaner/index.tsx
@@ -9589,11 +9589,11 @@ ${loc.channel ?? ""}`.toLowerCase();
         if (hadContent.current && !has) onEmptied();
         hadContent.current = has;
       };
-      const schedule2 = () => {
+      const schedule3 = () => {
         if (timer3) clearTimeout(timer3);
         timer3 = setTimeout(sample2, DEBOUNCE_MS);
       };
-      const { attached, off } = subscribeToDraft(schedule2);
+      const { attached, off } = subscribeToDraft(schedule3);
       poll = setInterval(sample2, attached ? POLL_MS * 4 : POLL_MS);
       return () => {
         disposed = true;
@@ -10109,21 +10109,21 @@ ${tail}`;
     return cache2.get(url);
   }
   async function resolveAssets(appId, urls) {
-    const pending = urls.filter((u) => u && !cache2.has(u));
-    if (!appId || pending.length === 0) return;
+    const pending2 = urls.filter((u) => u && !cache2.has(u));
+    if (!appId || pending2.length === 0) return;
     try {
       const response = await RestAPI.post({
         url: endpoint(appId),
-        body: { urls: pending }
+        body: { urls: pending2 }
       });
       const list = response?.body ?? [];
-      pending.forEach((url, i) => {
+      pending2.forEach((url, i) => {
         const path = list[i]?.external_asset_path;
         if (typeof path === "string" && path) cache2.set(url, `mp:${path}`);
         else cache2.set(url, null);
       });
     } catch (err) {
-      for (const url of pending) cache2.set(url, null);
+      for (const url of pending2) cache2.set(url, null);
       log26.debug("\u56FE\u7247\u6362\u53D6\u8D44\u6E90 id \u5931\u8D25\uFF08\u5E94\u7528 ID \u662F\u5426\u6B63\u786E\uFF1F\u56FE\u7247\u80FD\u516C\u5F00\u8BBF\u95EE\u5417\uFF1F\uFF09", err);
     }
   }
@@ -11313,15 +11313,20 @@ ${tail}`;
   function emojiImageUrl(e, size2 = 32) {
     return e.id ? emojiCdnUrl(e.id, e.animated, size2) : null;
   }
+  function guildIconUrl(guildId, icon, size2 = 48) {
+    if (!icon) return null;
+    const ext = icon.startsWith("a_") ? "gif" : "png";
+    return `https://cdn.discordapp.com/icons/${guildId}/${icon}.${ext}?size=${size2}`;
+  }
   function reactionKey(e) {
     return e.id ? `${e.name}:${e.id}` : e.name;
   }
-  function guildName(guildId) {
+  function guildMeta(guildId) {
     try {
       const g2 = GuildStore.getGuild?.(guildId) ?? (GuildStore.getGuilds?.() ?? {})[guildId];
-      return String(g2?.name ?? guildId);
+      return { name: String(g2?.name ?? guildId), icon: g2?.icon ? String(g2.icon) : null };
     } catch {
-      return guildId;
+      return { name: guildId, icon: null };
     }
   }
   function fromRecord(e) {
@@ -11343,7 +11348,10 @@ ${tail}`;
         const r = fromRecord(e);
         if (r) emojis.push(r);
       }
-      if (emojis.length) groups.push({ guildId, guildName: guildName(guildId), emojis });
+      if (emojis.length) {
+        const meta = guildMeta(guildId);
+        groups.push({ guildId, guildName: meta.name, guildIcon: meta.icon, emojis });
+      }
     };
     const entries = Object.entries(byGuild);
     if (entries.length) {
@@ -11386,48 +11394,86 @@ ${tail}`;
   function sleep2(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+  function route(channelId, messageId, e) {
+    return `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(reactionKey(e))}/@me`;
+  }
+  function actionEmoji(e) {
+    return { id: e.id || void 0, name: e.name, animated: e.animated };
+  }
   async function addOne(channelId, messageId, e) {
     const api = RestAPI;
     if (api && typeof api.put === "function") {
-      await api.put({
-        url: `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(reactionKey(e))}/@me`,
-        oldFormErrors: true
-      });
+      await api.put({ url: route(channelId, messageId, e), oldFormErrors: true });
       return;
     }
     const actions = reactionActions();
     if (actions && typeof actions.addReaction === "function") {
-      await Promise.resolve(
-        actions.addReaction(channelId, messageId, {
-          id: e.id || void 0,
-          name: e.name,
-          animated: e.animated
-        })
-      );
+      await Promise.resolve(actions.addReaction(channelId, messageId, actionEmoji(e)));
       return;
     }
     throw new Error("\u627E\u4E0D\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF08RestAPI / reaction action \u90FD\u6CA1\u89E3\u6790\u5230\uFF09");
   }
+  async function removeOne(channelId, messageId, e) {
+    const api = RestAPI;
+    if (api && typeof api.del === "function") {
+      await api.del({ url: route(channelId, messageId, e), oldFormErrors: true });
+      return;
+    }
+    const actions = reactionActions();
+    if (actions && typeof actions.removeReaction === "function") {
+      await Promise.resolve(actions.removeReaction(channelId, messageId, actionEmoji(e)));
+      return;
+    }
+    throw new Error("\u627E\u4E0D\u5230\u79FB\u9664\u53CD\u5E94\u7684\u63A5\u53E3");
+  }
+  function reactionMatches(reaction, e) {
+    const em = reaction?.emoji;
+    if (!em) return false;
+    if (e.id) return String(em.id ?? "") === e.id;
+    return !em.id && String(em.name ?? "") === e.name;
+  }
+  function inspect(channelId, messageId, emojis) {
+    let reactions = [];
+    try {
+      const msg = MessageStore.getMessage?.(channelId, messageId);
+      reactions = Array.isArray(msg?.reactions) ? msg.reactions : [];
+    } catch {
+      reactions = [];
+    }
+    const missing = [];
+    const mine = [];
+    for (const e of emojis) {
+      const r = reactions.find((x) => reactionMatches(x, e));
+      if (r && (r.me || r.meBurst)) mine.push(e);
+      else missing.push(e);
+    }
+    return { allMine: emojis.length > 0 && missing.length === 0, missing, mine };
+  }
   function reactionBackendReady() {
-    if (typeof RestAPI?.put === "function") return true;
+    const api = RestAPI;
+    if (typeof api?.put === "function" || typeof api?.del === "function") return true;
     const actions = reactionActions();
     return Boolean(actions && typeof actions.addReaction === "function");
   }
-  async function addReactions(channelId, messageId, emojis, delayMs) {
-    const total = emojis.length;
+  async function toggleReactions(channelId, messageId, emojis, delayMs) {
+    const { allMine, missing } = inspect(channelId, messageId, emojis);
+    const action = allMine ? "remove" : "add";
+    const targets = allMine ? emojis : missing;
+    const total = targets.length;
     let done = 0;
     let failed = 0;
     for (let i = 0; i < total; i++) {
       try {
-        await addOne(channelId, messageId, emojis[i]);
+        if (action === "add") await addOne(channelId, messageId, targets[i]);
+        else await removeOne(channelId, messageId, targets[i]);
       } catch (err) {
         failed++;
-        log33.warn(`\u6DFB\u52A0\u53CD\u5E94 :${emojis[i].name}: \u5931\u8D25`, err);
+        log33.warn(`${action === "add" ? "\u6DFB\u52A0" : "\u79FB\u9664"}\u53CD\u5E94 :${targets[i].name}: \u5931\u8D25`, err);
       }
       done++;
       if (delayMs > 0 && i < total - 1) await sleep2(delayMs);
     }
-    return { total, done, failed };
+    return { action, total, done, failed };
   }
 
   // src/plugins/quick-react/ui/EmojiPicker.tsx
@@ -11435,7 +11481,6 @@ ${tail}`;
   var STYLE_ID2 = "halcyon-quick-react";
   var PICKER_CSS = `
 .hc-qr-grid{display:flex;flex-wrap:wrap;gap:6px;padding:2px}
-.hc-qr-guild{width:100%;margin:10px 2px 2px;font-size:12px;font-weight:600;opacity:.55}
 .hc-qr-tile{position:relative;width:42px;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent;background:var(--background-secondary,rgba(255,255,255,.04))}
 .hc-qr-tile:hover{background:var(--background-modifier-hover,rgba(255,255,255,.08))}
 .hc-qr-tile--sel{border-color:var(--brand-500,#5865f2)}
@@ -11443,8 +11488,10 @@ ${tail}`;
 .hc-qr-tile__uni{font-size:24px;line-height:1}
 .hc-qr-tile__badge{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--brand-500,#5865f2);color:#fff;font-size:10px;line-height:15px;text-align:center}
 .hc-qr-note{opacity:.55;font-size:12px;padding:6px 2px}
-.hc-qr-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding-top:10px}
 .hc-qr-count{margin-right:auto;opacity:.7;font-size:13px}
+.hc-qr-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding:10px var(--hc-space-4,16px)}
+.hc-qr-guildcount{margin-left:auto;opacity:.5;font-size:12px}
+.hc-qr-back{display:inline-flex;align-items:center;gap:4px;cursor:pointer;background:none;border:none;color:var(--hc-label-secondary,#b5bac1);font-size:13px;padding:0}
 .hc-qr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .hc-qr-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 6px 3px 5px;border-radius:8px;background:var(--background-secondary,rgba(255,255,255,.05));font-size:12px}
 .hc-qr-chip img{width:18px;height:18px;object-fit:contain}
@@ -11452,6 +11499,9 @@ ${tail}`;
 .hc-qr-chip__x:hover{opacity:1}
 .hc-qr-add{display:flex;gap:8px;align-items:center;margin-top:6px}
 .hc-qr-add .hc-input{flex:1}
+.hc-qr-msgbtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;cursor:pointer;color:var(--interactive-normal,#b5bac1);border-radius:4px}
+.hc-qr-msgbtn:hover{color:var(--interactive-hover,#dbdee1);background:var(--background-modifier-hover,rgba(255,255,255,.06))}
+.hc-qr-msgbtn svg{width:20px;height:20px}
 `;
   function ensureQuickReactStyles() {
     injectStyles();
@@ -11501,33 +11551,26 @@ ${tail}`;
       closeReactionPicker();
     }
   }
-  var MAX_TILES = 400;
   function PickerModal2({
     onAdd,
     onClose
   }) {
     const groups = useMemo(() => collectGuildEmojis(), []);
-    const [query, setQuery] = useState("");
+    const [view, setView] = useState({ mode: "guilds" });
+    const [guildQuery, setGuildQuery] = useState("");
+    const [emojiQuery, setEmojiQuery] = useState("");
     const [selected, setSelected] = useState({});
-    const q = query.trim().toLowerCase();
-    const filteredGroups = useMemo(() => {
-      if (!q) return groups;
-      return groups.map((g2) => ({ ...g2, emojis: g2.emojis.filter((e) => e.name.toLowerCase().includes(q)) })).filter((g2) => g2.emojis.length > 0);
-    }, [groups, q]);
-    const matches = useMemo(() => filteredGroups.flatMap((g2) => g2.emojis), [filteredGroups]);
     const selectedCount = Object.keys(selected).length;
-    const toggle = (e) => {
-      const key = reactionKey(e);
-      setSelected((prev) => {
-        const next = { ...prev };
-        if (next[key]) delete next[key];
-        else next[key] = e;
-        return next;
-      });
-    };
-    const selectAllMatches = () => setSelected((prev) => {
+    const toggle = (e) => setSelected((prev) => {
       const next = { ...prev };
-      for (const e of matches) next[reactionKey(e)] = e;
+      const key = reactionKey(e);
+      if (next[key]) delete next[key];
+      else next[key] = e;
+      return next;
+    });
+    const addMany = (list) => setSelected((prev) => {
+      const next = { ...prev };
+      for (const e of list) next[reactionKey(e)] = e;
       return next;
     });
     const confirm = () => {
@@ -11535,7 +11578,11 @@ ${tail}`;
       if (list.length) onAdd(list);
       onClose();
     };
-    let rendered = 0;
+    const openGuild = (g2) => {
+      setEmojiQuery("");
+      setView({ mode: "emojis", guildId: g2.guildId, guildName: g2.guildName });
+    };
+    const current2 = view.mode === "emojis" ? groups.find((g2) => g2.guildId === view.guildId) : void 0;
     return /* @__PURE__ */ React.createElement(
       "div",
       {
@@ -11547,51 +11594,18 @@ ${tail}`;
           if (e.target === e.currentTarget) onClose();
         }
       },
-      /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker" }, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-emote-picker__title" }, "\u4ECE\u670D\u52A1\u5668\u6311\u9009\u53CD\u5E94\u8868\u60C5"), /* @__PURE__ */ React.createElement("button", { className: "hc-emote-picker__close", onClick: onClose, "aria-label": "\u5173\u95ED" }, /* @__PURE__ */ React.createElement(XmarkIcon, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__search" }, /* @__PURE__ */ React.createElement(SearchIcon, { size: 16, className: "hc-emote-picker__search-icon" }), /* @__PURE__ */ React.createElement(
-        "input",
+      /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker" }, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__head" }, view.mode === "emojis" ? /* @__PURE__ */ React.createElement("button", { className: "hc-qr-back", onClick: () => setView({ mode: "guilds" }) }, /* @__PURE__ */ React.createElement(ChevronLeftIcon, { size: 16 }), " \u670D\u52A1\u5668") : /* @__PURE__ */ React.createElement("span", { className: "hc-emote-picker__title" }, "\u6311\u9009\u53CD\u5E94\u8868\u60C5"), /* @__PURE__ */ React.createElement("button", { className: "hc-emote-picker__close", onClick: onClose, "aria-label": "\u5173\u95ED" }, /* @__PURE__ */ React.createElement(XmarkIcon, { size: 18 }))), view.mode === "guilds" ? /* @__PURE__ */ React.createElement(GuildList, { groups, query: guildQuery, setQuery: setGuildQuery, onOpen: openGuild }) : /* @__PURE__ */ React.createElement(
+        EmojiList,
         {
-          className: "hc-input",
-          placeholder: "\u641C\u7D22\u8868\u60C5\u540D\uFF0C\u6BD4\u5982 baka\u2026",
-          value: query,
-          autoFocus: true,
-          onChange: (e) => setQuery(e.currentTarget.value)
+          group: current2,
+          guildName: view.guildName,
+          query: emojiQuery,
+          setQuery: setEmojiQuery,
+          selected,
+          toggle,
+          addMany
         }
-      )), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__list" }, matches.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__empty" }, groups.length === 0 ? "\u6CA1\u8BFB\u5230\u670D\u52A1\u5668\u8868\u60C5\uFF08\u5148\u8FDB\u51E0\u4E2A\u6709\u81EA\u5B9A\u4E49\u8868\u60C5\u7684\u670D\u52A1\u5668\uFF09" : "\u6CA1\u6709\u5339\u914D\u7684\u8868\u60C5") : filteredGroups.map((g2) => {
-        if (rendered >= MAX_TILES) return null;
-        const slice = g2.emojis.slice(0, MAX_TILES - rendered);
-        rendered += slice.length;
-        return /* @__PURE__ */ React.createElement("div", { key: g2.guildId, className: "hc-qr-grid" }, /* @__PURE__ */ React.createElement("div", { className: "hc-qr-guild" }, g2.guildName), slice.map((e) => {
-          const key = reactionKey(e);
-          const url = emojiImageUrl(e, 40);
-          const sel = Boolean(selected[key]);
-          return /* @__PURE__ */ React.createElement(
-            "div",
-            {
-              key,
-              className: `hc-qr-tile${sel ? " hc-qr-tile--sel" : ""}`,
-              role: "button",
-              tabIndex: 0,
-              title: `:${e.name}:`,
-              onClick: () => toggle(e),
-              onKeyDown: (ev) => {
-                if (ev.key === "Enter") toggle(e);
-              }
-            },
-            url ? /* @__PURE__ */ React.createElement("img", { src: url, alt: e.name }) : /* @__PURE__ */ React.createElement("span", { className: "hc-qr-tile__uni" }, e.name),
-            sel && /* @__PURE__ */ React.createElement("span", { className: "hc-qr-tile__badge" }, "\u2713")
-          );
-        }));
-      }), rendered >= MAX_TILES && /* @__PURE__ */ React.createElement("div", { className: "hc-qr-note" }, "\u8868\u60C5\u592A\u591A\uFF0C\u53EA\u663E\u793A\u4E86\u524D ", MAX_TILES, " \u4E2A\uFF0C\u7528\u641C\u7D22\u7F29\u5C0F\u8303\u56F4\u3002")), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-foot" }, /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, "\u5DF2\u9009 ", selectedCount, " \u4E2A"), /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          className: "hc-btn hc-btn--secondary hc-btn--sm",
-          onClick: selectAllMatches,
-          disabled: matches.length === 0
-        },
-        "\u5168\u9009\u5339\u914D\uFF08",
-        matches.length,
-        "\uFF09"
-      ), /* @__PURE__ */ React.createElement(
+      ), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-foot" }, /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, "\u5DF2\u9009 ", selectedCount, " \u4E2A"), /* @__PURE__ */ React.createElement(
         "button",
         {
           className: "hc-btn hc-btn--primary hc-btn--sm",
@@ -11603,6 +11617,201 @@ ${tail}`;
         " \u4E2A"
       )))
     );
+  }
+  function GuildList({
+    groups,
+    query,
+    setQuery,
+    onOpen
+  }) {
+    const q = query.trim().toLowerCase();
+    const filtered = q ? groups.filter((g2) => g2.guildName.toLowerCase().includes(q)) : groups;
+    return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__search" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        className: "hc-input",
+        placeholder: "\u641C\u7D22\u670D\u52A1\u5668\u2026",
+        value: query,
+        onChange: (e) => setQuery(e.currentTarget.value)
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__list" }, filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__empty" }, groups.length === 0 ? "\u6CA1\u8BFB\u5230\u670D\u52A1\u5668\u8868\u60C5\uFF08\u5148\u8FDB\u51E0\u4E2A\u6709\u81EA\u5B9A\u4E49\u8868\u60C5\u7684\u670D\u52A1\u5668\uFF09" : "\u6CA1\u6709\u5339\u914D\u7684\u670D\u52A1\u5668") : filtered.map((g2) => {
+      const icon = guildIconUrl(g2.guildId, g2.guildIcon, 48);
+      return /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key: g2.guildId,
+          className: "hc-emote-picker__item",
+          role: "button",
+          tabIndex: 0,
+          onClick: () => onOpen(g2),
+          onKeyDown: (e) => {
+            if (e.key === "Enter") onOpen(g2);
+          }
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__icon" }, icon ? /* @__PURE__ */ React.createElement("img", { src: icon, alt: "" }) : g2.guildName.charAt(0).toUpperCase()),
+        /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__name" }, g2.guildName),
+        /* @__PURE__ */ React.createElement("span", { className: "hc-qr-guildcount" }, g2.emojis.length)
+      );
+    })));
+  }
+  function EmojiList({
+    group,
+    guildName,
+    query,
+    setQuery,
+    selected,
+    toggle,
+    addMany
+  }) {
+    const emojis = group?.emojis ?? [];
+    const q = query.trim().toLowerCase();
+    const filtered = q ? emojis.filter((e) => e.name.toLowerCase().includes(q)) : emojis;
+    return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__search" }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        className: "hc-input",
+        placeholder: `\u5728 ${guildName} \u91CC\u641C\u2026`,
+        value: query,
+        onChange: (e) => setQuery(e.currentTarget.value)
+      }
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-add" }, /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, filtered.length, " \u4E2A"), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "hc-btn hc-btn--secondary hc-btn--sm",
+        onClick: () => addMany(filtered),
+        disabled: filtered.length === 0
+      },
+      "\u5168\u9009\u8FD9\u4E9B"
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__list" }, filtered.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__empty" }, "\u6CA1\u6709\u5339\u914D\u7684\u8868\u60C5") : /* @__PURE__ */ React.createElement("div", { className: "hc-qr-grid" }, filtered.map((e) => {
+      const key = reactionKey(e);
+      const url = emojiImageUrl(e, 40);
+      const sel = Boolean(selected[key]);
+      return /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          key,
+          className: `hc-qr-tile${sel ? " hc-qr-tile--sel" : ""}`,
+          role: "button",
+          tabIndex: 0,
+          title: `:${e.name}:`,
+          onClick: () => toggle(e),
+          onKeyDown: (ev) => {
+            if (ev.key === "Enter") toggle(e);
+          }
+        },
+        url ? /* @__PURE__ */ React.createElement("img", { src: url, alt: e.name }) : /* @__PURE__ */ React.createElement("span", { className: "hc-qr-tile__uni" }, e.name),
+        sel && /* @__PURE__ */ React.createElement("span", { className: "hc-qr-tile__badge" }, "\u2713")
+      );
+    }))));
+  }
+
+  // src/plugins/quick-react/toolbar.ts
+  var log35 = logger("quick-react");
+  var BTN_CLASS = "hc-qr-msgbtn";
+  var COALESCE_MS = 120;
+  var SWEEP_MS = 1500;
+  var TOOLBAR_SELECTORS = ['[class*="buttonContainer"]', '[class*="buttons_"]'];
+  var ICON_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.3c.9 1.1 2.1 1.7 3.5 1.7s2.6-.6 3.5-1.7"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>';
+  var observer;
+  var sweepTimer;
+  var pending;
+  var onClick;
+  var enabled;
+  function resolveMessage(node) {
+    for (const props of getFiberPropsChain(node, 20)) {
+      const m = props?.message;
+      const channelId = m?.channel_id ?? m?.channelId;
+      if (m?.id && channelId) return { channelId: String(channelId), messageId: String(m.id) };
+    }
+    return null;
+  }
+  function makeButton(channelId, messageId) {
+    const btn = document.createElement("div");
+    btn.className = BTN_CLASS;
+    btn.setAttribute("role", "button");
+    btn.setAttribute("tabindex", "0");
+    btn.setAttribute("aria-label", "\u4E00\u952E\u53CD\u5E94");
+    btn.title = "\u4E00\u952E\u53CD\u5E94";
+    btn.innerHTML = ICON_SVG;
+    const fire = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      onClick?.(channelId, messageId);
+    };
+    btn.addEventListener("click", fire);
+    btn.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") fire(ev);
+    });
+    return btn;
+  }
+  function toolbars() {
+    for (const selector of TOOLBAR_SELECTORS) {
+      try {
+        const nodes = document.querySelectorAll(selector);
+        if (nodes.length > 0) return Array.from(nodes);
+      } catch {
+      }
+    }
+    return [];
+  }
+  function removeAll() {
+    for (const btn of Array.from(document.querySelectorAll(`.${BTN_CLASS}`))) btn.remove();
+  }
+  function scan() {
+    if (enabled && !enabled()) {
+      removeAll();
+      return;
+    }
+    for (const bar of toolbars()) {
+      try {
+        if (bar.querySelector(`.${BTN_CLASS}`)) continue;
+        const msg = resolveMessage(bar);
+        if (!msg) continue;
+        bar.insertBefore(makeButton(msg.channelId, msg.messageId), bar.firstChild);
+      } catch (err) {
+        log35.debug("\u6CE8\u5165 hover \u6309\u94AE\u5931\u8D25", err);
+      }
+    }
+  }
+  function schedule2() {
+    if (pending) return;
+    pending = setTimeout(() => {
+      pending = void 0;
+      scan();
+    }, COALESCE_MS);
+  }
+  function startToolbarButton2(click, isEnabled) {
+    ensureQuickReactStyles();
+    onClick = click;
+    enabled = isEnabled;
+    if (typeof document !== "undefined" && document.body) {
+      try {
+        observer = new MutationObserver(schedule2);
+        observer.observe(document.body, { childList: true, subtree: true });
+      } catch (err) {
+        log35.warn("MutationObserver \u6302\u63A5\u5931\u8D25\uFF0C\u6539\u7528\u8F6E\u8BE2\u515C\u5E95", err);
+      }
+    }
+    sweepTimer = setInterval(schedule2, SWEEP_MS);
+    scan();
+  }
+  function stopToolbarButton2() {
+    observer?.disconnect();
+    observer = void 0;
+    if (sweepTimer) {
+      clearInterval(sweepTimer);
+      sweepTimer = void 0;
+    }
+    if (pending) {
+      clearTimeout(pending);
+      pending = void 0;
+    }
+    removeAll();
+    onClick = void 0;
+    enabled = void 0;
+  }
+  function refreshToolbarButtons() {
+    scan();
   }
 
   // src/plugins/quick-react/ui/ConfigField.tsx
@@ -11673,7 +11882,7 @@ ${tail}`;
   }
 
   // src/plugins/quick-react/index.tsx
-  var log35 = logger("quick-react");
+  var log36 = logger("quick-react");
   var settings11 = defineSettings({
     reactions: {
       group: "\u53CD\u5E94",
@@ -11694,7 +11903,7 @@ ${tail}`;
       description: "\u4E00\u4E2A\u4E2A\u70B9\uFF0C\u95F4\u9694\u592A\u77ED\u4F1A\u88AB Discord \u9650\u6D41\u5BFC\u81F4\u90E8\u5206\u70B9\u4E0D\u4E0A\u3002\u9ED8\u8BA4 300\u3002"
     }
   });
-  function resolveMessage(node) {
+  function resolveMessage2(node) {
     if (!node) return null;
     for (const props of getFiberPropsChain(node, 16)) {
       const m = props?.message;
@@ -11705,29 +11914,35 @@ ${tail}`;
     }
     return null;
   }
-  var applying = false;
-  async function applyReactions(channelId, messageId) {
-    if (applying) return;
+  var running = false;
+  async function runToggle(channelId, messageId) {
+    if (running) return;
     const list = settings11.store.reactions ?? [];
-    if (list.length === 0) return;
-    applying = true;
-    showToast(`\u6B63\u5728\u6DFB\u52A0 ${list.length} \u4E2A\u53CD\u5E94\u2026`, "info");
+    if (list.length === 0) {
+      showToast("\u5148\u5728\u8BBE\u7F6E\u91CC\u914D\u7F6E\u53CD\u5E94\u8868\u60C5", "info");
+      return;
+    }
+    running = true;
     try {
-      const r = await addReactions(channelId, messageId, list, settings11.store.delayMs);
-      if (r.failed > 0) {
-        showToast(`\u5DF2\u6DFB\u52A0 ${r.done - r.failed}/${r.total}\uFF0C${r.failed} \u4E2A\u5931\u8D25`, "failure");
+      const r = await toggleReactions(channelId, messageId, list, settings11.store.delayMs);
+      const verb = r.action === "add" ? "\u6DFB\u52A0" : "\u53D6\u6D88";
+      if (r.total === 0) {
+        showToast("\u6CA1\u6709\u9700\u8981\u53D8\u52A8\u7684\u53CD\u5E94", "info");
+      } else if (r.failed > 0) {
+        showToast(`\u5DF2${verb} ${r.done - r.failed}/${r.total}\uFF0C${r.failed} \u4E2A\u5931\u8D25`, "failure");
       } else {
-        showToast(`\u5DF2\u6DFB\u52A0 ${r.done} \u4E2A\u53CD\u5E94`, "success");
+        showToast(`\u5DF2${verb} ${r.done} \u4E2A\u53CD\u5E94`, "success");
       }
+      refreshToolbarButtons();
     } catch (err) {
-      log35.error("\u4E00\u952E\u53CD\u5E94\u5931\u8D25", err);
+      log36.error("\u4E00\u952E\u53CD\u5E94\u5931\u8D25", err);
       showToast("\u4E00\u952E\u53CD\u5E94\u5931\u8D25\uFF0C\u770B\u63A7\u5236\u53F0\u65E5\u5FD7", "failure");
     } finally {
-      applying = false;
+      running = false;
     }
   }
   function menuPatch(children) {
-    const target = resolveMessage(getContextMenuTarget());
+    const target = resolveMessage2(getContextMenuTarget());
     if (!target) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) return;
@@ -11737,7 +11952,7 @@ ${tail}`;
         id: "halcyon-quick-react",
         label: count2 > 0 ? `\u4E00\u952E\u53CD\u5E94\uFF08${count2} \u4E2A\uFF09` : "\u4E00\u952E\u53CD\u5E94\uFF1A\u5148\u5728\u8BBE\u7F6E\u91CC\u914D\u7F6E",
         disabled: count2 === 0,
-        action: () => void applyReactions(target.channelId, target.messageId)
+        action: () => void runToggle(target.channelId, target.messageId)
       })
     );
   }
@@ -11751,12 +11966,18 @@ ${tail}`;
     settings: settings11,
     start() {
       unpatchers3.push(addContextMenuPatch("message", menuPatch));
+      startToolbarButton2(
+        (channelId, messageId) => void runToggle(channelId, messageId),
+        () => (settings11.store.reactions ?? []).length > 0
+      );
+      unpatchers3.push(settings11.subscribe("reactions", () => refreshToolbarButtons()));
       if (!reactionBackendReady()) {
-        log35.warn("\u6CA1\u89E3\u6790\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF0C\u70B9\u51FB\u65F6\u4F1A\u8D70\u515C\u5E95\u6216\u62A5\u9519\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
+        log36.warn("\u6CA1\u89E3\u6790\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF0C\u70B9\u51FB\u65F6\u4F1A\u8D70\u515C\u5E95\u6216\u62A5\u9519\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
       }
-      log35.info("\u4E00\u952E\u53CD\u5E94\u5C31\u7EEA \u2014 \u53F3\u952E\u6D88\u606F\u5373\u53EF");
+      log36.info("\u4E00\u952E\u53CD\u5E94\u5C31\u7EEA \u2014 \u53F3\u952E\u6D88\u606F\u6216\u70B9\u60AC\u505C\u5DE5\u5177\u680F\u7684\u5C0F\u7B11\u8138");
     },
     stop() {
+      stopToolbarButton2();
       for (const un of unpatchers3) {
         try {
           un();
@@ -11776,12 +11997,12 @@ ${tail}`;
   });
 
   // src/core/flux/index.ts
-  var log36 = logger("flux");
+  var log37 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log36.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log37.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -11793,7 +12014,7 @@ ${tail}`;
         try {
           listener(action);
         } catch (err) {
-          log36.error(`listener for ${type} threw`, err);
+          log37.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -11802,7 +12023,7 @@ ${tail}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log36.error(`could not subscribe to ${type}`, err);
+      log37.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -11813,7 +12034,7 @@ ${tail}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log36.error(`could not unsubscribe from ${type}`, err);
+      log37.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -11844,13 +12065,13 @@ ${tail}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log36.error("dispatch failed", action?.type, err);
+        log37.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log37 = logger("mark-all-read");
+  var log38 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -11864,7 +12085,7 @@ ${tail}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log37.warn(`could not read channels for guild ${guildId}`, err);
+        log38.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -11890,16 +12111,16 @@ ${tail}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log37.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log38.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log37.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log38.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log37.warn("could not describe getChannels shape", err);
+          log38.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -11919,14 +12140,14 @@ ${tail}`;
           }
         }
       } catch (err) {
-        log37.warn(`could not read joined threads for guild ${guildId}`, err);
+        log38.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log37.info(
+    log38.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -11943,9 +12164,9 @@ ${tail}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log37.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log38.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log37.info("nothing unread; skipping BULK_ACK");
+      log38.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -11953,12 +12174,12 @@ ${tail}`;
       context: "APP",
       channels
     });
-    log37.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log38.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log38 = logger("mark-all-read");
+  var log39 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -11983,7 +12204,7 @@ ${tail}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log38.error("mark all read failed", err);
+        log39.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -11992,7 +12213,7 @@ ${tail}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log39 = logger("mark-all-read");
+  var log40 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -12003,7 +12224,7 @@ ${tail}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log39.error("mark all read failed", err);
+      log40.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -12053,7 +12274,7 @@ ${tail}`;
   }
   function openQuestHub() {
     if (navigate("/quest-home")) return;
-    log39.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
+    log40.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
   }
   function QuestRailButton() {
     const count2 = useOpenQuestCount();
@@ -12124,7 +12345,7 @@ ${tail}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log39.info("mark-all-read ready");
+      log40.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -12132,7 +12353,7 @@ ${tail}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log40 = logger("silent-typing");
+  var log41 = logger("silent-typing");
   var settings12 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
@@ -12194,7 +12415,7 @@ ${tail}`;
         return void 0;
       }
     } catch (err) {
-      log40.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log41.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
@@ -12218,9 +12439,9 @@ ${tail}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log40.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log41.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log40.warn(
+      log41.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -12253,7 +12474,7 @@ ${tail}`;
       active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log40.warn(
+        log41.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -12263,17 +12484,17 @@ ${tail}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log40.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log41.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log40.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log41.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log40.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings12.store.scope}\uFF09`);
+      log41.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings12.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -12283,7 +12504,7 @@ ${tail}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log40.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log41.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -12423,7 +12644,7 @@ ${tail}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log41 = logger("member-count");
+  var log42 = logger("member-count");
   function memo(resolve) {
     let cached4;
     return () => cached4 ??= resolve();
@@ -12517,9 +12738,9 @@ ${tail}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log41.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log42.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log41.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log42.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -12671,7 +12892,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log42 = logger("member-count");
+  var log43 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -12737,7 +12958,7 @@ ${tail}`;
     try {
       hit.element.insertBefore(host6, hit.element.firstChild);
     } catch (err) {
-      log42.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log43.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
@@ -12745,11 +12966,11 @@ ${tail}`;
       mounted2.set(variant, { host: host6, unmount: unmount6, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log42.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log43.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
       host6.remove();
-      log42.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      log43.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
   function ensureMounted2() {
@@ -12770,7 +12991,7 @@ ${tail}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log42.warn(
+      log43.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -12787,7 +13008,7 @@ ${tail}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log42.warn(
+    log43.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -12811,7 +13032,7 @@ ${tail}`;
         ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log42.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
+      log43.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -12827,7 +13048,7 @@ ${tail}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log42.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log43.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12928,7 +13149,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log43 = logger("who-reacted");
+  var log44 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -12990,8 +13211,8 @@ ${tail}`;
     const key = cacheKey(target);
     const fresh = cachedReactors(target);
     if (fresh) return Promise.resolve(fresh);
-    const pending = inFlight2.get(key);
-    if (pending) return pending;
+    const pending2 = inFlight2.get(key);
+    if (pending2) return pending2;
     const capped = Math.max(1, Math.min(100, Math.trunc(limit) || 20));
     const url = `/channels/${target.channelId}/messages/${target.messageId}/reactions/${encodeURIComponent(emojiParam(target.emoji))}?limit=${capped}` + (target.type === 1 ? "&type=1" : "");
     const request = (async () => {
@@ -13011,7 +13232,7 @@ ${tail}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log43.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log44.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight2.set(key, guarded);
@@ -13073,7 +13294,7 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log44 = logger("who-reacted");
+  var log45 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
@@ -13142,12 +13363,12 @@ ${tail}`;
       }
       fillHost(host6, reactors, target.count);
     } catch (err) {
-      log44.debug("inline avatars: fetch failed", err);
+      log45.debug("inline avatars: fetch failed", err);
       host6.remove();
       DECORATED.delete(pill);
     }
   }
-  function scan() {
+  function scan2() {
     if (!settings14.store.inlineAvatars) return;
     let pills;
     try {
@@ -13164,8 +13385,8 @@ ${tail}`;
   function startInlineAvatars() {
     if (!settings14.store.inlineAvatars) return;
     stopInlineAvatars();
-    scan();
-    scanTimer = setInterval(scan, 1500);
+    scan2();
+    scanTimer = setInterval(scan2, 1500);
     if (typeof MutationObserver === "function") {
       mutationObserver = new MutationObserver((records) => {
         for (const record2 of records) {
@@ -13181,7 +13402,7 @@ ${tail}`;
       } catch {
       }
     }
-    log44.info("inline reactor avatars: enabled");
+    log45.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -13202,14 +13423,14 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log45 = logger("who-reacted");
+  var log46 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
   var host5 = null;
   var unmount5 = null;
   var anchor = null;
-  var observer = null;
+  var observer2 = null;
   var anchorTimer;
   var hovered = null;
   var showTimer;
@@ -13242,12 +13463,12 @@ ${tail}`;
       clearInterval(anchorTimer);
       anchorTimer = void 0;
     }
-    if (observer) {
+    if (observer2) {
       try {
-        observer.disconnect();
+        observer2.disconnect();
       } catch {
       }
-      observer = null;
+      observer2 = null;
     }
     if (unmount5) {
       try {
@@ -13285,14 +13506,14 @@ ${tail}`;
     try {
       unmount5 = mountDetached(React.createElement(ReactorCard, { target }), host5);
     } catch (err) {
-      log45.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log46.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide2();
       return;
     }
     reposition2();
     if (typeof ResizeObserver === "function") {
-      observer = new ResizeObserver(() => reposition2());
-      observer.observe(host5);
+      observer2 = new ResizeObserver(() => reposition2());
+      observer2.observe(host5);
     } else {
       setTimeout(reposition2, 120);
       setTimeout(reposition2, 400);
@@ -13413,7 +13634,7 @@ ${tail}`;
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log45.info(
+      log46.info(
         `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings14.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings14.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
@@ -13431,7 +13652,7 @@ ${tail}`;
       altDown = false;
       hide2();
       clearCache();
-      log45.info("\u5DF2\u505C\u7528");
+      log46.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13551,7 +13772,7 @@ ${tail}`;
     }
     return fromClientStatuses(userId);
   }
-  var COALESCE_MS = 400;
+  var COALESCE_MS2 = 400;
   var version = 0;
   var scheduled;
   var subscribers2 = /* @__PURE__ */ new Set();
@@ -13575,7 +13796,7 @@ ${tail}`;
         } catch {
         }
       }
-    }, COALESCE_MS);
+    }, COALESCE_MS2);
   }
   function resetPresenceBus() {
     if (scheduled) {
@@ -13722,7 +13943,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log46 = logger("platform-indicators");
+  var log47 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -13790,7 +14011,7 @@ ${tail}`;
       return true;
     } catch (err) {
       host6.remove();
-      log46.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      log47.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -13846,12 +14067,12 @@ ${tail}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log46.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log47.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
   }
-  function scan2() {
+  function scan3() {
     prune();
     const s = settings15.store;
     const selfId = currentUserId3();
@@ -13860,7 +14081,7 @@ ${tail}`;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log46.warn(
+      log47.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -13884,24 +14105,24 @@ ${tail}`;
       injectStyles();
       warnedNoAnchor2 = false;
       lastSelector2.clear();
-      scan2();
-      scanTimer2 = setInterval(scan2, SCAN_MS);
+      scan3();
+      scanTimer2 = setInterval(scan3, SCAN_MS);
       unsubscribes3 = WATCHED_ACTIONS2.map((type) => flux.subscribe(type, bumpPresence));
       unsubscribes3.push(
         settings15.subscribe("inMessages", (on) => {
           if (!on) detachKind("message");
-          else scan2();
+          else scan3();
         }),
         settings15.subscribe("inMemberList", (on) => {
           if (!on) detachKind("member");
-          else scan2();
+          else scan3();
         }),
         settings15.subscribe("colorize", () => bumpPresence()),
         settings15.subscribe("iconSize", () => bumpPresence()),
         settings15.subscribe("ignoreBots", () => bumpPresence()),
         settings15.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log47.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -13919,7 +14140,7 @@ ${tail}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log47.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13986,7 +14207,7 @@ ${tail}`;
   ];
 
   // src/core/probe.ts
-  var log47 = logger("probe");
+  var log48 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -14009,8 +14230,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.9" : "dev",
-      build: true ? "2026-09-28 09:55:15" : "dev",
+      version: true ? "0.7.10" : "dev",
+      build: true ? "2026-09-28 10:19:42" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14023,14 +14244,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log47.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log48.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log48 = logger("userscript");
+  var log49 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -14041,8 +14262,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.9" : "dev",
-        build: true ? "2026-09-28 09:55:15" : "dev",
+        version: true ? "0.7.10" : "dev",
+        build: true ? "2026-09-28 10:19:42" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -14059,6 +14280,6 @@ ${tail}`;
       };
     } catch {
     }
-    log48.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log48.error("userscript boot failed", err));
+    log49.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log49.error("userscript boot failed", err));
 })();
