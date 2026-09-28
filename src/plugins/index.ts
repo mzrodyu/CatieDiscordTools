@@ -18,6 +18,7 @@ import customRpc from "./custom-rpc";
 import imageZoom from "./image-zoom";
 import consoleCleaner from "./console-cleaner";
 import emoteCloner from "./emote-cloner";
+import quickReact from "./quick-react";
 import markAllRead from "./mark-all-read";
 import silentTyping from "./silent-typing";
 import memberCount from "./member-count";
@@ -38,6 +39,7 @@ export const plugins: Plugin[] = [
   imageZoom,
   consoleCleaner,
   emoteCloner,
+  quickReact,
   markAllRead,
   silentTyping,
   memberCount,

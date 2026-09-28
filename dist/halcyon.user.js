@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.8
+// @version      0.7.9
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-09-27 06:07:43" : "dev";
-      const version2 = true ? "0.7.8" : "dev";
+      const build = true ? "2026-09-28 09:55:15" : "dev";
+      const version2 = true ? "0.7.9" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3747,6 +3747,9 @@ ${components_default}`;
   function GamepadIcon(props) {
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M7.5 7.5h9a5 5 0 014.9 6l-.5 2.6A2.5 2.5 0 0118.45 18c-.9 0-1.73-.48-2.17-1.26L15.5 15.5h-7l-.78 1.24A2.5 2.5 0 015.55 18a2.5 2.5 0 01-2.45-1.9l-.5-2.6a5 5 0 014.9-6z" }), /* @__PURE__ */ React.createElement("path", { d: "M8.25 10.5v2.25M7.12 11.6h2.26" }), /* @__PURE__ */ React.createElement("path", { d: "M15.25 11h.01M17 12.75h.01" }));
   }
+  function ReactionIcon(props) {
+    return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "8.25" }), /* @__PURE__ */ React.createElement("path", { d: "M9 9.75h.01M15 9.75h.01" }), /* @__PURE__ */ React.createElement("path", { d: "M8.5 14.25a4.2 4.2 0 007 0" }));
+  }
   function EyeIcon(props) {
     return /* @__PURE__ */ React.createElement(Glyph, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M2.75 12s3.4-5.75 9.25-5.75S21.25 12 21.25 12s-3.4 5.75-9.25 5.75S2.75 12 2.75 12z" }), /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "12", r: "2.75" }));
   }
@@ -4112,17 +4115,17 @@ ${components_default}`;
     }, []);
     return list;
   }
-  function useSettingsSnapshot(settings15) {
+  function useSettingsSnapshot(settings16) {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubscribes4 = Object.keys(settings15.schema).map(
-        (key) => settings15.subscribe(key, () => bump((n) => n + 1))
+      const unsubscribes4 = Object.keys(settings16.schema).map(
+        (key) => settings16.subscribe(key, () => bump((n) => n + 1))
       );
       return () => {
         for (const off of unsubscribes4) off();
       };
-    }, [settings15]);
-    return settings15.store;
+    }, [settings16]);
+    return settings16.store;
   }
 
   // src/ui/settings/SettingsForm.tsx
@@ -4138,16 +4141,16 @@ ${components_default}`;
       return false;
     }
   }
-  function SettingsForm({ settings: settings15 }) {
-    const store = useSettingsSnapshot(settings15);
+  function SettingsForm({ settings: settings16 }) {
+    const store = useSettingsSnapshot(settings16);
     const keys = useMemo(
-      () => Object.keys(settings15.schema).filter((key) => !settings15.schema[key].hidden),
-      [settings15]
+      () => Object.keys(settings16.schema).filter((key) => !settings16.schema[key].hidden),
+      [settings16]
     );
     const [draft, setDraft] = useState(() => seed(store, keys));
     useEffect(() => {
       setDraft(seed(store, keys));
-    }, [settings15]);
+    }, [settings16]);
     if (keys.length === 0) return null;
     const dirty = keys.filter((key) => !equal(draft[key], store[key]));
     const save = () => {
@@ -4156,7 +4159,7 @@ ${components_default}`;
     const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
-      const title = settings15.schema[key].group ?? "\u8BBE\u7F6E";
+      const title = settings16.schema[key].group ?? "\u8BBE\u7F6E";
       const last = sections[sections.length - 1];
       if (last && last.title === title) last.keys.push(key);
       else sections.push({ title, keys: [key] });
@@ -4165,7 +4168,7 @@ ${components_default}`;
       SettingField,
       {
         key,
-        def: settings15.schema[key],
+        def: settings16.schema[key],
         value: draft[key],
         onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
@@ -4461,7 +4464,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.8" : "dev";
+    return true ? "0.7.9" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4539,7 +4542,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.8" : "dev";
+    const version2 = true ? "0.7.9" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     React.useEffect(() => {
       let alive = true;
@@ -6495,16 +6498,16 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
     } catch {
     }
-    let guildName;
+    let guildName2;
     try {
       if (gid) {
         const guild = GuildStore.getGuild?.(gid);
-        if (guild?.name) guildName = String(guild.name);
+        if (guild?.name) guildName2 = String(guild.name);
       }
     } catch {
     }
     const channel = channelName ? `#${channelName}` : isDM ? "\u79C1\u4FE1" : `#${channelId}`;
-    return { guild: guildName, channel };
+    return { guild: guildName2, channel };
   }
   function Location({ channelId, guildId }) {
     const loc = resolveLocation(channelId, guildId);
@@ -11306,13 +11309,479 @@ ${tail}`;
     }
   });
 
+  // src/plugins/quick-react/emoji.ts
+  function emojiImageUrl(e, size2 = 32) {
+    return e.id ? emojiCdnUrl(e.id, e.animated, size2) : null;
+  }
+  function reactionKey(e) {
+    return e.id ? `${e.name}:${e.id}` : e.name;
+  }
+  function guildName(guildId) {
+    try {
+      const g2 = GuildStore.getGuild?.(guildId) ?? (GuildStore.getGuilds?.() ?? {})[guildId];
+      return String(g2?.name ?? guildId);
+    } catch {
+      return guildId;
+    }
+  }
+  function fromRecord(e) {
+    if (!e?.id || !e?.name) return null;
+    if (e.available === false) return null;
+    return { id: String(e.id), name: String(e.name), animated: Boolean(e.animated) };
+  }
+  function collectGuildEmojis() {
+    const groups = [];
+    let byGuild = {};
+    try {
+      byGuild = EmojiStore.getGuilds?.() ?? {};
+    } catch {
+      byGuild = {};
+    }
+    const push2 = (guildId, list) => {
+      const emojis = [];
+      for (const e of list) {
+        const r = fromRecord(e);
+        if (r) emojis.push(r);
+      }
+      if (emojis.length) groups.push({ guildId, guildName: guildName(guildId), emojis });
+    };
+    const entries = Object.entries(byGuild);
+    if (entries.length) {
+      for (const [guildId, data] of entries) {
+        const list = Array.isArray(data) ? data : Array.isArray(data?.emojis) ? data.emojis : [];
+        push2(guildId, list);
+      }
+    } else {
+      try {
+        const guilds = GuildStore.getGuilds?.() ?? {};
+        for (const guildId of Object.keys(guilds)) {
+          const list = EmojiStore.getGuildEmoji?.(guildId) ?? [];
+          if (Array.isArray(list)) push2(guildId, list);
+        }
+      } catch {
+      }
+    }
+    groups.sort((a, b) => a.guildName.localeCompare(b.guildName, "zh-CN"));
+    return groups;
+  }
+  function parseManualEmoji(raw) {
+    const s = raw.trim();
+    if (!s) return null;
+    const m = /^<(a)?:(\w+):(\d+)>$/.exec(s);
+    if (m) return { id: m[3], name: m[2], animated: m[1] === "a" };
+    if (/^\d{5,25}$/.test(s)) return null;
+    return { id: "", name: s, animated: false };
+  }
+
+  // src/plugins/quick-react/send.ts
+  var log33 = logger("quick-react");
+  var cachedActions;
+  function reactionActions() {
+    if (cachedActions && typeof cachedActions.addReaction === "function") return cachedActions;
+    cachedActions = find(
+      (m) => typeof m?.addReaction === "function" && typeof m?.removeReaction === "function" && typeof m?.__halcyon_probe__ === "undefined"
+    );
+    return cachedActions;
+  }
+  function sleep2(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  async function addOne(channelId, messageId, e) {
+    const api = RestAPI;
+    if (api && typeof api.put === "function") {
+      await api.put({
+        url: `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(reactionKey(e))}/@me`,
+        oldFormErrors: true
+      });
+      return;
+    }
+    const actions = reactionActions();
+    if (actions && typeof actions.addReaction === "function") {
+      await Promise.resolve(
+        actions.addReaction(channelId, messageId, {
+          id: e.id || void 0,
+          name: e.name,
+          animated: e.animated
+        })
+      );
+      return;
+    }
+    throw new Error("\u627E\u4E0D\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF08RestAPI / reaction action \u90FD\u6CA1\u89E3\u6790\u5230\uFF09");
+  }
+  function reactionBackendReady() {
+    if (typeof RestAPI?.put === "function") return true;
+    const actions = reactionActions();
+    return Boolean(actions && typeof actions.addReaction === "function");
+  }
+  async function addReactions(channelId, messageId, emojis, delayMs) {
+    const total = emojis.length;
+    let done = 0;
+    let failed = 0;
+    for (let i = 0; i < total; i++) {
+      try {
+        await addOne(channelId, messageId, emojis[i]);
+      } catch (err) {
+        failed++;
+        log33.warn(`\u6DFB\u52A0\u53CD\u5E94 :${emojis[i].name}: \u5931\u8D25`, err);
+      }
+      done++;
+      if (delayMs > 0 && i < total - 1) await sleep2(delayMs);
+    }
+    return { total, done, failed };
+  }
+
+  // src/plugins/quick-react/ui/EmojiPicker.tsx
+  var log34 = logger("quick-react");
+  var STYLE_ID2 = "halcyon-quick-react";
+  var PICKER_CSS = `
+.hc-qr-grid{display:flex;flex-wrap:wrap;gap:6px;padding:2px}
+.hc-qr-guild{width:100%;margin:10px 2px 2px;font-size:12px;font-weight:600;opacity:.55}
+.hc-qr-tile{position:relative;width:42px;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent;background:var(--background-secondary,rgba(255,255,255,.04))}
+.hc-qr-tile:hover{background:var(--background-modifier-hover,rgba(255,255,255,.08))}
+.hc-qr-tile--sel{border-color:var(--brand-500,#5865f2)}
+.hc-qr-tile img{width:28px;height:28px;object-fit:contain}
+.hc-qr-tile__uni{font-size:24px;line-height:1}
+.hc-qr-tile__badge{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--brand-500,#5865f2);color:#fff;font-size:10px;line-height:15px;text-align:center}
+.hc-qr-note{opacity:.55;font-size:12px;padding:6px 2px}
+.hc-qr-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding-top:10px}
+.hc-qr-count{margin-right:auto;opacity:.7;font-size:13px}
+.hc-qr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.hc-qr-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 6px 3px 5px;border-radius:8px;background:var(--background-secondary,rgba(255,255,255,.05));font-size:12px}
+.hc-qr-chip img{width:18px;height:18px;object-fit:contain}
+.hc-qr-chip__x{cursor:pointer;opacity:.5;display:inline-flex;align-items:center}
+.hc-qr-chip__x:hover{opacity:1}
+.hc-qr-add{display:flex;gap:8px;align-items:center;margin-top:6px}
+.hc-qr-add .hc-input{flex:1}
+`;
+  function ensureQuickReactStyles() {
+    injectStyles();
+    if (document.getElementById(STYLE_ID2)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID2;
+    style.textContent = PICKER_CSS;
+    document.head.appendChild(style);
+  }
+  var host4 = null;
+  var unmount4 = null;
+  var keyHandler3 = null;
+  function closeReactionPicker() {
+    if (keyHandler3) {
+      document.removeEventListener("keydown", keyHandler3);
+      keyHandler3 = null;
+    }
+    if (unmount4) {
+      try {
+        unmount4();
+      } catch {
+      }
+      unmount4 = null;
+    }
+    if (host4) {
+      host4.remove();
+      host4 = null;
+    }
+  }
+  function openReactionPicker(onAdd) {
+    ensureQuickReactStyles();
+    closeReactionPicker();
+    host4 = document.createElement("div");
+    host4.className = "halcyon";
+    document.body.appendChild(host4);
+    keyHandler3 = (event) => {
+      if (event.key === "Escape") closeReactionPicker();
+    };
+    document.addEventListener("keydown", keyHandler3);
+    try {
+      unmount4 = mountDetached(
+        React.createElement(PickerModal2, { onAdd, onClose: closeReactionPicker }),
+        host4
+      );
+    } catch (err) {
+      log34.error("\u65E0\u6CD5\u6253\u5F00\u8868\u60C5\u9009\u62E9\u5668", err);
+      closeReactionPicker();
+    }
+  }
+  var MAX_TILES = 400;
+  function PickerModal2({
+    onAdd,
+    onClose
+  }) {
+    const groups = useMemo(() => collectGuildEmojis(), []);
+    const [query, setQuery] = useState("");
+    const [selected, setSelected] = useState({});
+    const q = query.trim().toLowerCase();
+    const filteredGroups = useMemo(() => {
+      if (!q) return groups;
+      return groups.map((g2) => ({ ...g2, emojis: g2.emojis.filter((e) => e.name.toLowerCase().includes(q)) })).filter((g2) => g2.emojis.length > 0);
+    }, [groups, q]);
+    const matches = useMemo(() => filteredGroups.flatMap((g2) => g2.emojis), [filteredGroups]);
+    const selectedCount = Object.keys(selected).length;
+    const toggle = (e) => {
+      const key = reactionKey(e);
+      setSelected((prev) => {
+        const next = { ...prev };
+        if (next[key]) delete next[key];
+        else next[key] = e;
+        return next;
+      });
+    };
+    const selectAllMatches = () => setSelected((prev) => {
+      const next = { ...prev };
+      for (const e of matches) next[reactionKey(e)] = e;
+      return next;
+    });
+    const confirm = () => {
+      const list = Object.values(selected);
+      if (list.length) onAdd(list);
+      onClose();
+    };
+    let rendered = 0;
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "hc-overlay",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "\u6311\u9009\u53CD\u5E94\u8868\u60C5",
+        onMouseDown: (e) => {
+          if (e.target === e.currentTarget) onClose();
+        }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker" }, /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-emote-picker__title" }, "\u4ECE\u670D\u52A1\u5668\u6311\u9009\u53CD\u5E94\u8868\u60C5"), /* @__PURE__ */ React.createElement("button", { className: "hc-emote-picker__close", onClick: onClose, "aria-label": "\u5173\u95ED" }, /* @__PURE__ */ React.createElement(XmarkIcon, { size: 18 }))), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__search" }, /* @__PURE__ */ React.createElement(SearchIcon, { size: 16, className: "hc-emote-picker__search-icon" }), /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          className: "hc-input",
+          placeholder: "\u641C\u7D22\u8868\u60C5\u540D\uFF0C\u6BD4\u5982 baka\u2026",
+          value: query,
+          autoFocus: true,
+          onChange: (e) => setQuery(e.currentTarget.value)
+        }
+      )), /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__list" }, matches.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-emote-picker__empty" }, groups.length === 0 ? "\u6CA1\u8BFB\u5230\u670D\u52A1\u5668\u8868\u60C5\uFF08\u5148\u8FDB\u51E0\u4E2A\u6709\u81EA\u5B9A\u4E49\u8868\u60C5\u7684\u670D\u52A1\u5668\uFF09" : "\u6CA1\u6709\u5339\u914D\u7684\u8868\u60C5") : filteredGroups.map((g2) => {
+        if (rendered >= MAX_TILES) return null;
+        const slice = g2.emojis.slice(0, MAX_TILES - rendered);
+        rendered += slice.length;
+        return /* @__PURE__ */ React.createElement("div", { key: g2.guildId, className: "hc-qr-grid" }, /* @__PURE__ */ React.createElement("div", { className: "hc-qr-guild" }, g2.guildName), slice.map((e) => {
+          const key = reactionKey(e);
+          const url = emojiImageUrl(e, 40);
+          const sel = Boolean(selected[key]);
+          return /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              key,
+              className: `hc-qr-tile${sel ? " hc-qr-tile--sel" : ""}`,
+              role: "button",
+              tabIndex: 0,
+              title: `:${e.name}:`,
+              onClick: () => toggle(e),
+              onKeyDown: (ev) => {
+                if (ev.key === "Enter") toggle(e);
+              }
+            },
+            url ? /* @__PURE__ */ React.createElement("img", { src: url, alt: e.name }) : /* @__PURE__ */ React.createElement("span", { className: "hc-qr-tile__uni" }, e.name),
+            sel && /* @__PURE__ */ React.createElement("span", { className: "hc-qr-tile__badge" }, "\u2713")
+          );
+        }));
+      }), rendered >= MAX_TILES && /* @__PURE__ */ React.createElement("div", { className: "hc-qr-note" }, "\u8868\u60C5\u592A\u591A\uFF0C\u53EA\u663E\u793A\u4E86\u524D ", MAX_TILES, " \u4E2A\uFF0C\u7528\u641C\u7D22\u7F29\u5C0F\u8303\u56F4\u3002")), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-foot" }, /* @__PURE__ */ React.createElement("span", { className: "hc-qr-count" }, "\u5DF2\u9009 ", selectedCount, " \u4E2A"), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "hc-btn hc-btn--secondary hc-btn--sm",
+          onClick: selectAllMatches,
+          disabled: matches.length === 0
+        },
+        "\u5168\u9009\u5339\u914D\uFF08",
+        matches.length,
+        "\uFF09"
+      ), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          className: "hc-btn hc-btn--primary hc-btn--sm",
+          onClick: confirm,
+          disabled: selectedCount === 0
+        },
+        "\u6DFB\u52A0 ",
+        selectedCount,
+        " \u4E2A"
+      )))
+    );
+  }
+
+  // src/plugins/quick-react/ui/ConfigField.tsx
+  function merge(list, additions) {
+    const have = new Set(list.map(reactionKey));
+    const out = list.slice();
+    for (const e of additions) {
+      const key = reactionKey(e);
+      if (!have.has(key)) {
+        have.add(key);
+        out.push(e);
+      }
+    }
+    return out;
+  }
+  function ReactionConfigField({
+    value,
+    onChange: onChange2
+  }) {
+    ensureQuickReactStyles();
+    const list = Array.isArray(value) ? value : [];
+    const [manual, setManual] = useState("");
+    const removeAt2 = (index) => onChange2(list.filter((_, i) => i !== index));
+    const addManual = () => {
+      const parsed = parseManualEmoji(manual);
+      if (parsed) onChange2(merge(list, [parsed]));
+      setManual("");
+    };
+    return /* @__PURE__ */ React.createElement("div", null, list.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-qr-chips" }, list.map((e, i) => {
+      const url = emojiImageUrl(e, 24);
+      return /* @__PURE__ */ React.createElement("span", { className: "hc-qr-chip", key: `${reactionKey(e)}-${i}` }, url ? /* @__PURE__ */ React.createElement("img", { src: url, alt: e.name }) : /* @__PURE__ */ React.createElement("span", null, e.name), /* @__PURE__ */ React.createElement("span", null, e.name), /* @__PURE__ */ React.createElement(
+        "span",
+        {
+          className: "hc-qr-chip__x",
+          role: "button",
+          tabIndex: 0,
+          "aria-label": "\u79FB\u9664",
+          onClick: () => removeAt2(i),
+          onKeyDown: (ev) => {
+            if (ev.key === "Enter") removeAt2(i);
+          }
+        },
+        /* @__PURE__ */ React.createElement(XmarkIcon, { size: 14 })
+      ));
+    })) : /* @__PURE__ */ React.createElement("div", { className: "hc-qr-note" }, "\u8FD8\u6CA1\u914D\u7F6E\u53CD\u5E94\u3002\u70B9\u4E0B\u9762\u4ECE\u670D\u52A1\u5668\u6311\uFF0C\u6216\u624B\u52A8\u586B\u4E00\u4E2A\u3002"), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-add" }, /* @__PURE__ */ React.createElement(
+      TextInput,
+      {
+        value: manual,
+        onChange: setManual,
+        placeholder: "\u{1F600} \u6216 <:name:id>",
+        onKeyDown: (ev) => {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            addManual();
+          }
+        }
+      }
+    ), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", onClick: addManual, disabled: !manual.trim() }, "\u6DFB\u52A0")), /* @__PURE__ */ React.createElement("div", { className: "hc-qr-add" }, /* @__PURE__ */ React.createElement(
+      Button,
+      {
+        size: "sm",
+        variant: "primary",
+        onClick: () => openReactionPicker((picked) => onChange2(merge(list, picked)))
+      },
+      /* @__PURE__ */ React.createElement(ReactionIcon, { size: 16 }),
+      " \u4ECE\u670D\u52A1\u5668\u6311\u9009"
+    ), list.length > 0 && /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "destructive", onClick: () => onChange2([]) }, /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }), " \u6E05\u7A7A")));
+  }
+
+  // src/plugins/quick-react/index.tsx
+  var log35 = logger("quick-react");
+  var settings11 = defineSettings({
+    reactions: {
+      group: "\u53CD\u5E94",
+      type: "custom",
+      default: [],
+      label: "\u914D\u7F6E\u53CD\u5E94\u8868\u60C5",
+      description: "\u70B9\u300C\u4ECE\u670D\u52A1\u5668\u6311\u9009\u300D\u628A\u8981\u70B9\u7684\u8868\u60C5\u9009\u597D\u3002\u540C\u540D\u4E0D\u540C id \u5404\u7B97\u4E00\u4E2A\uFF0C\u53EF\u4EE5\u53E0\u5F88\u591A\u4E2A\uFF08Discord \u5355\u6761\u6D88\u606F\u6700\u591A 20 \u4E2A\u4E0D\u540C\u8868\u60C5\uFF09\u3002",
+      component: ReactionConfigField
+    },
+    delayMs: {
+      group: "\u9AD8\u7EA7",
+      type: "number",
+      default: 300,
+      min: 0,
+      max: 3e3,
+      step: 50,
+      label: "\u6BCF\u4E2A\u53CD\u5E94\u95F4\u9694\uFF08\u6BEB\u79D2\uFF09",
+      description: "\u4E00\u4E2A\u4E2A\u70B9\uFF0C\u95F4\u9694\u592A\u77ED\u4F1A\u88AB Discord \u9650\u6D41\u5BFC\u81F4\u90E8\u5206\u70B9\u4E0D\u4E0A\u3002\u9ED8\u8BA4 300\u3002"
+    }
+  });
+  function resolveMessage(node) {
+    if (!node) return null;
+    for (const props of getFiberPropsChain(node, 16)) {
+      const m = props?.message;
+      const channelId = m?.channel_id ?? m?.channelId;
+      if (m?.id && channelId) {
+        return { channelId: String(channelId), messageId: String(m.id) };
+      }
+    }
+    return null;
+  }
+  var applying = false;
+  async function applyReactions(channelId, messageId) {
+    if (applying) return;
+    const list = settings11.store.reactions ?? [];
+    if (list.length === 0) return;
+    applying = true;
+    showToast(`\u6B63\u5728\u6DFB\u52A0 ${list.length} \u4E2A\u53CD\u5E94\u2026`, "info");
+    try {
+      const r = await addReactions(channelId, messageId, list, settings11.store.delayMs);
+      if (r.failed > 0) {
+        showToast(`\u5DF2\u6DFB\u52A0 ${r.done - r.failed}/${r.total}\uFF0C${r.failed} \u4E2A\u5931\u8D25`, "failure");
+      } else {
+        showToast(`\u5DF2\u6DFB\u52A0 ${r.done} \u4E2A\u53CD\u5E94`, "success");
+      }
+    } catch (err) {
+      log35.error("\u4E00\u952E\u53CD\u5E94\u5931\u8D25", err);
+      showToast("\u4E00\u952E\u53CD\u5E94\u5931\u8D25\uFF0C\u770B\u63A7\u5236\u53F0\u65E5\u5FD7", "failure");
+    } finally {
+      applying = false;
+    }
+  }
+  function menuPatch(children) {
+    const target = resolveMessage(getContextMenuTarget());
+    if (!target) return;
+    const MenuItem = getMenuItemComponent();
+    if (!MenuItem) return;
+    const count2 = (settings11.store.reactions ?? []).length;
+    children.push(
+      React.createElement(MenuItem, {
+        id: "halcyon-quick-react",
+        label: count2 > 0 ? `\u4E00\u952E\u53CD\u5E94\uFF08${count2} \u4E2A\uFF09` : "\u4E00\u952E\u53CD\u5E94\uFF1A\u5148\u5728\u8BBE\u7F6E\u91CC\u914D\u7F6E",
+        disabled: count2 === 0,
+        action: () => void applyReactions(target.channelId, target.messageId)
+      })
+    );
+  }
+  var unpatchers3 = [];
+  var quick_react_default = definePlugin({
+    id: "quick-react",
+    name: "\u4E00\u952E\u53CD\u5E94",
+    description: "\u53F3\u952E\u6D88\u606F\u4E00\u952E\u70B9\u4E0A\u4E00\u6574\u6392\u9884\u8BBE\u53CD\u5E94\u3002\u8868\u60C5\u4ECE\u4F60\u52A0\u5165\u7684\u670D\u52A1\u5668\u91CC\u6311\uFF0C\u5148\u5728\u8BBE\u7F6E\u91CC\u914D\u597D\u3002\u540C\u540D\u4E0D\u540C id \u4F1A\u5404\u7B97\u4E00\u4E2A\uFF0C\u80FD\u50CF\u622A\u56FE\u90A3\u6837\u53E0\u6210\u4E00\u6392\u3002\u53CD\u5E94\u5BF9\u6240\u6709\u4EBA\u53EF\u89C1\u3002",
+    authors: [{ name: "caitemm" }],
+    category: "utility",
+    settings: settings11,
+    start() {
+      unpatchers3.push(addContextMenuPatch("message", menuPatch));
+      if (!reactionBackendReady()) {
+        log35.warn("\u6CA1\u89E3\u6790\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF0C\u70B9\u51FB\u65F6\u4F1A\u8D70\u515C\u5E95\u6216\u62A5\u9519\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
+      }
+      log35.info("\u4E00\u952E\u53CD\u5E94\u5C31\u7EEA \u2014 \u53F3\u952E\u6D88\u606F\u5373\u53EF");
+    },
+    stop() {
+      for (const un of unpatchers3) {
+        try {
+          un();
+        } catch {
+        }
+      }
+      unpatchers3 = [];
+    },
+    /** 诊断快照。通过 HalcyonAPI.probe() 输出。 */
+    probe() {
+      return {
+        configuredCount: (settings11.store.reactions ?? []).length,
+        delayMs: settings11.store.delayMs,
+        backendReady: reactionBackendReady()
+      };
+    }
+  });
+
   // src/core/flux/index.ts
-  var log33 = logger("flux");
+  var log36 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log33.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log36.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -11324,7 +11793,7 @@ ${tail}`;
         try {
           listener(action);
         } catch (err) {
-          log33.error(`listener for ${type} threw`, err);
+          log36.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -11333,7 +11802,7 @@ ${tail}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log33.error(`could not subscribe to ${type}`, err);
+      log36.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -11344,7 +11813,7 @@ ${tail}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log33.error(`could not unsubscribe from ${type}`, err);
+      log36.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -11375,13 +11844,13 @@ ${tail}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log33.error("dispatch failed", action?.type, err);
+        log36.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log34 = logger("mark-all-read");
+  var log37 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -11395,7 +11864,7 @@ ${tail}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log34.warn(`could not read channels for guild ${guildId}`, err);
+        log37.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -11421,16 +11890,16 @@ ${tail}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log34.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log37.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log34.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log37.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log34.warn("could not describe getChannels shape", err);
+          log37.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -11450,14 +11919,14 @@ ${tail}`;
           }
         }
       } catch (err) {
-        log34.warn(`could not read joined threads for guild ${guildId}`, err);
+        log37.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log34.info(
+    log37.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -11474,9 +11943,9 @@ ${tail}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log34.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log37.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log34.info("nothing unread; skipping BULK_ACK");
+      log37.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -11484,12 +11953,12 @@ ${tail}`;
       context: "APP",
       channels
     });
-    log34.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log37.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log35 = logger("mark-all-read");
+  var log38 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -11514,7 +11983,7 @@ ${tail}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log35.error("mark all read failed", err);
+        log38.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -11523,7 +11992,7 @@ ${tail}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log36 = logger("mark-all-read");
+  var log39 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -11534,7 +12003,7 @@ ${tail}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log36.error("mark all read failed", err);
+      log39.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -11584,7 +12053,7 @@ ${tail}`;
   }
   function openQuestHub() {
     if (navigate("/quest-home")) return;
-    log36.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
+    log39.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
   }
   function QuestRailButton() {
     const count2 = useOpenQuestCount();
@@ -11655,7 +12124,7 @@ ${tail}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log36.info("mark-all-read ready");
+      log39.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -11663,8 +12132,8 @@ ${tail}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log37 = logger("silent-typing");
-  var settings11 = defineSettings({
+  var log40 = logger("silent-typing");
+  var settings12 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
       type: "select",
@@ -11712,7 +12181,7 @@ ${tail}`;
   function silenceFor(channelId) {
     if (!active2) return false;
     const id = channelId == null ? "" : String(channelId);
-    const s = settings11.store;
+    const s = settings12.store;
     if (id && s.allowChannels.includes(id)) return false;
     if (s.scope === "guilds") return !isPrivateChannel(id);
     if (s.scope === "dms") return isPrivateChannel(id);
@@ -11725,13 +12194,13 @@ ${tail}`;
         return void 0;
       }
     } catch (err) {
-      log37.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log40.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
   function onStopTyping(ctx) {
     try {
-      if (settings11.store.silenceStop && silenceFor(ctx.args[0])) return void 0;
+      if (settings12.store.silenceStop && silenceFor(ctx.args[0])) return void 0;
     } catch {
     }
     return ctx.callOriginal();
@@ -11749,9 +12218,9 @@ ${tail}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log37.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log40.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log37.warn(
+      log40.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -11762,7 +12231,7 @@ ${tail}`;
     description: "\u4E0D\u518D\u5411\u522B\u4EBA\u53D1\u9001\u201C\u6B63\u5728\u8F93\u5165\u2026\u201D\u72B6\u6001\u3002\u53EF\u4EE5\u53EA\u5728\u670D\u52A1\u5668\u6216\u53EA\u5728\u79C1\u804A\u751F\u6548\uFF0C\u4E5F\u80FD\u4E3A\u6307\u5B9A\u9891\u9053\u5F00\u4F8B\u5916\u3002\u522B\u4EBA\u7684\u8F93\u5165\u72B6\u6001\u7167\u5E38\u663E\u793A\uFF0C\u5173\u95ED\u63D2\u4EF6\u7ACB\u5373\u6062\u590D\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "privacy",
-    settings: settings11,
+    settings: settings12,
     patches: [
       {
         // The module that owns Discord's typing actions, identified by the local
@@ -11784,7 +12253,7 @@ ${tail}`;
       active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log37.warn(
+        log40.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -11794,17 +12263,17 @@ ${tail}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log37.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log40.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log37.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log40.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log37.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings11.store.scope}\uFF09`);
+      log40.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings12.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -11814,7 +12283,7 @@ ${tail}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log37.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log40.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -11840,7 +12309,7 @@ ${tail}`;
       return {
         active: active2,
         suppressed,
-        scope: settings11.store.scope,
+        scope: settings12.store.scope,
         typingModuleFound: module != null,
         startTypingIsFunction: typeof module?.startTyping === "function",
         /** True once our wrapper is installed on the module. */
@@ -11903,7 +12372,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/settings.ts
-  var settings12 = defineSettings({
+  var settings13 = defineSettings({
     placement: {
       group: "\u4F4D\u7F6E",
       type: "select",
@@ -11954,7 +12423,7 @@ ${tail}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log38 = logger("member-count");
+  var log41 = logger("member-count");
   function memo(resolve) {
     let cached4;
     return () => cached4 ??= resolve();
@@ -12040,7 +12509,7 @@ ${tail}`;
   }
   var nudged = /* @__PURE__ */ new Set();
   function nudge(guildId, channelId) {
-    if (!settings12.store.preloadCounts) return;
+    if (!settings13.store.preloadCounts) return;
     if (nudged.has(guildId)) return;
     nudged.add(guildId);
     try {
@@ -12048,9 +12517,9 @@ ${tail}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log38.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log41.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log38.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log41.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -12061,8 +12530,8 @@ ${tail}`;
     }
     try {
       const guild = GuildStore.getGuild?.(guildId);
-      const fromRecord = asCount(guild?.memberCount) ?? asCount(guild?.approximateMemberCount);
-      if (fromRecord != null) return fromRecord;
+      const fromRecord2 = asCount(guild?.memberCount) ?? asCount(guild?.approximateMemberCount);
+      if (fromRecord2 != null) return fromRecord2;
     } catch {
     }
     return totalByGuild.get(guildId) ?? null;
@@ -12180,7 +12649,7 @@ ${tail}`;
   }
   function MemberCountChip({ variant }) {
     const { total, online } = useMemberCounts();
-    const s = settings12.store;
+    const s = settings13.store;
     const showOnline = s.showOnline && online != null;
     const showTotal = s.showTotal && total != null;
     if (!showOnline && !showTotal) return null;
@@ -12202,7 +12671,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log39 = logger("member-count");
+  var log42 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -12245,7 +12714,7 @@ ${tail}`;
     return null;
   }
   function wantedVariants() {
-    const placement = settings12.store.placement;
+    const placement = settings13.store.placement;
     const want = /* @__PURE__ */ new Set();
     if (placement === "header" || placement === "both") want.add("header");
     if (placement === "member-list" || placement === "both") want.add("list");
@@ -12262,25 +12731,25 @@ ${tail}`;
     entry.host.remove();
   }
   function attach2(variant, hit) {
-    const host5 = document.createElement("div");
-    host5.className = "hc-membercount-host";
-    host5.setAttribute("data-hc-plugin", "member-count");
+    const host6 = document.createElement("div");
+    host6.className = "hc-membercount-host";
+    host6.setAttribute("data-hc-plugin", "member-count");
     try {
-      hit.element.insertBefore(host5, hit.element.firstChild);
+      hit.element.insertBefore(host6, hit.element.firstChild);
     } catch (err) {
-      log39.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log42.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
-      const unmount5 = mountDetached(React.createElement(MemberCountChip, { variant }), host5);
-      mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
+      const unmount6 = mountDetached(React.createElement(MemberCountChip, { variant }), host6);
+      mounted2.set(variant, { host: host6, unmount: unmount6, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log39.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log42.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
-      host5.remove();
-      log39.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      host6.remove();
+      log42.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
   function ensureMounted2() {
@@ -12301,7 +12770,7 @@ ${tail}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log39.warn(
+      log42.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -12318,7 +12787,7 @@ ${tail}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log39.warn(
+    log42.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -12329,7 +12798,7 @@ ${tail}`;
     description: "\u5728\u9891\u9053\u9876\u680F\u6216\u6210\u5458\u5217\u8868\u9876\u90E8\u663E\u793A\u5F53\u524D\u670D\u52A1\u5668\u7684\u5728\u7EBF\u4EBA\u6570\u4E0E\u603B\u6210\u5458\u6570\u3002\u6570\u5B57\u53D6\u81EA Discord \u81EA\u5DF1\u7684 store\uFF1B\u82E5\u67D0\u670D\u52A1\u5668\u8FD8\u6CA1\u6709\u6210\u5458\u5217\u8868\u6570\u636E\uFF0C\u4F1A\u8C03\u7528\u4E00\u6B21 Discord \u81EA\u8EAB\u7684\u9891\u9053\u9884\u52A0\u8F7D\u6765\u53D6\uFF08\u53EF\u5728\u8BBE\u7F6E\u91CC\u5173\u95ED\uFF09\u3002\u5207\u6362\u670D\u52A1\u5668\u81EA\u52A8\u66F4\u65B0\u3002",
     authors: [{ name: "caitemm" }],
     category: "utility",
-    settings: settings12,
+    settings: settings13,
     start() {
       injectStyles();
       warnedNoAnchor = false;
@@ -12337,12 +12806,12 @@ ${tail}`;
       startCountTracking();
       ensureMounted2();
       ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
-      unsubscribePlacement = settings12.subscribe("placement", () => {
+      unsubscribePlacement = settings13.subscribe("placement", () => {
         warnedNoAnchor = false;
         ensureMounted2();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log39.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings12.store.placement}\uFF09`);
+      log42.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -12358,13 +12827,13 @@ ${tail}`;
       stopCountTracking();
       for (const variant of [...mounted2.keys()]) teardown2(variant);
       lastSelector.clear();
-      log39.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log42.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
       const channelId = currentChannelId2();
       return {
-        placement: settings12.store.placement,
+        placement: settings13.store.placement,
         mounted: [...mounted2.entries()].map(([variant, entry]) => ({
           variant,
           selector: entry.selector,
@@ -12386,7 +12855,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/settings.ts
-  var settings13 = defineSettings({
+  var settings14 = defineSettings({
     inlineAvatars: {
       group: "\u5E38\u9A7B\u663E\u793A",
       type: "boolean",
@@ -12459,7 +12928,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log40 = logger("who-reacted");
+  var log43 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -12542,7 +13011,7 @@ ${tail}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log40.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log43.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight2.set(key, guarded);
@@ -12570,7 +13039,7 @@ ${tail}`;
     return /* @__PURE__ */ React.createElement("span", { className: "hc-whoreacted__emoji-char" }, emoji.name ?? "");
   }
   function ReactorCard({ target }) {
-    const s = settings13.store;
+    const s = settings14.store;
     const [state, setState] = useState(() => {
       const cached4 = cachedReactors(target);
       return cached4 ? { kind: "ready", reactors: cached4 } : { kind: "loading" };
@@ -12604,24 +13073,24 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log41 = logger("who-reacted");
+  var log44 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
   var mutationObserver;
   var REACTION_SELECTOR = '[class*="reactionInner"], [class*="reaction_"]';
   function makeHost() {
-    const host5 = document.createElement("span");
-    host5.className = "hc-inline-reactors";
-    host5.setAttribute(HOST_ATTR, "1");
-    return host5;
+    const host6 = document.createElement("span");
+    host6.className = "hc-inline-reactors";
+    host6.setAttribute(HOST_ATTR, "1");
+    return host6;
   }
-  function fillHost(host5, reactors, totalHint) {
-    const max = Math.max(1, Math.min(6, Math.trunc(settings13.store.inlineAvatarCount) || 3));
+  function fillHost(host6, reactors, totalHint) {
+    const max = Math.max(1, Math.min(6, Math.trunc(settings14.store.inlineAvatarCount) || 3));
     const shown = reactors.slice(0, max);
     const total = totalHint ?? reactors.length;
     const overflow = Math.max(0, total - shown.length);
-    host5.textContent = "";
+    host6.textContent = "";
     for (const reactor of shown) {
       const img = document.createElement("img");
       img.className = "hc-inline-reactors__avatar";
@@ -12630,13 +13099,13 @@ ${tail}`;
       img.loading = "lazy";
       img.title = reactor.name;
       img.referrerPolicy = "no-referrer";
-      host5.appendChild(img);
+      host6.appendChild(img);
     }
     if (shown.length > 0 && overflow > 0) {
       const more = document.createElement("span");
       more.className = "hc-inline-reactors__more";
       more.textContent = `+${overflow}`;
-      host5.appendChild(more);
+      host6.appendChild(more);
     }
   }
   function pillHasNativePreview(pill) {
@@ -12652,34 +13121,34 @@ ${tail}`;
     const target = resolveReaction(pill);
     if (!target) return;
     if (target.count != null && target.count <= 0) return;
-    const host5 = makeHost();
+    const host6 = makeHost();
     try {
-      pill.appendChild(host5);
+      pill.appendChild(host6);
     } catch {
       return;
     }
     try {
-      const wanted = Math.min(12, Math.max(6, (settings13.store.inlineAvatarCount || 3) + 3));
+      const wanted = Math.min(12, Math.max(6, (settings14.store.inlineAvatarCount || 3) + 3));
       const reactors = await fetchReactors(target, wanted);
-      if (!host5.isConnected) return;
+      if (!host6.isConnected) return;
       if (reactors.length === 0) {
-        host5.remove();
+        host6.remove();
         DECORATED.delete(pill);
         return;
       }
       if (pillHasNativePreview(pill)) {
-        host5.remove();
+        host6.remove();
         return;
       }
-      fillHost(host5, reactors, target.count);
+      fillHost(host6, reactors, target.count);
     } catch (err) {
-      log41.debug("inline avatars: fetch failed", err);
-      host5.remove();
+      log44.debug("inline avatars: fetch failed", err);
+      host6.remove();
       DECORATED.delete(pill);
     }
   }
   function scan() {
-    if (!settings13.store.inlineAvatars) return;
+    if (!settings14.store.inlineAvatars) return;
     let pills;
     try {
       pills = document.querySelectorAll(REACTION_SELECTOR);
@@ -12693,7 +13162,7 @@ ${tail}`;
     });
   }
   function startInlineAvatars() {
-    if (!settings13.store.inlineAvatars) return;
+    if (!settings14.store.inlineAvatars) return;
     stopInlineAvatars();
     scan();
     scanTimer = setInterval(scan, 1500);
@@ -12712,7 +13181,7 @@ ${tail}`;
       } catch {
       }
     }
-    log41.info("inline reactor avatars: enabled");
+    log44.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -12727,18 +13196,18 @@ ${tail}`;
       mutationObserver = void 0;
     }
     try {
-      document.querySelectorAll(`[${HOST_ATTR}]`).forEach((host5) => host5.remove());
+      document.querySelectorAll(`[${HOST_ATTR}]`).forEach((host6) => host6.remove());
     } catch {
     }
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log42 = logger("who-reacted");
+  var log45 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
-  var host4 = null;
-  var unmount4 = null;
+  var host5 = null;
+  var unmount5 = null;
   var anchor = null;
   var observer = null;
   var anchorTimer;
@@ -12751,18 +13220,18 @@ ${tail}`;
   var hoverToggleUnsub;
   var hoverListenersAttached = false;
   function reposition2() {
-    if (!host4 || !anchor) return;
+    if (!host5 || !anchor) return;
     const rect = anchor.getBoundingClientRect();
-    const width = host4.offsetWidth || 220;
-    const height = host4.offsetHeight || 110;
+    const width = host5.offsetWidth || 220;
+    const height = host5.offsetHeight || 110;
     const margin = 8;
     let left = rect.left + rect.width / 2 - width / 2;
     let top = rect.top - height - margin;
     if (top < margin) top = rect.bottom + margin;
     left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
     top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
-    host4.style.left = `${Math.round(left)}px`;
-    host4.style.top = `${Math.round(top)}px`;
+    host5.style.left = `${Math.round(left)}px`;
+    host5.style.top = `${Math.round(top)}px`;
   }
   function hide2() {
     if (hideTimer) {
@@ -12780,21 +13249,21 @@ ${tail}`;
       }
       observer = null;
     }
-    if (unmount4) {
+    if (unmount5) {
       try {
-        unmount4();
+        unmount5();
       } catch {
       }
-      unmount4 = null;
+      unmount5 = null;
     }
-    if (host4) {
-      host4.remove();
-      host4 = null;
+    if (host5) {
+      host5.remove();
+      host5 = null;
     }
     anchor = null;
   }
   function scheduleHide() {
-    if (!host4 || hideTimer) return;
+    if (!host5 || hideTimer) return;
     hideTimer = setTimeout(() => {
       hideTimer = void 0;
       hide2();
@@ -12808,22 +13277,22 @@ ${tail}`;
   }
   function show(element, target) {
     hide2();
-    host4 = document.createElement("div");
-    host4.className = "halcyon hc-whoreacted-host";
-    host4.setAttribute("data-hc-plugin", "who-reacted");
-    document.body.appendChild(host4);
+    host5 = document.createElement("div");
+    host5.className = "halcyon hc-whoreacted-host";
+    host5.setAttribute("data-hc-plugin", "who-reacted");
+    document.body.appendChild(host5);
     anchor = element;
     try {
-      unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
+      unmount5 = mountDetached(React.createElement(ReactorCard, { target }), host5);
     } catch (err) {
-      log42.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log45.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide2();
       return;
     }
     reposition2();
     if (typeof ResizeObserver === "function") {
       observer = new ResizeObserver(() => reposition2());
-      observer.observe(host4);
+      observer.observe(host5);
     } else {
       setTimeout(reposition2, 120);
       setTimeout(reposition2, 400);
@@ -12833,7 +13302,7 @@ ${tail}`;
     }, ANCHOR_CHECK_MS);
   }
   function triggerOpen() {
-    return settings13.store.trigger !== "alt-hover" || altDown;
+    return settings14.store.trigger !== "alt-hover" || altDown;
   }
   function tryShow(element) {
     if (!triggerOpen()) return;
@@ -12864,7 +13333,7 @@ ${tail}`;
     hovered = pill;
     clearShowTimer();
     cancelHide();
-    const delay = Math.max(0, Math.min(2e3, settings13.store.delay));
+    const delay = Math.max(0, Math.min(2e3, settings14.store.delay));
     showTimer = setTimeout(() => {
       showTimer = void 0;
       if (hovered === pill && document.contains(pill)) tryShow(pill);
@@ -12878,18 +13347,18 @@ ${tail}`;
   function onKeyDown3(event) {
     if (!event.altKey) return;
     altDown = true;
-    if (settings13.store.trigger === "alt-hover" && hovered && !host4) {
+    if (settings14.store.trigger === "alt-hover" && hovered && !host5) {
       if (document.contains(hovered)) tryShow(hovered);
     }
   }
   function onKeyUp(event) {
     if (event.key === "Alt" || !event.altKey) {
       altDown = false;
-      if (settings13.store.trigger === "alt-hover") hide2();
+      if (settings14.store.trigger === "alt-hover") hide2();
     }
   }
   function onScrollOrResize() {
-    if (host4) hide2();
+    if (host5) hide2();
   }
   function onWindowBlur() {
     altDown = false;
@@ -12926,26 +13395,26 @@ ${tail}`;
     description: "\u5728\u6BCF\u4E2A\u53CD\u5E94\u56DE\u5E94\u5185\u5D4C\u4E00\u5C0F\u884C\u5934\u50CF\uFF08\u524D\u51E0\u4E2A\u53CD\u5E94\u8005\uFF09\uFF0C\u50CF Discord \u684C\u9762\u8FD1\u7248\u7684 Reaction Preview \u4E00\u6837\uFF0C\u4E0D\u7528\u60AC\u505C\u5C31\u770B\u5F97\u5230\u3002\u540D\u5355\u6309\u9700\u67E5\u8BE2\u3001\u7F13\u5B58 30 \u79D2\u3002\u60AC\u505C\u5B8C\u6574\u540D\u5355\u6D6E\u5C42\u9ED8\u8BA4\u5173\u95ED\uFF0C\u9700\u8981\u65F6\u53EF\u5728\u8BBE\u7F6E\u91CC\u5F00\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "utility",
-    settings: settings13,
+    settings: settings14,
     start() {
       injectStyles();
       clearCache();
       startInlineAvatars();
-      inlineToggleUnsub = settings13.subscribe("inlineAvatars", (on) => {
+      inlineToggleUnsub = settings14.subscribe("inlineAvatars", (on) => {
         if (on) startInlineAvatars();
         else stopInlineAvatars();
       });
-      inlineCountUnsub = settings13.subscribe("inlineAvatarCount", () => {
+      inlineCountUnsub = settings14.subscribe("inlineAvatarCount", () => {
         stopInlineAvatars();
         startInlineAvatars();
       });
-      if (settings13.store.hoverPopout) attachHoverListeners();
-      hoverToggleUnsub = settings13.subscribe("hoverPopout", (on) => {
+      if (settings14.store.hoverPopout) attachHoverListeners();
+      hoverToggleUnsub = settings14.subscribe("hoverPopout", (on) => {
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log42.info(
-        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings13.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings13.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
+      log45.info(
+        `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings14.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings14.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
     stop() {
@@ -12962,7 +13431,7 @@ ${tail}`;
       altDown = false;
       hide2();
       clearCache();
-      log42.info("\u5DF2\u505C\u7528");
+      log45.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -12984,8 +13453,8 @@ ${tail}`;
         } : "fiber props \u91CC\u6CA1\u6709 message + emoji \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A\u7248\u672C\u7684 reaction \u7EC4\u4EF6 props \u53D8\u4E86";
       }
       return {
-        trigger: settings13.store.trigger,
-        cardShown: host4 != null,
+        trigger: settings14.store.trigger,
+        cardShown: host5 != null,
         reactionNodes: nodes?.length ?? -1,
         sample: sample2,
         anchors: probeSelectors([REACTION_SELECTOR2, '[class*="reactionInner"]', '[class*="reaction_"]']),
@@ -13147,7 +13616,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/settings.ts
-  var settings14 = defineSettings({
+  var settings15 = defineSettings({
     inMessages: {
       group: "\u663E\u793A\u4F4D\u7F6E",
       type: "boolean",
@@ -13230,7 +13699,7 @@ ${tail}`;
     isSelf
   }) {
     usePresenceVersion();
-    const s = settings14.store;
+    const s = settings15.store;
     if (s.ignoreSelf && isSelf) return null;
     if (s.ignoreBots && isBot(userId)) return null;
     const platforms = readPlatforms(userId);
@@ -13253,7 +13722,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log43 = logger("platform-indicators");
+  var log46 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -13304,24 +13773,24 @@ ${tail}`;
     return null;
   }
   function attach3(anchor2, kind, userId, selfId) {
-    const host5 = document.createElement("span");
-    host5.className = "hc-platform-host";
-    host5.setAttribute("data-hc-plugin", "platform-indicators");
+    const host6 = document.createElement("span");
+    host6.className = "hc-platform-host";
+    host6.setAttribute("data-hc-plugin", "platform-indicators");
     try {
-      anchor2.appendChild(host5);
+      anchor2.appendChild(host6);
     } catch {
       return false;
     }
     try {
-      const unmount5 = mountDetached(
+      const unmount6 = mountDetached(
         React.createElement(PlatformIndicator, { userId, isSelf: userId === selfId }),
-        host5
+        host6
       );
-      mounted3.set(host5, { kind, host: host5, anchor: anchor2, unmount: unmount5 });
+      mounted3.set(host6, { kind, host: host6, anchor: anchor2, unmount: unmount6 });
       return true;
     } catch (err) {
-      host5.remove();
-      log43.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      host6.remove();
+      log46.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -13377,21 +13846,21 @@ ${tail}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log43.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log46.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
   }
   function scan2() {
     prune();
-    const s = settings14.store;
+    const s = settings15.store;
     const selfId = currentUserId3();
     let anyAnchor = false;
     if (s.inMessages && scanKind("message", MESSAGE_SELECTORS, selfId)) anyAnchor = true;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log43.warn(
+      log46.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -13410,7 +13879,7 @@ ${tail}`;
     description: "\u5728\u6D88\u606F\u4F5C\u8005\u4E0E\u6210\u5458\u5217\u8868\u65C1\u663E\u793A\u5BF9\u65B9\u5F53\u524D\u6240\u5728\u7684\u5E73\u53F0\uFF08\u684C\u9762\u7AEF / \u624B\u673A / \u7F51\u9875 / \u6E38\u620F\u4E3B\u673A\uFF09\uFF0C\u56FE\u6807\u6309\u5728\u7EBF\u72B6\u6001\u7740\u8272\u3002\u6570\u636E\u53D6\u81EA Discord \u81EA\u5DF1\u7684\u72B6\u6001 store\uFF0C\u4E0D\u53D1\u4EFB\u4F55\u8BF7\u6C42\u3002",
     authors: [{ name: "Vencord" }, { name: "caitemm" }],
     category: "appearance",
-    settings: settings14,
+    settings: settings15,
     start() {
       injectStyles();
       warnedNoAnchor2 = false;
@@ -13419,20 +13888,20 @@ ${tail}`;
       scanTimer2 = setInterval(scan2, SCAN_MS);
       unsubscribes3 = WATCHED_ACTIONS2.map((type) => flux.subscribe(type, bumpPresence));
       unsubscribes3.push(
-        settings14.subscribe("inMessages", (on) => {
+        settings15.subscribe("inMessages", (on) => {
           if (!on) detachKind("message");
           else scan2();
         }),
-        settings14.subscribe("inMemberList", (on) => {
+        settings15.subscribe("inMemberList", (on) => {
           if (!on) detachKind("member");
           else scan2();
         }),
-        settings14.subscribe("colorize", () => bumpPresence()),
-        settings14.subscribe("iconSize", () => bumpPresence()),
-        settings14.subscribe("ignoreBots", () => bumpPresence()),
-        settings14.subscribe("ignoreSelf", () => bumpPresence())
+        settings15.subscribe("colorize", () => bumpPresence()),
+        settings15.subscribe("iconSize", () => bumpPresence()),
+        settings15.subscribe("ignoreBots", () => bumpPresence()),
+        settings15.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log43.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -13450,7 +13919,7 @@ ${tail}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log43.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13471,9 +13940,9 @@ ${tail}`;
       };
       return {
         settings: {
-          inMessages: settings14.store.inMessages,
-          inMemberList: settings14.store.inMemberList,
-          ignoreBots: settings14.store.ignoreBots
+          inMessages: settings15.store.inMessages,
+          inMemberList: settings15.store.inMemberList,
+          ignoreBots: settings15.store.ignoreBots
         },
         mountedCount: mounted3.size,
         selfId,
@@ -13508,6 +13977,7 @@ ${tail}`;
     image_zoom_default,
     console_cleaner_default,
     emote_cloner_default,
+    quick_react_default,
     mark_all_read_default,
     silent_typing_default,
     member_count_default,
@@ -13516,7 +13986,7 @@ ${tail}`;
   ];
 
   // src/core/probe.ts
-  var log44 = logger("probe");
+  var log47 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -13539,8 +14009,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.8" : "dev",
-      build: true ? "2026-09-27 06:07:43" : "dev",
+      version: true ? "0.7.9" : "dev",
+      build: true ? "2026-09-28 09:55:15" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -13553,14 +14023,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log44.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log47.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log45 = logger("userscript");
+  var log48 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -13571,8 +14041,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.8" : "dev",
-        build: true ? "2026-09-27 06:07:43" : "dev",
+        version: true ? "0.7.9" : "dev",
+        build: true ? "2026-09-28 09:55:15" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -13589,6 +14059,6 @@ ${tail}`;
       };
     } catch {
     }
-    log45.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log45.error("userscript boot failed", err));
+    log48.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log48.error("userscript boot failed", err));
 })();
