@@ -7,11 +7,18 @@ node_modules/
 halcyon-settings-backup-*.json
 
 # Build output is ignored except the artifacts users install directly from
-# the repository (userscript one-click install, extension zip + unpacked dir).
+# the repository (userscript one-click install, extension zip + unpacked dir,
+# and the desktop payload the installer / shim auto-updates from).
 dist/*
 !dist/halcyon.user.js
+!dist/halcyon.js
 !dist/halcyon-extension.zip
 !dist/extension/
+
+# Built installer binary — publish via GitHub Releases, don't commit it.
+installer/dist/
+# Vendored ps2exe module fetched by installer/build.ps1.
+installer/.tools/
 
 # Local Claude Code settings
 .claude/
