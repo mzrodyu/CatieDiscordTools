@@ -213,9 +213,22 @@ function inject() {
   script.remove();
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", inject, { once: true });
-} else {
+// Run at document-start — the instant this preload executes, BEFORE Discord's
+// renderer bundle. Halcyon takes over Webpack synchronously on load, so it must
+// run before Discord pushes its first chunk; waiting for DOMContentLoaded is far
+// too late and the module interceptor silently misses every factory (the whole
+// mod then loads but does nothing). It also captures window.localStorage before
+// Discord strips it.
+if (document.documentElement) {
   inject();
+} else {
+  // Preload ran before the root element existed; inject the instant it appears.
+  const obs = new MutationObserver(function () {
+    if (document.documentElement) {
+      obs.disconnect();
+      inject();
+    }
+  });
+  obs.observe(document, { childList: true, subtree: true });
 }
 `;
