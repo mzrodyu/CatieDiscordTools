@@ -31,8 +31,7 @@ $Engine = {
 
     $script:ShimPackageJson = @'
 {
-  "name": "halcyon-loader",
-  "version": "1.0.0",
+  "name": "discord",
   "main": "index.js",
   "private": true
 }
@@ -49,12 +48,13 @@ const https = require("https");
 const electron = require("electron");
 
 const RESOURCES = path.join(__dirname, "..");
-const ASAR = path.join(RESOURCES, "app.asar");
+// The real Discord app was renamed to _app.asar; this shim IS resources/app.asar.
+const ASAR = path.join(RESOURCES, "_app.asar");
 const PRELOAD = path.join(__dirname, "preload.js");
 
-// The auto-updated payload lives OUTSIDE resources/app: Discord installs each
-// client update into a fresh app-<version> folder and orphans this shim, but a
-// per-user cache dir survives that.
+// The auto-updated payload lives in a stable per-user dir: Discord installs each
+// client update into a fresh app-<version> folder and discards our shim, but the
+// %APPDATA%\Halcyon cache survives that.
 const PAYLOAD_URL = "https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.js";
 
 function cacheDir() {
@@ -119,34 +119,35 @@ setTimeout(refreshPayload, 5000);
 
 const { BrowserWindow } = electron;
 
-// Every renderer window gets our preload. We remember Discord's own preload so
-// the preload script can chain it rather than replace it.
+// Force our preload onto Discord's real client windows — the ones that already
+// carry a preload AND a title. Windows without those (splash, internal popups)
+// are left untouched. NOT guarding here is one thing that breaks the window's own
+// min/max/close controls; this mirrors how Vencord/Equicord patch.
 class HalcyonBrowserWindow extends BrowserWindow {
   constructor(options) {
-    const opts = options || {};
-    const webPreferences = opts.webPreferences || (opts.webPreferences = {});
-    if (webPreferences.preload) {
-      process.env.HALCYON_ORIGINAL_PRELOAD = webPreferences.preload;
+    if (!options || !options.webPreferences || !options.webPreferences.preload || !options.title) {
+      super(options);
+      return;
     }
-    webPreferences.preload = PRELOAD;
-    super(opts);
+    process.env.HALCYON_ORIGINAL_PRELOAD = options.webPreferences.preload;
+    options.webPreferences.preload = PRELOAD;
+    options.webPreferences.sandbox = false; // our preload needs fs / require
+    super(options);
   }
 }
 
-Object.setPrototypeOf(HalcyonBrowserWindow, BrowserWindow);
-
-const patchedElectron = new Proxy(electron, {
-  get(target, key) {
-    if (key === "BrowserWindow") return HalcyonBrowserWindow;
-    return target[key];
-  }
-});
+// Copy the real BrowserWindow's static members and preserve its .name, then swap
+// our subclass in as electron.BrowserWindow. Use a PLAIN object, NOT a Proxy: a
+// Proxy over the electron module subtly breaks Discord's own window IPC and the
+// min/max/close buttons stop responding. require.cache["electron"].exports is a
+// getter-only accessor, so delete it before assigning.
+Object.assign(HalcyonBrowserWindow, BrowserWindow);
+Object.defineProperty(HalcyonBrowserWindow, "name", { value: "BrowserWindow", configurable: true });
 
 try {
   const electronPath = require.resolve("electron");
-  if (require.cache[electronPath]) {
-    require.cache[electronPath].exports = patchedElectron;
-  }
+  delete require.cache[electronPath].exports;
+  require.cache[electronPath].exports = Object.assign({}, electron, { BrowserWindow: HalcyonBrowserWindow });
 } catch (err) {
   console.error("[Halcyon] could not patch electron module:", err);
 }
@@ -169,16 +170,10 @@ require(path.join(ASAR, realPackage.main));
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { webFrame } = require("electron");
 
-// 1. Chain Discord's own preload so nothing it sets up is lost.
+// Discord's own preload path — chained AFTER we start the payload (below).
 const original = process.env.HALCYON_ORIGINAL_PRELOAD;
-if (original) {
-  try {
-    require(original);
-  } catch (err) {
-    console.error("[Halcyon] Discord preload failed:", err);
-  }
-}
 
 // 2. Load the payload. Prefer the auto-updated cache (refreshed by the main
 //    process each launch); fall back to the copy shipped next to this shim so a
@@ -213,29 +208,27 @@ function inject() {
     console.error("[Halcyon] no payload available (cache empty, no bundled copy)");
     return;
   }
-  const script = document.createElement("script");
-  script.textContent = code + "\n//# sourceURL=halcyon://payload";
-  (document.head || document.documentElement).appendChild(script);
-  script.remove();
+  // Run the payload in the page's MAIN world via webFrame.executeJavaScript. It
+  // executes at document-start (before Discord's bundle, so Halcyon wins the
+  // Webpack race) and is NOT subject to Discord's CSP — so, unlike a <script>
+  // tag, no CSP stripping is needed. This is how Vencord/Equicord run their
+  // renderer, and it avoids the CSP/Proxy tricks that broke the window controls.
+  try {
+    webFrame.executeJavaScript(code + "\n//# sourceURL=halcyon://payload");
+  } catch (err) {
+    console.error("[Halcyon] executeJavaScript failed:", err);
+  }
 }
 
-// Run at document-start — the instant this preload executes, BEFORE Discord's
-// renderer bundle. Halcyon takes over Webpack synchronously on load, so it must
-// run before Discord pushes its first chunk; waiting for DOMContentLoaded is far
-// too late and the module interceptor silently misses every factory (the whole
-// mod then loads but does nothing). It also captures window.localStorage before
-// Discord strips it.
-if (document.documentElement) {
-  inject();
-} else {
-  // Preload ran before the root element existed; inject the instant it appears.
-  const obs = new MutationObserver(function () {
-    if (document.documentElement) {
-      obs.disconnect();
-      inject();
-    }
-  });
-  obs.observe(document, { childList: true, subtree: true });
+inject();
+
+// Now chain Discord's own preload so nothing it sets up is lost.
+if (original) {
+  try {
+    require(original);
+  } catch (err) {
+    console.error("[Halcyon] Discord preload failed:", err);
+  }
 }
 '@
     function Write-Utf8NoBom {
@@ -245,8 +238,10 @@ if (document.documentElement) {
     }
 
     function Test-Injected {
-        param([Parameter(Mandatory)][string]$ShimDir)
-        $idx = Join-Path $ShimDir 'index.js'
+        # Our injection: resources/app.asar is a DIRECTORY whose index.js carries
+        # the marker; the original app is preserved next to it as _app.asar.
+        param([Parameter(Mandatory)][string]$ResourcesPath)
+        $idx = Join-Path (Join-Path $ResourcesPath 'app.asar') 'index.js'
         if (-not (Test-Path -LiteralPath $idx)) { return $false }
         try {
             $head = Get-Content -LiteralPath $idx -TotalCount 3 -ErrorAction Stop
@@ -255,10 +250,13 @@ if (document.documentElement) {
     }
 
     function Test-ForeignShim {
-        # A resources/app that exists but is NOT ours (OpenAsar / another mod).
-        param([Parameter(Mandatory)][string]$ShimDir)
-        if (-not (Test-Path -LiteralPath $ShimDir)) { return $false }
-        return (-not (Test-Injected -ShimDir $ShimDir))
+        # app.asar replaced by a directory that is NOT ours (Vencord/Equicord/BD).
+        param([Parameter(Mandatory)][string]$ResourcesPath)
+        $asar = Join-Path $ResourcesPath 'app.asar'
+        $isDir = $false
+        try { $ai = Get-Item -LiteralPath $asar -ErrorAction SilentlyContinue; if ($ai -and $ai.PSIsContainer) { $isDir = $true } } catch {}
+        if (-not $isDir) { return $false }
+        return (-not (Test-Injected -ResourcesPath $ResourcesPath))
     }
 
     function Get-DiscordInstalls {
@@ -277,23 +275,15 @@ if (document.documentElement) {
             if ($null -eq $best) { continue }
             $resources = Join-Path $best.FullName 'resources'
             $asar = Join-Path $resources 'app.asar'
-            if (-not (Test-Path -LiteralPath $asar)) { continue }
-            # Another client mod (Vencord/Equicord/BetterDiscord) replaces app.asar
-            # with a directory and renames the original to _app.asar.
-            $otherMod = $false
-            try {
-                $ai = Get-Item -LiteralPath $asar -ErrorAction SilentlyContinue
-                if ($ai -and $ai.PSIsContainer) { $otherMod = $true }
-                if (Test-Path -LiteralPath (Join-Path $resources '_app.asar')) { $otherMod = $true }
-            } catch {}
-            $shimDir = Join-Path $resources 'app'
+            $orig = Join-Path $resources '_app.asar'
+            # Valid install: has app.asar (vanilla file OR a mod's directory) or our _app.asar.
+            if (-not (Test-Path -LiteralPath $asar) -and -not (Test-Path -LiteralPath $orig)) { continue }
             $result += [pscustomobject]@{
                 Flavor        = $flavor
                 Version       = $bestVer.ToString()
                 ResourcesPath = $resources
-                ShimDir       = $shimDir
-                Injected      = (Test-Injected -ShimDir $shimDir)
-                OtherMod      = $otherMod
+                Injected      = (Test-Injected -ResourcesPath $resources)
+                OtherMod      = (Test-ForeignShim -ResourcesPath $resources)
             }
         }
         return ,$result
@@ -323,28 +313,45 @@ if (document.documentElement) {
 
     function Install-One {
         param([Parameter(Mandatory)]$Install, [switch]$Force)
-        $shim = $Install.ShimDir
-        if ((Test-Path -LiteralPath $shim) -and (Test-ForeignShim -ShimDir $shim) -and (-not $Force)) {
-            return 'skipped-foreign'
+        $res  = $Install.ResourcesPath
+        $asar = Join-Path $res 'app.asar'
+        $orig = Join-Path $res '_app.asar'
+        if ((Test-ForeignShim -ResourcesPath $res) -and (-not $Force)) { return 'skipped-foreign' }
+        $already = Test-Injected -ResourcesPath $res
+        # Preserve the real app exactly once (rename app.asar -> _app.asar).
+        if (-not (Test-Path -LiteralPath $orig)) {
+            $ai = Get-Item -LiteralPath $asar -ErrorAction SilentlyContinue
+            if ($ai -and -not $ai.PSIsContainer) { Move-Item -LiteralPath $asar -Destination $orig }
+            else { return 'error: app.asar missing' }
+        } else {
+            # A stale app.asar file beside _app.asar — the real app is already saved.
+            $ai = Get-Item -LiteralPath $asar -ErrorAction SilentlyContinue
+            if ($ai -and -not $ai.PSIsContainer) { Remove-Item -LiteralPath $asar -Force }
         }
-        $already = Test-Injected -ShimDir $shim
-        if (-not (Test-Path -LiteralPath $shim)) { New-Item -ItemType Directory -Path $shim -Force | Out-Null }
-        Write-Utf8NoBom -Path (Join-Path $shim 'package.json') -Content $script:ShimPackageJson
-        Write-Utf8NoBom -Path (Join-Path $shim 'index.js')     -Content $script:ShimIndexJs
-        Write-Utf8NoBom -Path (Join-Path $shim 'preload.js')   -Content $script:ShimPreloadJs
+        if (-not (Test-Path -LiteralPath $asar)) { New-Item -ItemType Directory -Path $asar -Force | Out-Null }
+        Write-Utf8NoBom -Path (Join-Path $asar 'package.json') -Content $script:ShimPackageJson
+        Write-Utf8NoBom -Path (Join-Path $asar 'index.js')     -Content $script:ShimIndexJs
+        Write-Utf8NoBom -Path (Join-Path $asar 'preload.js')   -Content $script:ShimPreloadJs
         if (Test-Path -LiteralPath $script:CacheFile) {
-            try { [System.IO.File]::Copy($script:CacheFile, (Join-Path $shim 'halcyon.js'), $true) } catch {}
+            try { [System.IO.File]::Copy($script:CacheFile, (Join-Path $asar 'halcyon.js'), $true) } catch {}
         }
         if ($already) { return 'updated' } else { return 'installed' }
     }
 
     function Uninstall-One {
         param([Parameter(Mandatory)]$Install)
-        $shim = $Install.ShimDir
-        if (-not (Test-Path -LiteralPath $shim)) { return 'not-present' }
-        if (Test-ForeignShim -ShimDir $shim) { return 'left-foreign' }
-        try { Remove-Item -LiteralPath $shim -Recurse -Force -ErrorAction Stop; return 'removed' }
-        catch { return ('error: ' + $_.Exception.Message) }
+        $res  = $Install.ResourcesPath
+        $asar = Join-Path $res 'app.asar'
+        $orig = Join-Path $res '_app.asar'
+        if (-not (Test-Injected -ResourcesPath $res)) {
+            if (Test-ForeignShim -ResourcesPath $res) { return 'left-foreign' }
+            return 'not-present'
+        }
+        try {
+            Remove-Item -LiteralPath $asar -Recurse -Force -ErrorAction Stop
+            if (Test-Path -LiteralPath $orig) { Move-Item -LiteralPath $orig -Destination $asar }
+            return 'removed'
+        } catch { return ('error: ' + $_.Exception.Message) }
     }
     function Get-DiscordProcesses {
         Get-Process -ErrorAction SilentlyContinue | Where-Object { $script:ProcNames -contains $_.Name }
@@ -658,9 +665,8 @@ function Refresh-View {
     } else {
         foreach ($i in $installs) {
             if ($i.Injected) { $status = '已注入' }
-            elseif (Test-ForeignShim -ShimDir $i.ShimDir) { $status = '被其他 mod 占用（跳过）' }
+            elseif ($i.OtherMod) { $status = '被其他 mod 占用（跳过）' }
             else { $status = '未注入' }
-            if ($i.OtherMod) { $status = $status + ' · 检测到其他 mod(Equicord/Vencord/BD)' }
             [void]$grid.Rows.Add(($i.Flavor + '  ' + $i.Version), $status)
         }
         $btnInstall.Enabled = $true

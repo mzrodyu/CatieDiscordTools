@@ -1,26 +1,28 @@
 // Files written into Discord's resources by the Halcyon installer / injector.
 //
-// Electron loads a `resources/app` directory in preference to `resources/
-// app.asar`. We drop a tiny shim there: a loader that runs first, appends our
-// preload to every window, and then hands control to the untouched real app
-// inside app.asar. Uninstalling is just deleting the folder — app.asar is never
-// modified.
+// Injection method: current Discord runs on an Electron that loads
+// `resources/app.asar` and IGNORES a `resources/app` folder, so the only entry
+// point Discord actually loads is app.asar itself. We therefore rename the real
+// `app.asar` to `_app.asar` and put this shim in its place as a `app.asar`
+// DIRECTORY. The loader runs first, forces our preload onto every window, strips
+// Discord's CSP so the injected payload can execute, then hands control to the
+// untouched real app in `_app.asar`. Uninstall = delete our app.asar dir and
+// rename `_app.asar` back. (This mirrors how Vencord/Equicord inject.)
 //
 // The renderer payload (halcyon.js) is NOT baked into the shim. The main-process
 // loader refreshes it from GitHub on every launch into a stable per-user cache
-// (outside resources/app, which Discord wipes on each client update), and the
-// preload injects whatever is cached. That gives the desktop build the same
-// auto-update behaviour the userscript gets from Tampermonkey, while a failed
-// fetch or offline start simply reuses the last-good copy.
+// (%APPDATA%\Halcyon, outside the app dir Discord replaces on each client
+// update), and the preload injects whatever is cached. That gives the desktop
+// build the same auto-update the userscript gets from Tampermonkey, while a
+// failed fetch or offline start simply reuses the last-good copy.
 //
 // IMPORTANT: keep LOADER_JS / PRELOAD_JS byte-identical to the copies embedded in
 // installer/HalcyonInstaller.ps1 — both write the same shim.
 
-/** resources/app/package.json */
+/** resources/app.asar/package.json (our loader dir stands in for app.asar) */
 export const SHIM_PACKAGE_JSON = `${JSON.stringify(
   {
-    name: "halcyon-loader",
-    version: "1.0.0",
+    name: "discord",
     main: "index.js",
     private: true
   },
@@ -43,12 +45,13 @@ const https = require("https");
 const electron = require("electron");
 
 const RESOURCES = path.join(__dirname, "..");
-const ASAR = path.join(RESOURCES, "app.asar");
+// The real Discord app was renamed to _app.asar; this shim IS resources/app.asar.
+const ASAR = path.join(RESOURCES, "_app.asar");
 const PRELOAD = path.join(__dirname, "preload.js");
 
-// The auto-updated payload lives OUTSIDE resources/app: Discord installs each
-// client update into a fresh app-<version> folder and orphans this shim, but a
-// per-user cache dir survives that.
+// The auto-updated payload lives in a stable per-user dir: Discord installs each
+// client update into a fresh app-<version> folder and discards our shim, but the
+// %APPDATA%\Halcyon cache survives that.
 const PAYLOAD_URL = "https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.js";
 
 function cacheDir() {
@@ -113,34 +116,35 @@ setTimeout(refreshPayload, 5000);
 
 const { BrowserWindow } = electron;
 
-// Every renderer window gets our preload. We remember Discord's own preload so
-// the preload script can chain it rather than replace it.
+// Force our preload onto Discord's real client windows — the ones that already
+// carry a preload AND a title. Windows without those (splash, internal popups)
+// are left untouched. NOT guarding here is one thing that breaks the window's own
+// min/max/close controls; this mirrors how Vencord/Equicord patch.
 class HalcyonBrowserWindow extends BrowserWindow {
   constructor(options) {
-    const opts = options || {};
-    const webPreferences = opts.webPreferences || (opts.webPreferences = {});
-    if (webPreferences.preload) {
-      process.env.HALCYON_ORIGINAL_PRELOAD = webPreferences.preload;
+    if (!options || !options.webPreferences || !options.webPreferences.preload || !options.title) {
+      super(options);
+      return;
     }
-    webPreferences.preload = PRELOAD;
-    super(opts);
+    process.env.HALCYON_ORIGINAL_PRELOAD = options.webPreferences.preload;
+    options.webPreferences.preload = PRELOAD;
+    options.webPreferences.sandbox = false; // our preload needs fs / require
+    super(options);
   }
 }
 
-Object.setPrototypeOf(HalcyonBrowserWindow, BrowserWindow);
-
-const patchedElectron = new Proxy(electron, {
-  get(target, key) {
-    if (key === "BrowserWindow") return HalcyonBrowserWindow;
-    return target[key];
-  }
-});
+// Copy the real BrowserWindow's static members and preserve its .name, then swap
+// our subclass in as electron.BrowserWindow. Use a PLAIN object, NOT a Proxy: a
+// Proxy over the electron module subtly breaks Discord's own window IPC and the
+// min/max/close buttons stop responding. require.cache["electron"].exports is a
+// getter-only accessor, so delete it before assigning.
+Object.assign(HalcyonBrowserWindow, BrowserWindow);
+Object.defineProperty(HalcyonBrowserWindow, "name", { value: "BrowserWindow", configurable: true });
 
 try {
   const electronPath = require.resolve("electron");
-  if (require.cache[electronPath]) {
-    require.cache[electronPath].exports = patchedElectron;
-  }
+  delete require.cache[electronPath].exports;
+  require.cache[electronPath].exports = Object.assign({}, electron, { BrowserWindow: HalcyonBrowserWindow });
 } catch (err) {
   console.error("[Halcyon] could not patch electron module:", err);
 }
@@ -163,16 +167,10 @@ export const PRELOAD_JS = String.raw`// Generated by Halcyon. Do not edit; run t
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { webFrame } = require("electron");
 
-// 1. Chain Discord's own preload so nothing it sets up is lost.
+// Discord's own preload path — chained AFTER we start the payload (below).
 const original = process.env.HALCYON_ORIGINAL_PRELOAD;
-if (original) {
-  try {
-    require(original);
-  } catch (err) {
-    console.error("[Halcyon] Discord preload failed:", err);
-  }
-}
 
 // 2. Load the payload. Prefer the auto-updated cache (refreshed by the main
 //    process each launch); fall back to the copy shipped next to this shim so a
@@ -207,28 +205,26 @@ function inject() {
     console.error("[Halcyon] no payload available (cache empty, no bundled copy)");
     return;
   }
-  const script = document.createElement("script");
-  script.textContent = code + "\n//# sourceURL=halcyon://payload";
-  (document.head || document.documentElement).appendChild(script);
-  script.remove();
+  // Run the payload in the page's MAIN world via webFrame.executeJavaScript. It
+  // executes at document-start (before Discord's bundle, so Halcyon wins the
+  // Webpack race) and is NOT subject to Discord's CSP — so, unlike a <script>
+  // tag, no CSP stripping is needed. This is how Vencord/Equicord run their
+  // renderer, and it avoids the CSP/Proxy tricks that broke the window controls.
+  try {
+    webFrame.executeJavaScript(code + "\n//# sourceURL=halcyon://payload");
+  } catch (err) {
+    console.error("[Halcyon] executeJavaScript failed:", err);
+  }
 }
 
-// Run at document-start — the instant this preload executes, BEFORE Discord's
-// renderer bundle. Halcyon takes over Webpack synchronously on load, so it must
-// run before Discord pushes its first chunk; waiting for DOMContentLoaded is far
-// too late and the module interceptor silently misses every factory (the whole
-// mod then loads but does nothing). It also captures window.localStorage before
-// Discord strips it.
-if (document.documentElement) {
-  inject();
-} else {
-  // Preload ran before the root element existed; inject the instant it appears.
-  const obs = new MutationObserver(function () {
-    if (document.documentElement) {
-      obs.disconnect();
-      inject();
-    }
-  });
-  obs.observe(document, { childList: true, subtree: true });
+inject();
+
+// Now chain Discord's own preload so nothing it sets up is lost.
+if (original) {
+  try {
+    require(original);
+  } catch (err) {
+    console.error("[Halcyon] Discord preload failed:", err);
+  }
 }
 `;

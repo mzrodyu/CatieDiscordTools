@@ -37,19 +37,23 @@ npm run build:installer
 
 `installer/dist/` 已在 `.gitignore` 里——别提交二进制，用 GitHub Releases 分发。
 
-## 自动更新怎么工作
+## 注入方式与自动更新
 
-桌面版和网页油猴一样能自动更新，机制在 [`../src/injector/templates.ts`](../src/injector/templates.ts)：
+**注入方式**：当前 Discord 的 Electron 会优先加载 `resources/app.asar` 而**忽略** `resources/app`
+文件夹，所以我们把原版 `app.asar` 改名成 `_app.asar`，再把外壳做成一个 `app.asar` **目录**顶上
+（和 Vencord/Equicord 同一套）。外壳的 index.js 接管窗口(只碰带 preload 且有标题的真窗口)、用
+`webFrame.executeJavaScript` 在主世界跑插件(天然绕过 CSP，无需剥离 CSP、也不用 Proxy 包 electron
+——那两样会搞坏窗口的最小化/关闭按钮)，最后 `require` 回 `_app.asar` 的真正 Discord。卸载 = 删掉
+`app.asar` 目录、把 `_app.asar` 改名回去。机制都在 [`../src/injector/templates.ts`](../src/injector/templates.ts)。
 
-- 壳的**主进程**（index.js）每次 Discord 启动时，用 Node 的 https 从 GitHub 拉最新
-  `dist/halcyon.js`，原子写入 `%APPDATA%\Halcyon\halcyon.js`。主进程不受渲染进程 CSP
-  限制，所以能直连 raw.githubusercontent.com。
-- 壳的 **preload** 只读本地缓存并注入页面主世界，所以启动零延迟、离线可用。
-- 结果：更新是「下次启动生效」（和 Tampermonkey 一样），失败 / 离线就继续用上次的缓存，
-  绝不会因为网络问题让 Discord 起不来。
-- 缓存放在 `%APPDATA%\Halcyon` 而不是 `resources/app` 里，因为 Discord 客户端升级会换到新的
-  `app-<版本>` 目录、把旧壳孤立掉；缓存在外面才能活下来。孤立的壳本身由「开机自动保持注入」
-  的登录任务补回来。
+**自动更新**（和网页油猴一样）：
+
+- 外壳**主进程**每次启动时用 Node https 从 GitHub 拉最新 `dist/halcyon.js`，原子写入
+  `%APPDATA%\Halcyon\halcyon.js`。主进程不受渲染进程 CSP 限制，能直连 raw.githubusercontent.com。
+- **preload** 只读本地缓存、用 executeJavaScript 注入主世界，启动零延迟、离线可用。
+- 更新「下次启动生效」（同 Tampermonkey）；失败 / 离线就继续用上次缓存，绝不因网络让 Discord 起不来。
+- 缓存放 `%APPDATA%\Halcyon` 而不是壳里，因为 Discord 客户端升级会换到新的 `app-<版本>` 目录、把旧壳
+  孤立掉；缓存在外面才能活下来。孤立的壳由「开机自动保持注入」的登录任务补回来。
 
 ### 前置条件（重要）
 
