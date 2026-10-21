@@ -12,6 +12,7 @@ A restrained, iOS-styled plugin system / client mod for the Discord web &amp; de
 
 [![Greasy Fork 一键安装](https://img.shields.io/badge/🐵_Greasy_Fork-一键安装-670000?style=for-the-badge)](https://greasyfork.org/scripts/587776-halcyon-for-discord)
 [![下载浏览器扩展](https://img.shields.io/badge/🧩_下载浏览器扩展-.zip-3b82f6?style=for-the-badge)](https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon-extension.zip)
+[![下载桌面安装器](https://img.shields.io/badge/🖥️_桌面客户端-一键安装器-2ea44f?style=for-the-badge)](https://github.com/mzrodyu/CatieDiscordTools/releases/latest)
 
 <sub>油猴：装 <a href="https://www.tampermonkey.net/">Tampermonkey</a> 后点上方按钮，跳到 Greasy Fork 弹出安装页，并支持后续自动更新 · 备用：<a href="https://github.com/mzrodyu/CatieDiscordTools/raw/main/dist/halcyon.user.js">从 GitHub 直装</a> · 扩展：下载解压后在 <code>chrome://extensions</code> 开「开发者模式」加载 · <a href="#安装三选一">详细教程</a></sub>
 
@@ -84,29 +85,37 @@ Halcyon 的定位是 **稳定、可读、克制**：
 
 Chrome / Edge / Opera 需 111+；Firefox 128+ 也支持。扩展版的设置存在 `chrome.storage` 里（主世界只有同步接口，异步的 `chrome.storage` 通过一个隔离世界的桥接脚本 + 同步内存镜像对接）。
 
-### 方式三：注入桌面客户端（开发者）
+### 方式三：桌面客户端一键安装器（推荐，给普通用户）
 
-需要 Node ≥ 18，会往 Discord 的资源目录写入一个 loader。以下命令 `pnpm` / `npm` 均可：
+不想碰命令行的话，直接下载 **[Halcyon 安装器](https://github.com/mzrodyu/CatieDiscordTools/releases/latest)**，
+双击运行：
+
+1. 点「安装 / 更新」，自动识别本机的 Discord（稳定版 / PTB / Canary）
+2. 如果 Discord 正开着，安装器会问你关掉并在装完后自动重启
+3. 重启后在 Discord 里按 `Ctrl+Shift+H` 打开设置
+
+安装器是单个 exe，**不需要装 Node、不需要命令行、运行时不依赖任何东西**。插件本体已内置，断网
+也能装；之后每次启动 Discord 会自动从 GitHub 拉最新版。默认勾选「开机自动保持注入」，Discord
+自己升级后也会自动重装回去。卸载点一下「卸载」即可，Discord 恢复原版。
+
+> 安装器是 PowerShell 打包的未签名 exe，个别杀软 / SmartScreen 可能误报，属正常现象，选「仍要运行」
+> 即可。也可以下载 [run.cmd + HalcyonInstaller.ps1](installer/) 直接跑脚本，更不容易被误报。
+
+### 方式三（开发者）：源码注入
+
+需要 Node ≥ 18。以下命令 `pnpm` / `npm` 均可：
 
 ```bash
-# 克隆
 git clone https://github.com/mzrodyu/CatieDiscordTools.git
 cd CatieDiscordTools
-
-# 安装依赖
 pnpm install
-
-# 生产构建（同时产出桌面注入包、浏览器扩展、油猴脚本）
-pnpm build
-
-# 注入到本地 Discord（需要具备写入 Discord 资源目录的权限）
-pnpm inject
-
-# 开发构建（watch）
-pnpm dev
+pnpm build          # 生产构建（桌面注入包、浏览器扩展、油猴脚本）
+pnpm inject         # 注入到本地 Discord
+pnpm dev            # 开发构建（watch）
 ```
 
-桌面注入与网页版两种方式互不影响，按需选择。
+注入方式是把 `resources/app.asar` 改名为 `_app.asar`，再用一个 loader 目录顶上（与 Vencord /
+Equicord 相同，当前 Discord 只认这个入口）。`pnpm uninject` 可完全还原。桌面版与网页版互不影响。
 
 ## 文档索引
 
