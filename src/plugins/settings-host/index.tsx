@@ -363,6 +363,34 @@ function buildLegacySections(): LegacySection[] {
   ];
 }
 
+/**
+ * Section ids only Discord's *user* settings sidebar carries. The legacy
+ * `getPredicateSections` shape is shared with guild and channel settings, which
+ * still use it on current builds — matching the method alone says nothing about
+ * which sidebar we are looking at. Splicing into those put a HALCYON group in
+ * the server/channel settings list, so the legacy path now refuses any list
+ * without one of these markers.
+ */
+const USER_SIDEBAR_SECTIONS = [
+  "my account",
+  "user_section",
+  "privacy & safety",
+  "authorized apps",
+  "voice & video",
+  "keybinds"
+];
+
+function isUserSettingsSidebar(sections: LegacySection[]): boolean {
+  return sections.some((s) => {
+    const id = typeof s?.section === "string" ? s.section.trim().toLowerCase() : "";
+    return id !== "" && USER_SIDEBAR_SECTIONS.includes(id);
+  });
+}
+
+/** One-shot diagnostics: which non-user surface we declined, and its shape. */
+let skippedNonUserLayout = false;
+let skippedNonUserSidebar = false;
+
 let onKeyDown: ((event: KeyboardEvent) => void) | null = null;
 
 export default definePlugin({
@@ -420,6 +448,24 @@ export default definePlugin({
       if (!builder || builder.key !== "$Root") return layout;
       if (!Array.isArray(layout)) return layout;
 
+      // Same builder class backs every settings surface on current builds, so
+      // "$Root" alone does not mean "user settings". Require one of the
+      // user-settings sections (`billing_section` / `user_section`) before
+      // touching anything — guild and channel settings must come back exactly
+      // as Discord built them.
+      const billingIndex = layout.findIndex((n) => n?.key === "billing_section");
+      const accountIndex = layout.findIndex((n) => n?.key === "user_section");
+      if (billingIndex < 0 && accountIndex < 0) {
+        if (!skippedNonUserLayout) {
+          skippedNonUserLayout = true;
+          log.info(
+            `[settings-scope] layout left untouched (${layout.length} nodes: ` +
+              `${layout.map((n) => String(n?.key)).slice(0, 12).join(", ")})`
+          );
+        }
+        return layout;
+      }
+
       // Record the real node shape once (kept for debugging; harmless).
       probeLayoutOnce(layout);
 
@@ -438,11 +484,8 @@ export default definePlugin({
       };
 
       // Sit just above the Nitro/billing block — the seam client mods
-      // conventionally occupy — falling back to the account block, then a fixed
-      // early slot, if those anchors ever move.
-      let index = layout.findIndex((n) => n?.key === "billing_section");
-      if (index < 0) index = layout.findIndex((n) => n?.key === "user_section");
-      if (index < 0) index = Math.min(2, layout.length);
+      // conventionally occupy — falling back to the account block.
+      const index = billingIndex >= 0 ? billingIndex : accountIndex;
 
       layout.splice(index, 0, section);
       log.info(`native settings embed active — section inserted at index ${index}/${layout.length}`);
@@ -467,6 +510,19 @@ export default definePlugin({
       // Guard against a base list that already carries our group (a reused
       // array). "halcyon-plugins" is the first page we insert.
       if (sections.some((s) => s?.section === "halcyon-plugins")) return sections;
+
+      // Guild/channel settings run through the same legacy method. Leave them
+      // completely untouched — only the user settings sidebar gets our group.
+      if (!isUserSettingsSidebar(sections)) {
+        if (!skippedNonUserSidebar) {
+          skippedNonUserSidebar = true;
+          log.info(
+            `[settings-scope] legacy sidebar left untouched (${sections.length} sections: ` +
+              `${sections.map((s) => s?.section).filter(Boolean).slice(0, 12).join(", ")})`
+          );
+        }
+        return sections;
+      }
 
       const mine = buildLegacySections();
       const out = sections.slice();

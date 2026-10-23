@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.15
+// @version      0.7.16
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-10-21 05:37:40" : "dev";
-      const version2 = true ? "0.7.15" : "dev";
+      const build = true ? "2026-10-23 13:38:11" : "dev";
+      const version2 = true ? "0.7.16" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4464,7 +4464,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.15" : "dev";
+    return true ? "0.7.16" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4539,29 +4539,69 @@ ${components_default}`;
   }
 
   // src/ui/settings/AboutView.tsx
+  function statusText(update, checking) {
+    if (checking) return "\u68C0\u67E5\u4E2D\u2026";
+    if (!update) return "\u5C1A\u672A\u68C0\u67E5";
+    switch (update.status) {
+      case "current":
+        return "\u5DF2\u662F\u6700\u65B0\u7248\u672C";
+      case "outdated":
+        return `\u53D1\u73B0\u65B0\u7248\u672C ${update.latest}`;
+      case "unknown":
+        return "\u65E0\u6CD5\u68C0\u67E5\u66F4\u65B0";
+      default:
+        return "\u68C0\u67E5\u4E2D\u2026";
+    }
+  }
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.15" : "dev";
+    const version2 = true ? "0.7.16" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
-    React.useEffect(() => {
-      let alive = true;
-      void checkForUpdate().then((state) => {
-        if (alive) setUpdate(state);
+    const [checking, setChecking] = React.useState(false);
+    const alive = React.useRef(true);
+    const runCheck = React.useCallback((force) => {
+      setChecking(true);
+      void checkForUpdate(force).then((state) => {
+        if (alive.current) setUpdate(state);
+      }).finally(() => {
+        if (alive.current) setChecking(false);
       });
-      return () => {
-        alive = false;
-      };
     }, []);
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version2, update?.status === "outdated" && "\uFF0C\u6709\u65B0\u7248\u672C\u53EF\u7528"))), update?.status === "outdated" && /* @__PURE__ */ React.createElement(Section, { title: "\u66F4\u65B0" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u53D1\u73B0\u65B0\u7248\u672C ", update.latest)), /* @__PURE__ */ React.createElement(
-      Button,
+    React.useEffect(() => {
+      alive.current = true;
+      runCheck(false);
+      return () => {
+        alive.current = false;
+      };
+    }, [runCheck]);
+    const outdated = update?.status === "outdated";
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-stack" }, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero" }, /* @__PURE__ */ React.createElement(HalcyonMark, { size: 32 }), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__name" }, "Halcyon"), /* @__PURE__ */ React.createElement("div", { className: "hc-about-hero__ver" }, "\u7248\u672C ", version2, outdated && "\uFF0C\u6709\u65B0\u7248\u672C\u53EF\u7528"))), /* @__PURE__ */ React.createElement(
+      Section,
       {
-        variant: "primary",
-        size: "sm",
-        onClick: () => window.open(PROJECT_URL, "_blank", "noopener,noreferrer")
+        title: "\u66F4\u65B0",
+        note: update?.status === "unknown" ? "\u65E0\u6CD5\u8BBF\u95EE GitHub \u2014\u2014 \u53EF\u80FD\u88AB\u7F51\u7EDC\u6216\u5BA2\u6237\u7AEF\u7B56\u7565\u62E6\u622A\uFF0C\u7A0D\u540E\u518D\u8BD5\u3002" : void 0
       },
-      "\u524D\u5F80\u4E0B\u8F7D"
-    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled2) })), /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7248\u672C ", version2), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, statusText(update, checking))), /* @__PURE__ */ React.createElement(
+        Button,
+        {
+          variant: "secondary",
+          size: "sm",
+          disabled: checking,
+          onClick: () => runCheck(true)
+        },
+        checking ? "\u68C0\u67E5\u4E2D\u2026" : "\u68C0\u67E5\u66F4\u65B0"
+      )),
+      outdated && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u53D1\u73B0\u65B0\u7248\u672C ", update?.latest)), /* @__PURE__ */ React.createElement(
+        Button,
+        {
+          variant: "primary",
+          size: "sm",
+          onClick: () => window.open(PROJECT_URL, "_blank", "noopener,noreferrer")
+        },
+        "\u524D\u5F80\u4E0B\u8F7D"
+      ))
+    ), /* @__PURE__ */ React.createElement(Section, { title: "\u6982\u89C8" }, /* @__PURE__ */ React.createElement(AboutRow, { label: "\u63D2\u4EF6\u603B\u6570", value: String(plugins2.length) }), /* @__PURE__ */ React.createElement(AboutRow, { label: "\u5DF2\u542F\u7528", value: String(enabled2) })), /* @__PURE__ */ React.createElement(
       Section,
       {
         title: "\u9879\u76EE",
@@ -4863,6 +4903,22 @@ ${components_default}`;
       { section: "halcyon-about", label: "\u5173\u4E8E", element: AboutSection }
     ];
   }
+  var USER_SIDEBAR_SECTIONS = [
+    "my account",
+    "user_section",
+    "privacy & safety",
+    "authorized apps",
+    "voice & video",
+    "keybinds"
+  ];
+  function isUserSettingsSidebar(sections) {
+    return sections.some((s) => {
+      const id = typeof s?.section === "string" ? s.section.trim().toLowerCase() : "";
+      return id !== "" && USER_SIDEBAR_SECTIONS.includes(id);
+    });
+  }
+  var skippedNonUserLayout = false;
+  var skippedNonUserSidebar = false;
   var onKeyDown = null;
   var settings_host_default = definePlugin({
     id: "halcyon-settings",
@@ -4915,6 +4971,17 @@ ${components_default}`;
       try {
         if (!builder || builder.key !== "$Root") return layout;
         if (!Array.isArray(layout)) return layout;
+        const billingIndex = layout.findIndex((n) => n?.key === "billing_section");
+        const accountIndex = layout.findIndex((n) => n?.key === "user_section");
+        if (billingIndex < 0 && accountIndex < 0) {
+          if (!skippedNonUserLayout) {
+            skippedNonUserLayout = true;
+            log6.info(
+              `[settings-scope] layout left untouched (${layout.length} nodes: ${layout.map((n) => String(n?.key)).slice(0, 12).join(", ")})`
+            );
+          }
+          return layout;
+        }
         probeLayoutOnce(layout);
         if (!INJECT_SECTION) return layout;
         if (layout.some((n) => n?.key === HALCYON_SECTION_KEY)) return layout;
@@ -4925,9 +4992,7 @@ ${components_default}`;
           useTitle: () => "HALCYON",
           buildLayout: () => ENTRIES.map((entry) => buildEntry(types, entry))
         };
-        let index = layout.findIndex((n) => n?.key === "billing_section");
-        if (index < 0) index = layout.findIndex((n) => n?.key === "user_section");
-        if (index < 0) index = Math.min(2, layout.length);
+        const index = billingIndex >= 0 ? billingIndex : accountIndex;
         layout.splice(index, 0, section);
         log6.info(`native settings embed active \u2014 section inserted at index ${index}/${layout.length}`);
         return layout;
@@ -4948,6 +5013,15 @@ ${components_default}`;
       try {
         if (!Array.isArray(sections)) return sections;
         if (sections.some((s) => s?.section === "halcyon-plugins")) return sections;
+        if (!isUserSettingsSidebar(sections)) {
+          if (!skippedNonUserSidebar) {
+            skippedNonUserSidebar = true;
+            log6.info(
+              `[settings-scope] legacy sidebar left untouched (${sections.length} sections: ${sections.map((s) => s?.section).filter(Boolean).slice(0, 12).join(", ")})`
+            );
+          }
+          return sections;
+        }
         const mine = buildLegacySections();
         const out = sections.slice();
         const firstDivider = out.findIndex((s) => s && s.section === "DIVIDER");
@@ -14171,8 +14245,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.15" : "dev",
-      build: true ? "2026-10-21 05:37:40" : "dev",
+      version: true ? "0.7.16" : "dev",
+      build: true ? "2026-10-23 13:38:11" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14203,8 +14277,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.15" : "dev",
-        build: true ? "2026-10-21 05:37:40" : "dev",
+        version: true ? "0.7.16" : "dev",
+        build: true ? "2026-10-23 13:38:11" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
