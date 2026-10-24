@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.19
+// @version      0.7.20
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -345,25 +345,6 @@ var Halcyon = (() => {
       }
       return needles.every((n) => src.includes(n));
     });
-  }
-  function findBySource(...needles) {
-    if (!wpRequire) return void 0;
-    for (const id of Object.keys(wpRequire.m)) {
-      let src;
-      try {
-        src = wpRequire.m[id].toString();
-      } catch {
-        continue;
-      }
-      if (needles.every((n) => src.includes(n))) {
-        try {
-          return wpRequire(id);
-        } catch (err) {
-          log.error("failed to require source-matched module", id, err);
-        }
-      }
-    }
-    return void 0;
   }
   function findStore(name) {
     return find((exp) => exp?.getName?.() === name || exp?.constructor?.displayName === name);
@@ -861,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-10-24 09:52:09" : "dev";
-      const version2 = true ? "0.7.19" : "dev";
+      const build = true ? "2026-10-24 09:57:25" : "dev";
+      const version2 = true ? "0.7.20" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3238,6 +3219,45 @@ ${slices.join("\n  ...  \n")}`
   filter: brightness(1.08);
 }
 
+/* --- Recovered-media viewer (message-logger) ----------------------------- */
+/*
+ * Our own full-size viewer for thumbnails the recorder painted back. Mounted on
+ * document.body above Discord's layer stack, so literal values, no tokens.
+ * (The client's internal media-modal action proved unreliable across builds \u2014
+ * a wrong signature no-ops silently \u2014 hence a viewer we own.)
+ */
+.hc-media-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+}
+.hc-media-overlay__img {
+  max-width: 92vw;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  cursor: default;
+}
+.hc-media-overlay__hint {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  user-select: none;
+  pointer-events: none;
+}
+
 
 /* --- Message-log button in the channel header toolbar -------------------- */
 /*
@@ -4504,7 +4524,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.19" : "dev";
+    return true ? "0.7.20" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4596,7 +4616,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.19" : "dev";
+    const version2 = true ? "0.7.20" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -6246,85 +6266,52 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-logger/media-open.ts
-  var mediaModal;
-  var legacyImageModal;
-  function resolveMediaModal() {
-    if (mediaModal !== void 0) return mediaModal;
-    let resolved = null;
-    try {
-      const mod = findBySource("hasMediaOptions", "shouldHideMediaOptions");
-      if (typeof mod === "function") {
-        resolved = mod;
-      } else if (typeof mod?.openMediaModal === "function") {
-        resolved = mod.openMediaModal.bind(mod);
-      } else if (typeof mod?.default === "function") {
-        resolved = mod.default;
-      }
-    } catch {
-      resolved = null;
-    }
-    mediaModal = resolved;
-    return resolved;
+  var OVERLAY_ID = "hc-media-overlay";
+  function closeOverlay() {
+    const el = document.getElementById(OVERLAY_ID);
+    if (!el) return;
+    el.remove();
   }
-  function resolveLegacyModal() {
-    if (legacyImageModal !== void 0) return legacyImageModal;
-    let resolved = null;
-    try {
-      const mod = find((m) => typeof m?.openImageModal === "function");
-      if (mod) resolved = (url) => mod.openImageModal(url);
-    } catch {
-      resolved = null;
-    }
-    legacyImageModal = resolved;
-    return resolved;
-  }
-  function openInTab(url) {
-    try {
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch {
-    }
-  }
-  function showInModal(url, width, height) {
-    const modal = resolveMediaModal();
-    if (modal) {
-      const open = (w, h) => {
-        try {
-          modal({ items: [{ type: "IMAGE", url, original: url, width: w, height: h }] });
-          return true;
-        } catch {
-          return false;
-        }
-      };
-      if (width && height && open(width, height)) return true;
-      try {
-        const img = new Image();
-        img.onload = () => {
-          if (!open(img.naturalWidth || 1, img.naturalHeight || 1)) openInTab(url);
-        };
-        img.onerror = () => openInTab(url);
-        img.src = url;
-        return true;
-      } catch {
-      }
-    }
-    const legacy = resolveLegacyModal();
-    if (legacy) {
-      try {
-        legacy(url);
-        return true;
-      } catch {
-      }
-    }
-    return false;
-  }
-  function openMedia(url, width, height) {
+  function openMedia(url) {
     if (!url) return;
     let full = url;
     try {
       full = originalSrc(url);
     } catch {
     }
-    if (!showInModal(full, width, height)) openInTab(full);
+    try {
+      closeOverlay();
+      const wrap = document.createElement("div");
+      wrap.id = OVERLAY_ID;
+      wrap.className = "hc-media-overlay";
+      wrap.setAttribute("role", "dialog");
+      wrap.setAttribute("aria-modal", "true");
+      const img = document.createElement("img");
+      img.className = "hc-media-overlay__img";
+      img.src = full;
+      img.alt = "";
+      img.draggable = false;
+      img.addEventListener("click", (event) => event.stopPropagation());
+      const hint = document.createElement("div");
+      hint.className = "hc-media-overlay__hint";
+      hint.textContent = "\u70B9\u51FB\u7A7A\u767D\u5904\u6216\u6309 Esc \u5173\u95ED";
+      const onKey = (event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          close();
+        }
+      };
+      const close = () => {
+        document.removeEventListener("keydown", onKey, true);
+        wrap.remove();
+      };
+      wrap.addEventListener("click", close);
+      document.addEventListener("keydown", onKey, true);
+      wrap.appendChild(img);
+      wrap.appendChild(hint);
+      document.body.appendChild(wrap);
+    } catch {
+    }
   }
 
   // src/plugins/message-logger/attachments.ts
@@ -6746,7 +6733,7 @@ ${loc.channel ?? ""}`.toLowerCase();
           title: "\u70B9\u51FB\u67E5\u770B\u5927\u56FE",
           onClick: (event) => {
             event.preventDefault();
-            openMedia(a.proxy_url ?? a.url, a.width, a.height);
+            openMedia(a.proxy_url ?? a.url);
           }
         },
         /* @__PURE__ */ React.createElement("img", { className: "hc-msg__thumb", src: src(a.proxy_url ?? a.url), alt: a.filename ?? "\u9644\u4EF6", loading: "lazy" })
@@ -6771,7 +6758,7 @@ ${loc.channel ?? ""}`.toLowerCase();
           title: "\u70B9\u51FB\u67E5\u770B\u5927\u56FE",
           onClick: (event) => {
             event.preventDefault();
-            openMedia(a.proxy_url ?? a.url, a.width, a.height);
+            openMedia(a.proxy_url ?? a.url);
           }
         },
         /* @__PURE__ */ React.createElement("img", { className: "hc-msg__thumb", src: src(a.proxy_url ?? a.url), alt: a.filename ?? "\u9644\u4EF6", loading: "lazy" })
@@ -7775,9 +7762,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       out.push({
         url,
         kind: ct.startsWith("video/") ? "video" : ct.startsWith("image/") ? "image" : "file",
-        name: a.filename,
-        width: a.width,
-        height: a.height
+        name: a.filename
       });
     }
     for (const e of embeds ?? []) {
@@ -7820,7 +7805,7 @@ ${loc.channel ?? ""}`.toLowerCase();
                   onClick: (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    openMedia(m.url, m.width, m.height);
+                    openMedia(m.url);
                   }
                 },
                 /* @__PURE__ */ React.createElement("img", { className: "hc-deleted-media__thumb", src: m.url, alt: m.name ?? "", loading: "lazy" })
@@ -7862,7 +7847,7 @@ ${loc.channel ?? ""}`.toLowerCase();
               onClick: (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                openMedia(m.url, m.width, m.height);
+                openMedia(m.url);
               }
             },
             /* @__PURE__ */ React.createElement(
@@ -14561,8 +14546,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.19" : "dev",
-      build: true ? "2026-10-24 09:52:09" : "dev",
+      version: true ? "0.7.20" : "dev",
+      build: true ? "2026-10-24 09:57:25" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14593,8 +14578,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.19" : "dev",
-        build: true ? "2026-10-24 09:52:09" : "dev",
+        version: true ? "0.7.20" : "dev",
+        build: true ? "2026-10-24 09:57:25" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

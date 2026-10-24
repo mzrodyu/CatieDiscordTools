@@ -2160,6 +2160,45 @@
   filter: brightness(1.08);
 }
 
+/* --- Recovered-media viewer (message-logger) ----------------------------- */
+/*
+ * Our own full-size viewer for thumbnails the recorder painted back. Mounted on
+ * document.body above Discord's layer stack, so literal values, no tokens.
+ * (The client's internal media-modal action proved unreliable across builds —
+ * a wrong signature no-ops silently — hence a viewer we own.)
+ */
+.hc-media-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+}
+.hc-media-overlay__img {
+  max-width: 92vw;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  cursor: default;
+}
+.hc-media-overlay__hint {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  user-select: none;
+  pointer-events: none;
+}
+
 
 /* --- Message-log button in the channel header toolbar -------------------- */
 /*

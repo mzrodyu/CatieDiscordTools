@@ -1442,9 +1442,6 @@ interface DeletedMedia {
   url: string;
   kind: "image" | "video" | "file";
   name?: string;
-  /** Attachment dimensions, forwarded to the media modal (it needs both). */
-  width?: number;
-  height?: number;
 }
 
 /**
@@ -1463,9 +1460,7 @@ function collectDeletedMedia(attachments?: RichAttachment[], embeds?: any[]): De
     out.push({
       url,
       kind: ct.startsWith("video/") ? "video" : ct.startsWith("image/") ? "image" : "file",
-      name: a.filename,
-      width: a.width,
-      height: a.height
+      name: a.filename
     });
   }
   for (const e of embeds ?? []) {
@@ -1533,7 +1528,7 @@ function MessageExtras(props: {
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          openMedia(m.url, m.width, m.height);
+                          openMedia(m.url);
                         }}
                       >
                         <img className="hc-deleted-media__thumb" src={m.url} alt={m.name ?? ""} loading="lazy" />
@@ -1588,7 +1583,7 @@ function MessageExtras(props: {
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                openMedia(m.url, m.width, m.height);
+                openMedia(m.url);
               }}
             >
               <img

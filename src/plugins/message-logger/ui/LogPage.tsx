@@ -580,7 +580,7 @@ function DeletedRow({
                 title="点击查看大图"
                 onClick={(event) => {
                   event.preventDefault();
-                  openMedia(a.proxy_url ?? a.url, a.width, a.height);
+                  openMedia(a.proxy_url ?? a.url);
                 }}
               >
                 <img className="hc-msg__thumb" src={src(a.proxy_url ?? a.url)} alt={a.filename ?? "附件"} loading="lazy" />
@@ -637,7 +637,7 @@ function EditedRow({
                         title="点击查看大图"
                         onClick={(event) => {
                           event.preventDefault();
-                          openMedia(a.proxy_url ?? a.url, a.width, a.height);
+                          openMedia(a.proxy_url ?? a.url);
                         }}
                       >
                         <img className="hc-msg__thumb" src={src(a.proxy_url ?? a.url)} alt={a.filename ?? "附件"} loading="lazy" />
