@@ -11,6 +11,7 @@ import { logger } from "../../../core/logger";
 import { getSourcePatchReport } from "../../../core/modules/webpack";
 import { messageLog, type DeletedEntry, type EditedEntry } from "../store";
 import { renderContent } from "../render-content";
+import { openMedia } from "../media-open";
 import { cached as cachedUrl, needsRefresh, refreshUrls } from "../attachments";
 import {
   DEFAULT_FILTERS,
@@ -570,13 +571,20 @@ function DeletedRow({
         <div className="hc-msg__media">
           {entry.attachmentsRich!.map((a, i) =>
             (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? (
-              <img
+              <a
                 key={i}
-                className="hc-msg__thumb"
-                src={src(a.proxy_url ?? a.url)}
-                alt={a.filename ?? "附件"}
-                loading="lazy"
-              />
+                className="hc-media-open"
+                href={src(a.proxy_url ?? a.url) ?? a.url}
+                target="_blank"
+                rel="noreferrer"
+                title="点击查看大图"
+                onClick={(event) => {
+                  event.preventDefault();
+                  openMedia(a.proxy_url ?? a.url, a.width, a.height);
+                }}
+              >
+                <img className="hc-msg__thumb" src={src(a.proxy_url ?? a.url)} alt={a.filename ?? "附件"} loading="lazy" />
+              </a>
             ) : (
               <a key={i} href={src(a.url)} target="_blank" rel="noreferrer">
                 📎 {a.filename ?? "附件"}
@@ -620,13 +628,20 @@ function EditedRow({
                 <span className="hc-msg__media">
                   {version.attachments.map((a, i) =>
                     (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? (
-                      <img
+                      <a
                         key={i}
-                        className="hc-msg__thumb"
-                        src={src(a.proxy_url ?? a.url)}
-                        alt={a.filename ?? "附件"}
-                        loading="lazy"
-                      />
+                        className="hc-media-open"
+                        href={src(a.proxy_url ?? a.url) ?? a.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="点击查看大图"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          openMedia(a.proxy_url ?? a.url, a.width, a.height);
+                        }}
+                      >
+                        <img className="hc-msg__thumb" src={src(a.proxy_url ?? a.url)} alt={a.filename ?? "附件"} loading="lazy" />
+                      </a>
                     ) : (
                       <a key={i} href={src(a.url)} target="_blank" rel="noreferrer">
                         📎 {a.filename ?? "附件"}

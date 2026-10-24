@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.18
+// @version      0.7.19
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -345,6 +345,25 @@ var Halcyon = (() => {
       }
       return needles.every((n) => src.includes(n));
     });
+  }
+  function findBySource(...needles) {
+    if (!wpRequire) return void 0;
+    for (const id of Object.keys(wpRequire.m)) {
+      let src;
+      try {
+        src = wpRequire.m[id].toString();
+      } catch {
+        continue;
+      }
+      if (needles.every((n) => src.includes(n))) {
+        try {
+          return wpRequire(id);
+        } catch (err) {
+          log.error("failed to require source-matched module", id, err);
+        }
+      }
+    }
+    return void 0;
   }
   function findStore(name) {
     return find((exp) => exp?.getName?.() === name || exp?.constructor?.displayName === name);
@@ -842,8 +861,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-10-24 09:35:56" : "dev";
-      const version2 = true ? "0.7.18" : "dev";
+      const build = true ? "2026-10-24 09:52:09" : "dev";
+      const version2 = true ? "0.7.19" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3207,6 +3226,17 @@ ${slices.join("\n  ...  \n")}`
   font-size: 0.8125rem;
   word-break: break-all;
 }
+/* Recovered thumbnails are our own <img>s \u2014 Discord's click handlers don't
+ * know them, so the link wrapping them is ours too. */
+.hc-media-open {
+  display: inline-block;
+  line-height: 0;
+  cursor: zoom-in;
+  border-radius: 8px;
+}
+.hc-media-open:hover {
+  filter: brightness(1.08);
+}
 
 
 /* --- Message-log button in the channel header toolbar -------------------- */
@@ -4474,7 +4504,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.18" : "dev";
+    return true ? "0.7.19" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4566,7 +4596,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.18" : "dev";
+    const version2 = true ? "0.7.19" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -6166,6 +6196,137 @@ ${loc.channel ?? ""}`.toLowerCase();
     return parts;
   }
 
+  // src/plugins/image-zoom/lens.ts
+  function lensStyle(rect, cursorX, cursorY, lens2, zoom2) {
+    const bgWidth = Math.max(1, rect.width * zoom2);
+    const bgHeight = Math.max(1, rect.height * zoom2);
+    const cx = Math.min(Math.max(cursorX - rect.left, 0), rect.width);
+    const cy = Math.min(Math.max(cursorY - rect.top, 0), rect.height);
+    const half = lens2 / 2;
+    let bgX = half - cx * zoom2;
+    let bgY = half - cy * zoom2;
+    bgX = bgWidth <= lens2 ? (lens2 - bgWidth) / 2 : Math.min(0, Math.max(lens2 - bgWidth, bgX));
+    bgY = bgHeight <= lens2 ? (lens2 - bgHeight) / 2 : Math.min(0, Math.max(lens2 - bgHeight, bgY));
+    return { bgWidth, bgHeight, bgX, bgY };
+  }
+  function stepZoom(current2, direction, min, max) {
+    const next = current2 + (direction < 0 ? 0.5 : -0.5);
+    return Math.round(Math.min(max, Math.max(min, next)) * 10) / 10;
+  }
+  function stepLens(current2, direction) {
+    const next = current2 + (direction < 0 ? 40 : -40);
+    return Math.min(800, Math.max(120, Math.round(next)));
+  }
+  var MEDIA_HOSTS = /(^|\.)(discordapp\.com|discordapp\.net|discord\.com)$/i;
+  function parseUrl(src) {
+    try {
+      return new URL(src);
+    } catch {
+    }
+    try {
+      const base = typeof location !== "undefined" ? location.href : "https://discord.com/";
+      return new URL(src, base);
+    } catch {
+      return null;
+    }
+  }
+  function originalSrc(src) {
+    const url = parseUrl(src);
+    if (!url || !MEDIA_HOSTS.test(url.hostname)) return src;
+    for (const param of ["width", "height", "size", "quality", "format"]) url.searchParams.delete(param);
+    return url.toString();
+  }
+  function qualifies(el, minSize) {
+    if (!(el instanceof HTMLImageElement)) return false;
+    if (!el.currentSrc && !el.src) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width < minSize || rect.height < minSize) return false;
+    if (el.closest(".halcyon") !== null) return false;
+    return true;
+  }
+
+  // src/plugins/message-logger/media-open.ts
+  var mediaModal;
+  var legacyImageModal;
+  function resolveMediaModal() {
+    if (mediaModal !== void 0) return mediaModal;
+    let resolved = null;
+    try {
+      const mod = findBySource("hasMediaOptions", "shouldHideMediaOptions");
+      if (typeof mod === "function") {
+        resolved = mod;
+      } else if (typeof mod?.openMediaModal === "function") {
+        resolved = mod.openMediaModal.bind(mod);
+      } else if (typeof mod?.default === "function") {
+        resolved = mod.default;
+      }
+    } catch {
+      resolved = null;
+    }
+    mediaModal = resolved;
+    return resolved;
+  }
+  function resolveLegacyModal() {
+    if (legacyImageModal !== void 0) return legacyImageModal;
+    let resolved = null;
+    try {
+      const mod = find((m) => typeof m?.openImageModal === "function");
+      if (mod) resolved = (url) => mod.openImageModal(url);
+    } catch {
+      resolved = null;
+    }
+    legacyImageModal = resolved;
+    return resolved;
+  }
+  function openInTab(url) {
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+    }
+  }
+  function showInModal(url, width, height) {
+    const modal = resolveMediaModal();
+    if (modal) {
+      const open = (w, h) => {
+        try {
+          modal({ items: [{ type: "IMAGE", url, original: url, width: w, height: h }] });
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      if (width && height && open(width, height)) return true;
+      try {
+        const img = new Image();
+        img.onload = () => {
+          if (!open(img.naturalWidth || 1, img.naturalHeight || 1)) openInTab(url);
+        };
+        img.onerror = () => openInTab(url);
+        img.src = url;
+        return true;
+      } catch {
+      }
+    }
+    const legacy = resolveLegacyModal();
+    if (legacy) {
+      try {
+        legacy(url);
+        return true;
+      } catch {
+      }
+    }
+    return false;
+  }
+  function openMedia(url, width, height) {
+    if (!url) return;
+    let full = url;
+    try {
+      full = originalSrc(url);
+    } catch {
+    }
+    if (!showInModal(full, width, height)) openInTab(full);
+  }
+
   // src/plugins/message-logger/attachments.ts
   var log11 = logger("message-logger");
   var GRACE_MS = 60 * 60 * 1e3;
@@ -6575,14 +6736,20 @@ ${loc.channel ?? ""}`.toLowerCase();
     const src = (url) => freshUrl ? freshUrl(url) : url;
     return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), entry.author.bot && /* @__PURE__ */ React.createElement(Badge, { tone: "neutral" }, "BOT"), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.deletedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__body" }, entry.content ? renderContent(entry.content, highlight) : entry.stickers?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F3F7}\uFE0F \u8D34\u7EB8\uFF1A", entry.stickers.map((s) => s.name).join("\u3001")) : entry.attachmentsRich?.length || entry.embeds?.length ? /* @__PURE__ */ React.createElement("span", null, "\u{1F5BC}\uFE0F \u5A92\u4F53\u6D88\u606F") : /* @__PURE__ */ React.createElement("span", { className: "hc-msg__empty" }, "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09")), (entry.attachmentsRich?.length ?? 0) > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__media" }, entry.attachmentsRich.map(
       (a, i) => (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? /* @__PURE__ */ React.createElement(
-        "img",
+        "a",
         {
           key: i,
-          className: "hc-msg__thumb",
-          src: src(a.proxy_url ?? a.url),
-          alt: a.filename ?? "\u9644\u4EF6",
-          loading: "lazy"
-        }
+          className: "hc-media-open",
+          href: src(a.proxy_url ?? a.url) ?? a.url,
+          target: "_blank",
+          rel: "noreferrer",
+          title: "\u70B9\u51FB\u67E5\u770B\u5927\u56FE",
+          onClick: (event) => {
+            event.preventDefault();
+            openMedia(a.proxy_url ?? a.url, a.width, a.height);
+          }
+        },
+        /* @__PURE__ */ React.createElement("img", { className: "hc-msg__thumb", src: src(a.proxy_url ?? a.url), alt: a.filename ?? "\u9644\u4EF6", loading: "lazy" })
       ) : /* @__PURE__ */ React.createElement("a", { key: i, href: src(a.url), target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", a.filename ?? "\u9644\u4EF6")
     )), !entry.attachmentsRich?.length && entry.attachments.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__meta" }, "\u9644\u4EF6 ", entry.attachments.length, " \u4E2A"));
   }
@@ -6594,14 +6761,20 @@ ${loc.channel ?? ""}`.toLowerCase();
     const src = (url) => freshUrl ? freshUrl(url) : url;
     return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version2, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version2.content ? renderContent(version2.content, highlight) : "\uFF08\u7A7A\uFF09", version2.attachments?.length ? /* @__PURE__ */ React.createElement("span", { className: "hc-msg__media" }, version2.attachments.map(
       (a, i) => (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? /* @__PURE__ */ React.createElement(
-        "img",
+        "a",
         {
           key: i,
-          className: "hc-msg__thumb",
-          src: src(a.proxy_url ?? a.url),
-          alt: a.filename ?? "\u9644\u4EF6",
-          loading: "lazy"
-        }
+          className: "hc-media-open",
+          href: src(a.proxy_url ?? a.url) ?? a.url,
+          target: "_blank",
+          rel: "noreferrer",
+          title: "\u70B9\u51FB\u67E5\u770B\u5927\u56FE",
+          onClick: (event) => {
+            event.preventDefault();
+            openMedia(a.proxy_url ?? a.url, a.width, a.height);
+          }
+        },
+        /* @__PURE__ */ React.createElement("img", { className: "hc-msg__thumb", src: src(a.proxy_url ?? a.url), alt: a.filename ?? "\u9644\u4EF6", loading: "lazy" })
       ) : /* @__PURE__ */ React.createElement("a", { key: i, href: src(a.url), target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", a.filename ?? "\u9644\u4EF6")
     )) : null)))));
   }
@@ -7602,7 +7775,9 @@ ${loc.channel ?? ""}`.toLowerCase();
       out.push({
         url,
         kind: ct.startsWith("video/") ? "video" : ct.startsWith("image/") ? "image" : "file",
-        name: a.filename
+        name: a.filename,
+        width: a.width,
+        height: a.height
       });
     }
     for (const e of embeds ?? []) {
@@ -7633,7 +7808,23 @@ ${loc.channel ?? ""}`.toLowerCase();
             renderContent(version2.content),
             time ? /* @__PURE__ */ React.createElement("span", { className: "hc-edit-history__time" }, time) : null,
             media.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history__media" }, media.map(
-              (m, i) => m.kind === "file" ? /* @__PURE__ */ React.createElement("a", { className: "hc-deleted-media__file", key: i, href: m.url, target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", m.name ?? "\u9644\u4EF6") : /* @__PURE__ */ React.createElement("img", { className: "hc-deleted-media__thumb", key: i, src: m.url, alt: m.name ?? "", loading: "lazy" })
+              (m, i) => m.kind === "file" ? /* @__PURE__ */ React.createElement("a", { className: "hc-deleted-media__file", key: i, href: m.url, target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", m.name ?? "\u9644\u4EF6") : /* @__PURE__ */ React.createElement(
+                "a",
+                {
+                  key: i,
+                  className: "hc-media-open",
+                  href: m.url,
+                  target: "_blank",
+                  rel: "noreferrer",
+                  title: "\u70B9\u51FB\u67E5\u770B\u5927\u56FE",
+                  onClick: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openMedia(m.url, m.width, m.height);
+                  }
+                },
+                /* @__PURE__ */ React.createElement("img", { className: "hc-deleted-media__thumb", src: m.url, alt: m.name ?? "", loading: "lazy" })
+              )
             ))
           );
         }))
@@ -7660,15 +7851,30 @@ ${loc.channel ?? ""}`.toLowerCase();
             "\u{1F4CE} ",
             m.name ?? "\u9644\u4EF6"
           ) : /* @__PURE__ */ React.createElement(
-            "img",
+            "a",
             {
-              className: "hc-deleted-media__thumb",
+              className: "hc-media-open",
               key: i,
-              src: m.url,
-              alt: m.name ?? "",
-              loading: "lazy",
-              referrerPolicy: "no-referrer"
-            }
+              href: m.url,
+              target: "_blank",
+              rel: "noreferrer",
+              title: "\u70B9\u51FB\u67E5\u770B\u5927\u56FE",
+              onClick: (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                openMedia(m.url, m.width, m.height);
+              }
+            },
+            /* @__PURE__ */ React.createElement(
+              "img",
+              {
+                className: "hc-deleted-media__thumb",
+                src: m.url,
+                alt: m.name ?? "",
+                loading: "lazy",
+                referrerPolicy: "no-referrer"
+              }
+            )
           )
         ))
       );
@@ -10564,55 +10770,6 @@ ${tail}`;
       dispatchActivity(null);
     }
   });
-
-  // src/plugins/image-zoom/lens.ts
-  function lensStyle(rect, cursorX, cursorY, lens2, zoom2) {
-    const bgWidth = Math.max(1, rect.width * zoom2);
-    const bgHeight = Math.max(1, rect.height * zoom2);
-    const cx = Math.min(Math.max(cursorX - rect.left, 0), rect.width);
-    const cy = Math.min(Math.max(cursorY - rect.top, 0), rect.height);
-    const half = lens2 / 2;
-    let bgX = half - cx * zoom2;
-    let bgY = half - cy * zoom2;
-    bgX = bgWidth <= lens2 ? (lens2 - bgWidth) / 2 : Math.min(0, Math.max(lens2 - bgWidth, bgX));
-    bgY = bgHeight <= lens2 ? (lens2 - bgHeight) / 2 : Math.min(0, Math.max(lens2 - bgHeight, bgY));
-    return { bgWidth, bgHeight, bgX, bgY };
-  }
-  function stepZoom(current2, direction, min, max) {
-    const next = current2 + (direction < 0 ? 0.5 : -0.5);
-    return Math.round(Math.min(max, Math.max(min, next)) * 10) / 10;
-  }
-  function stepLens(current2, direction) {
-    const next = current2 + (direction < 0 ? 40 : -40);
-    return Math.min(800, Math.max(120, Math.round(next)));
-  }
-  var MEDIA_HOSTS = /(^|\.)(discordapp\.com|discordapp\.net|discord\.com)$/i;
-  function parseUrl(src) {
-    try {
-      return new URL(src);
-    } catch {
-    }
-    try {
-      const base = typeof location !== "undefined" ? location.href : "https://discord.com/";
-      return new URL(src, base);
-    } catch {
-      return null;
-    }
-  }
-  function originalSrc(src) {
-    const url = parseUrl(src);
-    if (!url || !MEDIA_HOSTS.test(url.hostname)) return src;
-    for (const param of ["width", "height", "size", "quality", "format"]) url.searchParams.delete(param);
-    return url.toString();
-  }
-  function qualifies(el, minSize) {
-    if (!(el instanceof HTMLImageElement)) return false;
-    if (!el.currentSrc && !el.src) return false;
-    const rect = el.getBoundingClientRect();
-    if (rect.width < minSize || rect.height < minSize) return false;
-    if (el.closest(".halcyon") !== null) return false;
-    return true;
-  }
 
   // src/plugins/image-zoom/index.ts
   var settings9 = defineSettings({
@@ -14404,8 +14561,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.18" : "dev",
-      build: true ? "2026-10-24 09:35:56" : "dev",
+      version: true ? "0.7.19" : "dev",
+      build: true ? "2026-10-24 09:52:09" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14436,8 +14593,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.18" : "dev",
-        build: true ? "2026-10-24 09:35:56" : "dev",
+        version: true ? "0.7.19" : "dev",
+        build: true ? "2026-10-24 09:52:09" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

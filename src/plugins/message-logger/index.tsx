@@ -33,6 +33,7 @@ import {
   type RichAttachment
 } from "./store";
 import { renderContent } from "./render-content";
+import { openMedia } from "./media-open";
 import { LogPage } from "./ui/LogPage";
 import { startToolbarButton, stopToolbarButton } from "./toolbar-button";
 
@@ -1441,6 +1442,9 @@ interface DeletedMedia {
   url: string;
   kind: "image" | "video" | "file";
   name?: string;
+  /** Attachment dimensions, forwarded to the media modal (it needs both). */
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -1459,7 +1463,9 @@ function collectDeletedMedia(attachments?: RichAttachment[], embeds?: any[]): De
     out.push({
       url,
       kind: ct.startsWith("video/") ? "video" : ct.startsWith("image/") ? "image" : "file",
-      name: a.filename
+      name: a.filename,
+      width: a.width,
+      height: a.height
     });
   }
   for (const e of embeds ?? []) {
@@ -1517,7 +1523,21 @@ function MessageExtras(props: {
                         📎 {m.name ?? "附件"}
                       </a>
                     ) : (
-                      <img className="hc-deleted-media__thumb" key={i} src={m.url} alt={m.name ?? ""} loading="lazy" />
+                      <a
+                        key={i}
+                        className="hc-media-open"
+                        href={m.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="点击查看大图"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          openMedia(m.url, m.width, m.height);
+                        }}
+                      >
+                        <img className="hc-deleted-media__thumb" src={m.url} alt={m.name ?? ""} loading="lazy" />
+                      </a>
                     )
                   )}
                 </div>
@@ -1558,14 +1578,27 @@ function MessageExtras(props: {
               📎 {m.name ?? "附件"}
             </a>
           ) : (
-            <img
-              className="hc-deleted-media__thumb"
+            <a
+              className="hc-media-open"
               key={i}
-              src={m.url}
-              alt={m.name ?? ""}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-            />
+              href={m.url}
+              target="_blank"
+              rel="noreferrer"
+              title="点击查看大图"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                openMedia(m.url, m.width, m.height);
+              }}
+            >
+              <img
+                className="hc-deleted-media__thumb"
+                src={m.url}
+                alt={m.name ?? ""}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+            </a>
           )
         )}
       </div>
