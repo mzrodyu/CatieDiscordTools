@@ -25,7 +25,14 @@ import { useState, useEffect } from "../../core/common/react";
 import { logger } from "../../core/logger";
 import { ClockIcon } from "../../icons";
 import { settings } from "./settings";
-import { messageLog, type Author, type DeletedEntry, type RichAttachment } from "./store";
+import {
+  messageLog,
+  mediaKey,
+  type Author,
+  type DeletedEntry,
+  type EditVersion,
+  type RichAttachment
+} from "./store";
 import { renderContent } from "./render-content";
 import { LogPage } from "./ui/LogPage";
 import { startToolbarButton, stopToolbarButton } from "./toolbar-button";
@@ -254,7 +261,11 @@ function remember(channelId: unknown, id: unknown, message: any): void {
     // Partial payloads (some MESSAGE_UPDATEs) may omit these; keep what we had.
     author: message?.author ?? prior?.author,
     attachments: Array.isArray(message?.attachments) ? attachmentsOf(message) : prior?.attachments,
-    attachmentsRich: rich.length ? rich : prior?.attachmentsRich,
+    // Presence of the field is what decides, not emptiness: an edit that
+    // REMOVES an image sends `attachments: []`, and that empty list is the
+    // truth. (Partial updates omit the field entirely — those keep the prior
+    // value.) The removed image is preserved in the edit history instead.
+    attachmentsRich: Array.isArray(message?.attachments) ? rich : prior?.attachmentsRich,
     embeds: embeds.length ? embeds : prior?.embeds,
     stickers: stickers.length ? stickers : prior?.stickers,
     sentAt: message?.timestamp != null ? toMillis(message.timestamp) : prior?.sentAt,
@@ -736,14 +747,29 @@ function captureEdit(payload: any): void {
   const snap = shadow.get(key);
   const previous = snap?.content ?? (typeof existing?.content === "string" ? existing.content : undefined);
 
-  // Whatever we record, the newest text becomes the next edit's "before".
+  // Media as it was BEFORE this update. The shadow map is the trustworthy
+  // snapshot (own edits are applied to the cache optimistically); the live
+  // record is the fallback for a message that predates the recorder. This must
+  // be read before remember() overwrites it.
+  const priorMedia = snap?.attachmentsRich ?? richAttachmentsOf(existing);
+
+  // Whatever we record, the newest text/media becomes the next edit's "before".
   remember(channelId, id, payload);
 
   if (previous === undefined) {
     log.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
     return;
   }
-  if (previous === payload.content) return;
+
+  // An edit can remove an image without touching the text at all, and Discord
+  // then drops the attachment from the message for good. Comparing the media
+  // set as well is what keeps that picture in the log ("插件没看到图片").
+  // Only payloads that actually carry `attachments` are compared; partial
+  // updates omit the field and must not read as "media removed".
+  const mediaChanged =
+    Array.isArray(payload.attachments) && mediaKey(richAttachmentsOf(payload)) !== mediaKey(priorMedia);
+
+  if (previous === payload.content && !mediaChanged) return;
 
   const author = existing?.author ?? snap?.author ?? payload.author ?? {};
   if (isIgnored(channelId, author)) return;
@@ -754,7 +780,8 @@ function captureEdit(payload: any): void {
     String(channelId),
     toAuthor(author),
     previous,
-    guildId != null ? String(guildId) : undefined
+    guildId != null ? String(guildId) : undefined,
+    mediaChanged ? priorMedia : undefined
   );
 }
 
@@ -1305,7 +1332,7 @@ function collectDeletedMedia(attachments?: RichAttachment[], embeds?: any[]): De
 }
 
 function MessageExtras(props: {
-  history?: Array<{ content: string; at: number }>;
+  history?: EditVersion[];
   deletedAt?: number;
   editedAt?: number;
   isDeleted: boolean;
@@ -1324,6 +1351,10 @@ function MessageExtras(props: {
           // at the end of the line (always HH:MM:SS — datetime would be too long
           // per row), so "when was each edit" reads down the stack.
           const time = formatDeletedAt(version.at, "time");
+          // Media the version carried. Only present when that edit changed the
+          // media (an image that was removed/replaced), so a plain text edit
+          // doesn't repeat the still-visible picture.
+          const media = version.attachments?.length ? collectDeletedMedia(version.attachments) : [];
           return (
             <div
               className={`hc-edit-history__version hc-edit-history__version--${s.deleteStyle || "tint"}`}
@@ -1331,6 +1362,19 @@ function MessageExtras(props: {
             >
               {renderContent(version.content)}
               {time ? <span className="hc-edit-history__time">{time}</span> : null}
+              {media.length > 0 && (
+                <div className="hc-edit-history__media">
+                  {media.map((m, i) =>
+                    m.kind === "file" ? (
+                      <a className="hc-deleted-media__file" key={i} href={m.url} target="_blank" rel="noreferrer">
+                        📎 {m.name ?? "附件"}
+                      </a>
+                    ) : (
+                      <img className="hc-deleted-media__thumb" key={i} src={m.url} alt={m.name ?? ""} loading="lazy" />
+                    )
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

@@ -126,6 +126,15 @@ function useFreshUrls(visible: readonly LogEntry[]): (url?: string) => string | 
         }
       }
       if ("attachments" in entry && Array.isArray(entry.attachments)) urls.push(...entry.attachments);
+      // Media captured on an old edit version (the "image was deleted" case).
+      if ("history" in entry && Array.isArray(entry.history)) {
+        for (const v of entry.history) {
+          for (const a of v.attachments ?? []) {
+            if (a.proxy_url) urls.push(a.proxy_url);
+            if (a.url) urls.push(a.url);
+          }
+        }
+      }
     }
     const stale = urls.filter((u) => needsRefresh(u) && !cachedUrl(u));
     if (stale.length === 0) return;
@@ -370,6 +379,7 @@ export function LogPage(): React.ReactElement {
                     key={`${entry.channelId}-${entry.id}`}
                     entry={entry}
                     highlight={matcher.highlight}
+                    freshUrl={freshUrl}
                   />
                 ))}
           </div>
@@ -582,7 +592,16 @@ function DeletedRow({
   );
 }
 
-function EditedRow({ entry, highlight }: { entry: EditedEntry; highlight?: RegExp | null }): React.ReactElement {
+function EditedRow({
+  entry,
+  highlight,
+  freshUrl
+}: {
+  entry: EditedEntry;
+  highlight?: RegExp | null;
+  freshUrl?: (url?: string) => string | undefined;
+}): React.ReactElement {
+  const src = (url?: string): string | undefined => (freshUrl ? freshUrl(url) : url);
   return (
     <div className="hc-msg">
       <div className="hc-msg__head">
@@ -597,6 +616,25 @@ function EditedRow({ entry, highlight }: { entry: EditedEntry; highlight?: RegEx
             <span className="hc-msg__vtag">v{index + 1}</span>
             <span className="hc-msg__vbody">
               {version.content ? renderContent(version.content, highlight) : "（空）"}
+              {version.attachments?.length ? (
+                <span className="hc-msg__media">
+                  {version.attachments.map((a, i) =>
+                    (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? (
+                      <img
+                        key={i}
+                        className="hc-msg__thumb"
+                        src={src(a.proxy_url ?? a.url)}
+                        alt={a.filename ?? "附件"}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <a key={i} href={src(a.url)} target="_blank" rel="noreferrer">
+                        📎 {a.filename ?? "附件"}
+                      </a>
+                    )
+                  )}
+                </span>
+              ) : null}
             </span>
           </div>
         ))}

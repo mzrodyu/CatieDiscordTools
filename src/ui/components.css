@@ -1460,6 +1460,16 @@
   vertical-align: baseline;
 }
 
+/* Media a superseded version carried — typically the picture an edit removed.
+ * Thumbnails reuse .hc-deleted-media__thumb; this only stacks them beneath the
+ * old-version line. */
+.hc-edit-history__media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
 /* The old-version line mirrors the deleted-message style (tint/text/ghost/
  * strike) so both share one setting; strike stays its natural default look. */
 

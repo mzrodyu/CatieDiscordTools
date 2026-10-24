@@ -46,14 +46,39 @@ export interface DeletedEntry {
   deletedAt: number;
 }
 
+/**
+ * One superseded version of a message.
+ *
+ * `attachments` is filled only when that edit changed the message's media
+ * (removed, replaced or added an image/file). A text-only edit leaves it empty
+ * — the live message still shows its media, so repeating the same picture on
+ * every old version would just add noise. The exception this exists for: an
+ * edit that DELETES an image. Discord then forgets the attachment entirely, so
+ * without this snapshot the picture would be gone from the log for good.
+ */
+export interface EditVersion {
+  content: string;
+  at: number;
+  attachments?: RichAttachment[];
+}
+
 export interface EditedEntry {
   id: string;
   channelId: string;
   guildId?: string;
   author: Author;
   /** Oldest first; the last item is the most recent superseded version. */
-  history: Array<{ content: string; at: number }>;
+  history: EditVersion[];
   updatedAt: number;
+}
+
+/**
+ * Stable identity for a set of attachments. Ids/filenames, never the signed
+ * URL: Discord's `?ex=…&is=…&hm=…` signature rotates daily, so two snapshots of
+ * the same picture would otherwise look different.
+ */
+export function mediaKey(list?: Pick<RichAttachment, "id" | "filename" | "url" | "proxy_url">[]): string {
+  return (list ?? []).map((a) => a?.id ?? a?.filename ?? a?.url ?? a?.proxy_url ?? "").join("|");
 }
 
 interface Persisted {
@@ -155,17 +180,32 @@ class MessageLogStore {
     this.emit();
   }
 
-  recordEdit(id: string, channelId: string, author: Author, previous: string, guildId?: string): void {
+  recordEdit(
+    id: string,
+    channelId: string,
+    author: Author,
+    previous: string,
+    guildId?: string,
+    media?: RichAttachment[]
+  ): void {
     const now = Date.now();
     let entry = this.edited.find((e) => e.id === id);
+    const version: EditVersion = {
+      content: previous,
+      at: now,
+      ...(media && media.length ? { attachments: media } : {})
+    };
 
     if (!entry) {
-      entry = { id, channelId, guildId, author, history: [{ content: previous, at: now }], updatedAt: now };
+      entry = { id, channelId, guildId, author, history: [version], updatedAt: now };
       this.edited.unshift(entry);
     } else {
       const last = entry.history[entry.history.length - 1];
-      if (last?.content === previous) return; // nothing new
-      entry.history.push({ content: previous, at: now });
+      // An edit is new when the superseded text changed OR it carried media the
+      // previous recorded version didn't have (the "deleted the image" case,
+      // where the text stays identical).
+      if (last?.content === previous && mediaKey(last.attachments) === mediaKey(version.attachments)) return;
+      entry.history.push(version);
       entry.updatedAt = now;
     }
 

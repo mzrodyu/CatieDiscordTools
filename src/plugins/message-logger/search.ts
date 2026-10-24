@@ -107,7 +107,11 @@ export function searchableText(entry: LogEntry, guild?: string, channel?: string
   if (channel) parts.push(channel);
   if ("content" in entry && typeof entry.content === "string") parts.push(entry.content);
   if ("history" in entry && Array.isArray(entry.history)) {
-    for (const v of entry.history) if (v?.content) parts.push(v.content);
+    for (const v of entry.history) {
+      if (v?.content) parts.push(v.content);
+      // A version's media (an image an edit removed) is searchable by filename.
+      for (const a of v?.attachments ?? []) if (a?.filename) parts.push(a.filename);
+    }
   }
   if ("stickers" in entry && Array.isArray(entry.stickers)) {
     for (const s of entry.stickers) if (s?.name) parts.push(s.name);

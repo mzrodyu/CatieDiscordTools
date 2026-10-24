@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.16
+// @version      0.7.17
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-10-23 13:38:11" : "dev";
-      const version2 = true ? "0.7.16" : "dev";
+      const build = true ? "2026-10-24 09:29:39" : "dev";
+      const version2 = true ? "0.7.17" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -2517,6 +2517,16 @@ ${slices.join("\n  ...  \n")}`
   font-variant-numeric: tabular-nums;
   text-decoration: none;
   vertical-align: baseline;
+}
+
+/* Media a superseded version carried \u2014 typically the picture an edit removed.
+ * Thumbnails reuse .hc-deleted-media__thumb; this only stacks them beneath the
+ * old-version line. */
+.hc-edit-history__media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 /* The old-version line mirrors the deleted-message style (tint/text/ghost/
@@ -4464,7 +4474,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.16" : "dev";
+    return true ? "0.7.17" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4556,7 +4566,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.16" : "dev";
+    const version2 = true ? "0.7.17" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -5663,6 +5673,9 @@ ${components_default}`;
   // src/plugins/message-logger/store.ts
   var log10 = logger("message-logger");
   var DATA_NS = "message-logger.log";
+  function mediaKey(list) {
+    return (list ?? []).map((a) => a?.id ?? a?.filename ?? a?.url ?? a?.proxy_url ?? "").join("|");
+  }
   var SAVE_DEBOUNCE = 500;
   var MAX_SAVE_WAIT = 3e3;
   var SIZE_BUDGET = 1e6;
@@ -5730,16 +5743,21 @@ ${components_default}`;
       this.scheduleSave();
       this.emit();
     }
-    recordEdit(id, channelId, author, previous, guildId) {
+    recordEdit(id, channelId, author, previous, guildId, media) {
       const now = Date.now();
       let entry = this.edited.find((e) => e.id === id);
+      const version2 = {
+        content: previous,
+        at: now,
+        ...media && media.length ? { attachments: media } : {}
+      };
       if (!entry) {
-        entry = { id, channelId, guildId, author, history: [{ content: previous, at: now }], updatedAt: now };
+        entry = { id, channelId, guildId, author, history: [version2], updatedAt: now };
         this.edited.unshift(entry);
       } else {
         const last = entry.history[entry.history.length - 1];
-        if (last?.content === previous) return;
-        entry.history.push({ content: previous, at: now });
+        if (last?.content === previous && mediaKey(last.attachments) === mediaKey(version2.attachments)) return;
+        entry.history.push(version2);
         entry.updatedAt = now;
       }
       if (this.edited.length > 300) this.edited.length = 300;
@@ -6042,7 +6060,10 @@ ${components_default}`;
     if (channel) parts.push(channel);
     if ("content" in entry && typeof entry.content === "string") parts.push(entry.content);
     if ("history" in entry && Array.isArray(entry.history)) {
-      for (const v of entry.history) if (v?.content) parts.push(v.content);
+      for (const v of entry.history) {
+        if (v?.content) parts.push(v.content);
+        for (const a of v?.attachments ?? []) if (a?.filename) parts.push(a.filename);
+      }
     }
     if ("stickers" in entry && Array.isArray(entry.stickers)) {
       for (const s of entry.stickers) if (s?.name) parts.push(s.name);
@@ -6272,6 +6293,14 @@ ${loc.channel ?? ""}`.toLowerCase();
           }
         }
         if ("attachments" in entry && Array.isArray(entry.attachments)) urls.push(...entry.attachments);
+        if ("history" in entry && Array.isArray(entry.history)) {
+          for (const v of entry.history) {
+            for (const a of v.attachments ?? []) {
+              if (a.proxy_url) urls.push(a.proxy_url);
+              if (a.url) urls.push(a.url);
+            }
+          }
+        }
       }
       const stale = urls.filter((u) => needsRefresh(u) && !cached2(u));
       if (stale.length === 0) return;
@@ -6437,7 +6466,8 @@ ${loc.channel ?? ""}`.toLowerCase();
       {
         key: `${entry.channelId}-${entry.id}`,
         entry,
-        highlight: matcher.highlight
+        highlight: matcher.highlight,
+        freshUrl
       }
     ))), pageCount > 1 && /* @__PURE__ */ React.createElement(Pager, { page, pageCount, onChange: goTo })));
   }
@@ -6556,8 +6586,24 @@ ${loc.channel ?? ""}`.toLowerCase();
       ) : /* @__PURE__ */ React.createElement("a", { key: i, href: src(a.url), target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", a.filename ?? "\u9644\u4EF6")
     )), !entry.attachmentsRich?.length && entry.attachments.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-msg__meta" }, "\u9644\u4EF6 ", entry.attachments.length, " \u4E2A"));
   }
-  function EditedRow({ entry, highlight }) {
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version2, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version2.content ? renderContent(version2.content, highlight) : "\uFF08\u7A7A\uFF09")))));
+  function EditedRow({
+    entry,
+    highlight,
+    freshUrl
+  }) {
+    const src = (url) => freshUrl ? freshUrl(url) : url;
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-msg" }, /* @__PURE__ */ React.createElement("div", { className: "hc-msg__head" }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__author" }, entry.author.name), /* @__PURE__ */ React.createElement(Location, { channelId: entry.channelId, guildId: entry.guildId }), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__time" }, formatTime2(entry.updatedAt)), /* @__PURE__ */ React.createElement(JumpButton, { entry })), /* @__PURE__ */ React.createElement("div", { className: "hc-msg__versions" }, entry.history.map((version2, index) => /* @__PURE__ */ React.createElement("div", { className: "hc-msg__version", key: index }, /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vtag" }, "v", index + 1), /* @__PURE__ */ React.createElement("span", { className: "hc-msg__vbody" }, version2.content ? renderContent(version2.content, highlight) : "\uFF08\u7A7A\uFF09", version2.attachments?.length ? /* @__PURE__ */ React.createElement("span", { className: "hc-msg__media" }, version2.attachments.map(
+      (a, i) => (a.content_type ?? "").startsWith("image/") || (a.content_type ?? "").startsWith("video/") ? /* @__PURE__ */ React.createElement(
+        "img",
+        {
+          key: i,
+          className: "hc-msg__thumb",
+          src: src(a.proxy_url ?? a.url),
+          alt: a.filename ?? "\u9644\u4EF6",
+          loading: "lazy"
+        }
+      ) : /* @__PURE__ */ React.createElement("a", { key: i, href: src(a.url), target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", a.filename ?? "\u9644\u4EF6")
+    )) : null)))));
   }
   function resolveLocation(channelId, guildId) {
     let channelName;
@@ -6835,7 +6881,11 @@ ${loc.channel ?? ""}`.toLowerCase();
       // Partial payloads (some MESSAGE_UPDATEs) may omit these; keep what we had.
       author: message?.author ?? prior?.author,
       attachments: Array.isArray(message?.attachments) ? attachmentsOf(message) : prior?.attachments,
-      attachmentsRich: rich.length ? rich : prior?.attachmentsRich,
+      // Presence of the field is what decides, not emptiness: an edit that
+      // REMOVES an image sends `attachments: []`, and that empty list is the
+      // truth. (Partial updates omit the field entirely — those keep the prior
+      // value.) The removed image is preserved in the edit history instead.
+      attachmentsRich: Array.isArray(message?.attachments) ? rich : prior?.attachmentsRich,
       embeds: embeds.length ? embeds : prior?.embeds,
       stickers: stickers.length ? stickers : prior?.stickers,
       sentAt: message?.timestamp != null ? toMillis(message.timestamp) : prior?.sentAt,
@@ -7117,12 +7167,14 @@ ${loc.channel ?? ""}`.toLowerCase();
     const existing = readMessage(channelId, id);
     const snap = shadow.get(key);
     const previous = snap?.content ?? (typeof existing?.content === "string" ? existing.content : void 0);
+    const priorMedia = snap?.attachmentsRich ?? richAttachmentsOf(existing);
     remember(channelId, id, payload);
     if (previous === void 0) {
       log14.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
       return;
     }
-    if (previous === payload.content) return;
+    const mediaChanged = Array.isArray(payload.attachments) && mediaKey(richAttachmentsOf(payload)) !== mediaKey(priorMedia);
+    if (previous === payload.content && !mediaChanged) return;
     const author = existing?.author ?? snap?.author ?? payload.author ?? {};
     if (isIgnored(channelId, author)) return;
     const guildId = payload.guild_id ?? payload.guildId ?? existing?.guild_id ?? snap?.guildId;
@@ -7131,7 +7183,8 @@ ${loc.channel ?? ""}`.toLowerCase();
       String(channelId),
       toAuthor(author),
       previous,
-      guildId != null ? String(guildId) : void 0
+      guildId != null ? String(guildId) : void 0,
+      mediaChanged ? priorMedia : void 0
     );
   }
   function entryToRaw(entry) {
@@ -7470,6 +7523,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       nodes.push(
         /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history", key: "hc-edit-history" }, props.history.map((version2, index) => {
           const time = formatDeletedAt(version2.at, "time");
+          const media = version2.attachments?.length ? collectDeletedMedia(version2.attachments) : [];
           return /* @__PURE__ */ React.createElement(
             "div",
             {
@@ -7477,7 +7531,10 @@ ${loc.channel ?? ""}`.toLowerCase();
               key: index
             },
             renderContent(version2.content),
-            time ? /* @__PURE__ */ React.createElement("span", { className: "hc-edit-history__time" }, time) : null
+            time ? /* @__PURE__ */ React.createElement("span", { className: "hc-edit-history__time" }, time) : null,
+            media.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history__media" }, media.map(
+              (m, i) => m.kind === "file" ? /* @__PURE__ */ React.createElement("a", { className: "hc-deleted-media__file", key: i, href: m.url, target: "_blank", rel: "noreferrer" }, "\u{1F4CE} ", m.name ?? "\u9644\u4EF6") : /* @__PURE__ */ React.createElement("img", { className: "hc-deleted-media__thumb", key: i, src: m.url, alt: m.name ?? "", loading: "lazy" })
+            ))
           );
         }))
       );
@@ -14245,8 +14302,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.16" : "dev",
-      build: true ? "2026-10-23 13:38:11" : "dev",
+      version: true ? "0.7.17" : "dev",
+      build: true ? "2026-10-24 09:29:39" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14277,8 +14334,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.16" : "dev",
-        build: true ? "2026-10-23 13:38:11" : "dev",
+        version: true ? "0.7.17" : "dev",
+        build: true ? "2026-10-24 09:29:39" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
