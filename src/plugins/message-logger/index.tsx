@@ -30,7 +30,6 @@ import {
   mediaKey,
   type Author,
   type DeletedEntry,
-  type EditVersion,
   type RichAttachment
 } from "./store";
 import { renderContent } from "./render-content";
@@ -69,9 +68,38 @@ function toAuthor(author: any): Author {
   return { id: String(author?.id ?? "0"), name: displayName(author), bot: Boolean(author?.bot) };
 }
 
+/**
+ * Read an array-ish field as a plain array.
+ *
+ * Gateway payloads carry plain arrays, but message *records* in the store can
+ * surface the same field as an Immutable List (it has `toArray`). Reading both
+ * matters for the attachment-removal case: if the live record's list isn't a
+ * plain array, a naive `Array.isArray` check reads it as "no attachments".
+ */
+function asArray(value: unknown): any[] {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  const v = value as any;
+  if (typeof v.toArray === "function") {
+    try {
+      const out = v.toArray();
+      return Array.isArray(out) ? out : [];
+    } catch {
+      return [];
+    }
+  }
+  if (typeof value !== "string" && typeof v[Symbol.iterator] === "function") {
+    try {
+      return Array.from(v);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function attachmentsOf(message: any): string[] {
-  const list = message?.attachments;
-  if (!Array.isArray(list)) return [];
+  const list = asArray(message?.attachments);
   return list.map((a: any) => a?.filename || a?.url || "附件").slice(0, 20);
 }
 
@@ -81,8 +109,7 @@ function attachmentsOf(message: any): string[] {
  * both spellings are read.
  */
 function richAttachmentsOf(message: any): RichAttachment[] {
-  const list = message?.attachments;
-  if (!Array.isArray(list)) return [];
+  const list = asArray(message?.attachments);
   return list
     .map((a: any) => ({
       id: a?.id != null ? String(a.id) : undefined,
@@ -256,16 +283,17 @@ function remember(channelId: unknown, id: unknown, message: any): void {
   const stickers = stickersOf(message);
   const rich = richAttachmentsOf(message);
   const embeds = embedsOf(message);
+  // Presence of the field is what decides, not emptiness: an edit that REMOVES
+  // an image sends an empty list, and that empty list is the truth. (Partial
+  // updates omit the field entirely — those keep the prior value.) The removed
+  // image is preserved in the edit history instead.
+  const hasAttachments = message?.attachments != null;
   shadow.set(key, {
     content,
     // Partial payloads (some MESSAGE_UPDATEs) may omit these; keep what we had.
     author: message?.author ?? prior?.author,
-    attachments: Array.isArray(message?.attachments) ? attachmentsOf(message) : prior?.attachments,
-    // Presence of the field is what decides, not emptiness: an edit that
-    // REMOVES an image sends `attachments: []`, and that empty list is the
-    // truth. (Partial updates omit the field entirely — those keep the prior
-    // value.) The removed image is preserved in the edit history instead.
-    attachmentsRich: Array.isArray(message?.attachments) ? rich : prior?.attachmentsRich,
+    attachments: hasAttachments ? attachmentsOf(message) : prior?.attachments,
+    attachmentsRich: hasAttachments ? rich : prior?.attachmentsRich,
     embeds: embeds.length ? embeds : prior?.embeds,
     stickers: stickers.length ? stickers : prior?.stickers,
     sentAt: message?.timestamp != null ? toMillis(message.timestamp) : prior?.sentAt,
@@ -622,6 +650,70 @@ function scheduleRerender(channelId: string, messageId: string): void {
   }, 0);
 }
 
+/**
+ * Last-resort recovery for an attachment removal whose update action never
+ * reached the recorder (some builds apply the edit through another path).
+ *
+ * Called from the in-chat renderer with the live message: if the message says
+ * it was edited, the shadow knows what its media looked like, and the two no
+ * longer match, record the missing version. Deferred and idempotent — after it
+ * runs, the shadow matches the live record and this stops firing.
+ */
+const reconcilingMedia = new Set<string>();
+
+function reconcileMediaFromRender(message: any): void {
+  try {
+    if (!settings.store.logEdits || !message || message.deleted) return;
+    // Only a full message record can prove "the media is gone": partial props
+    // (previews) simply omit the field.
+    if (message.attachments == null || typeof message.content !== "string") return;
+    const channelId = message.channel_id ?? message.channelId;
+    const id = message.id;
+    if (!channelId || !id) return;
+    if (message.edited_timestamp == null && message.editedTimestamp == null) return;
+    const cid = String(channelId);
+    const mid = String(id);
+    if (messageLog.isDeleted(cid, mid)) return;
+    const key = `${cid}:${mid}`;
+    const snap = shadow.get(key);
+    if (!snap?.attachmentsRich) return;
+    if (mediaKey(richAttachmentsOf(message)) === mediaKey(snap.attachmentsRich)) return;
+    if (reconcilingMedia.has(key)) return;
+    reconcilingMedia.add(key);
+
+    setTimeout(() => {
+      reconcilingMedia.delete(key);
+      try {
+        const current = shadow.get(key);
+        if (!current?.attachmentsRich) return;
+        const live = readMessage(cid, mid) ?? message;
+        const after = richAttachmentsOf(live);
+        if (mediaKey(after) === mediaKey(current.attachmentsRich)) return;
+        const author = live?.author ?? current.author ?? {};
+        if (isIgnored(cid, author)) return;
+        if (typeof current.content !== "string") return;
+        const guildId = live?.guild_id ?? live?.guildId ?? current.guildId;
+        log.info(
+          `edit ${mid}: 媒体 ${current.attachmentsRich.length} → ${after.length}（渲染时补录）`
+        );
+        messageLog.recordEdit(
+          mid,
+          cid,
+          toAuthor(author),
+          current.content,
+          guildId != null ? String(guildId) : undefined,
+          current.attachmentsRich
+        );
+        remember(cid, mid, live);
+      } catch (err) {
+        log.debug("render-time media reconcile failed (non-fatal)", err);
+      }
+    }, 0);
+  } catch {
+    // best-effort; never break Discord's renderer
+  }
+}
+
 function captureDelete(channelId: string, id: string): void {
   if (!channelId || !id) return;
 
@@ -736,7 +828,6 @@ function captureEdit(payload: any): void {
   const channelId = payload.channel_id ?? payload.channelId;
   const id = payload.id;
   if (!channelId || !id) return;
-  if (typeof payload.content !== "string") return; // embed-only updates aren't edits
 
   // The shadow map is the trustworthy "before" — Discord's cache may already
   // hold the new text (own edits apply optimistically; other client mods
@@ -746,43 +837,78 @@ function captureEdit(payload: any): void {
   const existing = readMessage(channelId, id);
   const snap = shadow.get(key);
   const previous = snap?.content ?? (typeof existing?.content === "string" ? existing.content : undefined);
-
-  // Media as it was BEFORE this update. The shadow map is the trustworthy
-  // snapshot (own edits are applied to the cache optimistically); the live
-  // record is the fallback for a message that predates the recorder. This must
-  // be read before remember() overwrites it.
+  // Media as it was BEFORE this update. Read before anything mutates the
+  // snapshot below.
   const priorMedia = snap?.attachmentsRich ?? richAttachmentsOf(existing);
-
-  // Whatever we record, the newest text/media becomes the next edit's "before".
-  remember(channelId, id, payload);
-
-  if (previous === undefined) {
-    log.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
-    return;
-  }
-
-  // An edit can remove an image without touching the text at all, and Discord
-  // then drops the attachment from the message for good. Comparing the media
-  // set as well is what keeps that picture in the log ("插件没看到图片").
-  // Only payloads that actually carry `attachments` are compared; partial
-  // updates omit the field and must not read as "media removed".
-  const mediaChanged =
-    Array.isArray(payload.attachments) && mediaKey(richAttachmentsOf(payload)) !== mediaKey(priorMedia);
-
-  if (previous === payload.content && !mediaChanged) return;
-
   const author = existing?.author ?? snap?.author ?? payload.author ?? {};
-  if (isIgnored(channelId, author)) return;
-
   const guildId = payload.guild_id ?? payload.guildId ?? existing?.guild_id ?? snap?.guildId;
-  messageLog.recordEdit(
-    String(id),
-    String(channelId),
-    toAuthor(author),
-    previous,
-    guildId != null ? String(guildId) : undefined,
-    mediaChanged ? priorMedia : undefined
-  );
+
+  /**
+   * Settle the edit with the AFTER state.
+   *
+   * The payload cannot be trusted for attachment changes. Removing an
+   * attachment in the edit box ("移除附件") produces an update whose shape
+   * varies — the attachment list may be absent, partial, or not a plain array
+   * — and the message store is what ends up with the truth. So the actual
+   * comparison runs on a macrotask, after the stores have applied this update,
+   * against the live record: `贴图被移除` then shows up as
+   * `priorMedia != liveMedia` even when the text did not change at all.
+   *
+   * The payload is only the fallback for a message that is not in the cache.
+   */
+  setTimeout(() => {
+    try {
+      const cid = String(channelId);
+      const mid = String(id);
+      const live = readMessage(cid, mid);
+      // Our own deleted-row repaint dispatches a fabricated MESSAGE_UPDATE.
+      // Never let that read as an edit (its rebuilt record can be thinner).
+      if (live?.deleted === true || messageLog.isDeleted(cid, mid)) return;
+      let afterContent: unknown;
+      let afterMedia: RichAttachment[];
+      if (live && typeof live.content === "string") {
+        afterContent = live.content;
+        afterMedia = richAttachmentsOf(live);
+        remember(cid, mid, live);
+      } else if (typeof payload.content === "string") {
+        // Not in the cache (edit for a channel we never loaded): the payload
+        // is all we have.
+        afterContent = payload.content;
+        afterMedia = payload.attachments != null ? richAttachmentsOf(payload) : priorMedia;
+        remember(cid, mid, payload);
+      } else {
+        return; // embed-only update and nothing to compare against
+      }
+
+      if (previous === undefined) {
+        log.debug(`edit to ${mid} skipped: no prior content known (message predates the recorder)`);
+        return;
+      }
+
+      const contentChanged = typeof afterContent === "string" && afterContent !== previous;
+      const mediaChanged = mediaKey(afterMedia) !== mediaKey(priorMedia);
+      if (!contentChanged && !mediaChanged) return;
+      if (isIgnored(cid, author)) return;
+
+      if (mediaChanged) {
+        log.info(
+          `edit ${mid}: 媒体 ${priorMedia.length} → ${afterMedia.length}` +
+            (contentChanged ? "" : "（仅移除/更换附件，文字未变）")
+        );
+      }
+
+      messageLog.recordEdit(
+        mid,
+        cid,
+        toAuthor(author),
+        previous,
+        guildId != null ? String(guildId) : undefined,
+        mediaChanged ? priorMedia : undefined
+      );
+    } catch (err) {
+      log.debug(`post-store edit check failed for ${id}`, err);
+    }
+  }, 0);
 }
 
 // --- resurrecting deleted messages after a reload ---------------------------
@@ -1290,6 +1416,19 @@ function useMlogSettings(): void {
 }
 
 /**
+ * Re-render the calling component whenever the log store changes.
+ *
+ * The edit recorder settles edits on a macrotask (see captureEdit), i.e. AFTER
+ * Discord has already repainted the edited row. Without this subscription the
+ * just-captured old version — including a removed image — would only appear
+ * after some other re-render or a channel switch.
+ */
+function useLogRevision(): void {
+  const [, bump] = useState(0);
+  useEffect(() => messageLog.subscribe(() => bump((n) => n + 1)), []);
+}
+
+/**
  * The per-message extras rendered inside Discord's message: the persisted edit
  * history and the "此消息已删除" marker. It's a real component (not inline nodes)
  * so it can subscribe to settings and re-render live — that's what lets the
@@ -1332,7 +1471,8 @@ function collectDeletedMedia(attachments?: RichAttachment[], embeds?: any[]): De
 }
 
 function MessageExtras(props: {
-  history?: EditVersion[];
+  channelId: string;
+  messageId: string;
   deletedAt?: number;
   editedAt?: number;
   isDeleted: boolean;
@@ -1340,13 +1480,20 @@ function MessageExtras(props: {
   media?: DeletedMedia[];
 }): React.ReactElement | null {
   useMlogSettings();
+  // Read the history live instead of taking it as a prop: the recorder settles
+  // an edit a tick after the row already painted, and the subscription above
+  // lets that version (with a removed image) show up without a reload.
+  useLogRevision();
+  const history = messageLog.getEdited().find(
+    (e) => e.id === props.messageId && e.channelId === props.channelId
+  )?.history;
   const s = settings.store;
   const nodes: React.ReactNode[] = [];
 
-  if (s.logEdits && props.history && props.history.length > 0) {
+  if (s.logEdits && history && history.length > 0) {
     nodes.push(
       <div className="hc-edit-history" key="hc-edit-history">
-        {props.history.map((version, index) => {
+        {history.map((version, index) => {
           // Each old version carries the time it was superseded; show it inline
           // at the end of the line (always HH:MM:SS — datetime would be too long
           // per row), so "when was each edit" reads down the stack.
@@ -1863,6 +2010,11 @@ export default definePlugin({
       // too so an ignored author (self / bots / muted ids) shows no extras.
       if (isIgnored(String(channelId), message?.author)) return null;
 
+      // Safety net: an attachment removed by an edit whose update action the
+      // recorder never saw is still detectable here, because the shadow keeps
+      // the pre-edit media and this is the live message.
+      reconcileMediaFromRender(message);
+
       const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
       const record = messageLog.findDeleted(String(channelId), String(id));
       const hasHistory = Boolean(entry && entry.history.length > 0);
@@ -1881,7 +2033,8 @@ export default definePlugin({
 
       return (
         <MessageExtras
-          history={entry?.history}
+          channelId={String(channelId)}
+          messageId={String(id)}
           deletedAt={record?.deletedAt}
           editedAt={editedAt}
           isDeleted={isDeleted}

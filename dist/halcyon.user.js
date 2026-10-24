@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.17
+// @version      0.7.18
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-10-24 09:29:39" : "dev";
-      const version2 = true ? "0.7.17" : "dev";
+      const build = true ? "2026-10-24 09:35:56" : "dev";
+      const version2 = true ? "0.7.18" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4474,7 +4474,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.17" : "dev";
+    return true ? "0.7.18" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4566,7 +4566,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.17" : "dev";
+    const version2 = true ? "0.7.18" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -6770,14 +6770,33 @@ ${loc.channel ?? ""}`.toLowerCase();
   function toAuthor(author) {
     return { id: String(author?.id ?? "0"), name: displayName(author), bot: Boolean(author?.bot) };
   }
+  function asArray(value) {
+    if (Array.isArray(value)) return value;
+    if (value == null) return [];
+    const v = value;
+    if (typeof v.toArray === "function") {
+      try {
+        const out = v.toArray();
+        return Array.isArray(out) ? out : [];
+      } catch {
+        return [];
+      }
+    }
+    if (typeof value !== "string" && typeof v[Symbol.iterator] === "function") {
+      try {
+        return Array.from(v);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
   function attachmentsOf(message) {
-    const list = message?.attachments;
-    if (!Array.isArray(list)) return [];
+    const list = asArray(message?.attachments);
     return list.map((a) => a?.filename || a?.url || "\u9644\u4EF6").slice(0, 20);
   }
   function richAttachmentsOf(message) {
-    const list = message?.attachments;
-    if (!Array.isArray(list)) return [];
+    const list = asArray(message?.attachments);
     return list.map((a) => ({
       id: a?.id != null ? String(a.id) : void 0,
       filename: a?.filename ?? a?.fileName ?? void 0,
@@ -6876,16 +6895,13 @@ ${loc.channel ?? ""}`.toLowerCase();
     const stickers = stickersOf(message);
     const rich = richAttachmentsOf(message);
     const embeds = embedsOf(message);
+    const hasAttachments = message?.attachments != null;
     shadow.set(key, {
       content,
       // Partial payloads (some MESSAGE_UPDATEs) may omit these; keep what we had.
       author: message?.author ?? prior?.author,
-      attachments: Array.isArray(message?.attachments) ? attachmentsOf(message) : prior?.attachments,
-      // Presence of the field is what decides, not emptiness: an edit that
-      // REMOVES an image sends `attachments: []`, and that empty list is the
-      // truth. (Partial updates omit the field entirely — those keep the prior
-      // value.) The removed image is preserved in the edit history instead.
-      attachmentsRich: Array.isArray(message?.attachments) ? rich : prior?.attachmentsRich,
+      attachments: hasAttachments ? attachmentsOf(message) : prior?.attachments,
+      attachmentsRich: hasAttachments ? rich : prior?.attachmentsRich,
       embeds: embeds.length ? embeds : prior?.embeds,
       stickers: stickers.length ? stickers : prior?.stickers,
       sentAt: message?.timestamp != null ? toMillis(message.timestamp) : prior?.sentAt,
@@ -7092,6 +7108,55 @@ ${loc.channel ?? ""}`.toLowerCase();
       setTimeout(() => rerendered.delete(key), 1500);
     }, 0);
   }
+  var reconcilingMedia = /* @__PURE__ */ new Set();
+  function reconcileMediaFromRender(message) {
+    try {
+      if (!settings.store.logEdits || !message || message.deleted) return;
+      if (message.attachments == null || typeof message.content !== "string") return;
+      const channelId = message.channel_id ?? message.channelId;
+      const id = message.id;
+      if (!channelId || !id) return;
+      if (message.edited_timestamp == null && message.editedTimestamp == null) return;
+      const cid = String(channelId);
+      const mid = String(id);
+      if (messageLog.isDeleted(cid, mid)) return;
+      const key = `${cid}:${mid}`;
+      const snap = shadow.get(key);
+      if (!snap?.attachmentsRich) return;
+      if (mediaKey(richAttachmentsOf(message)) === mediaKey(snap.attachmentsRich)) return;
+      if (reconcilingMedia.has(key)) return;
+      reconcilingMedia.add(key);
+      setTimeout(() => {
+        reconcilingMedia.delete(key);
+        try {
+          const current2 = shadow.get(key);
+          if (!current2?.attachmentsRich) return;
+          const live = readMessage(cid, mid) ?? message;
+          const after = richAttachmentsOf(live);
+          if (mediaKey(after) === mediaKey(current2.attachmentsRich)) return;
+          const author = live?.author ?? current2.author ?? {};
+          if (isIgnored(cid, author)) return;
+          if (typeof current2.content !== "string") return;
+          const guildId = live?.guild_id ?? live?.guildId ?? current2.guildId;
+          log14.info(
+            `edit ${mid}: \u5A92\u4F53 ${current2.attachmentsRich.length} \u2192 ${after.length}\uFF08\u6E32\u67D3\u65F6\u8865\u5F55\uFF09`
+          );
+          messageLog.recordEdit(
+            mid,
+            cid,
+            toAuthor(author),
+            current2.content,
+            guildId != null ? String(guildId) : void 0,
+            current2.attachmentsRich
+          );
+          remember(cid, mid, live);
+        } catch (err) {
+          log14.debug("render-time media reconcile failed (non-fatal)", err);
+        }
+      }, 0);
+    } catch {
+    }
+  }
   function captureDelete(channelId, id) {
     if (!channelId || !id) return;
     const message = readMessage(channelId, id);
@@ -7162,30 +7227,57 @@ ${loc.channel ?? ""}`.toLowerCase();
     const channelId = payload.channel_id ?? payload.channelId;
     const id = payload.id;
     if (!channelId || !id) return;
-    if (typeof payload.content !== "string") return;
     const key = `${channelId}:${id}`;
     const existing = readMessage(channelId, id);
     const snap = shadow.get(key);
     const previous = snap?.content ?? (typeof existing?.content === "string" ? existing.content : void 0);
     const priorMedia = snap?.attachmentsRich ?? richAttachmentsOf(existing);
-    remember(channelId, id, payload);
-    if (previous === void 0) {
-      log14.debug(`edit to ${id} skipped: no prior content known (message predates the recorder)`);
-      return;
-    }
-    const mediaChanged = Array.isArray(payload.attachments) && mediaKey(richAttachmentsOf(payload)) !== mediaKey(priorMedia);
-    if (previous === payload.content && !mediaChanged) return;
     const author = existing?.author ?? snap?.author ?? payload.author ?? {};
-    if (isIgnored(channelId, author)) return;
     const guildId = payload.guild_id ?? payload.guildId ?? existing?.guild_id ?? snap?.guildId;
-    messageLog.recordEdit(
-      String(id),
-      String(channelId),
-      toAuthor(author),
-      previous,
-      guildId != null ? String(guildId) : void 0,
-      mediaChanged ? priorMedia : void 0
-    );
+    setTimeout(() => {
+      try {
+        const cid = String(channelId);
+        const mid = String(id);
+        const live = readMessage(cid, mid);
+        if (live?.deleted === true || messageLog.isDeleted(cid, mid)) return;
+        let afterContent;
+        let afterMedia;
+        if (live && typeof live.content === "string") {
+          afterContent = live.content;
+          afterMedia = richAttachmentsOf(live);
+          remember(cid, mid, live);
+        } else if (typeof payload.content === "string") {
+          afterContent = payload.content;
+          afterMedia = payload.attachments != null ? richAttachmentsOf(payload) : priorMedia;
+          remember(cid, mid, payload);
+        } else {
+          return;
+        }
+        if (previous === void 0) {
+          log14.debug(`edit to ${mid} skipped: no prior content known (message predates the recorder)`);
+          return;
+        }
+        const contentChanged = typeof afterContent === "string" && afterContent !== previous;
+        const mediaChanged = mediaKey(afterMedia) !== mediaKey(priorMedia);
+        if (!contentChanged && !mediaChanged) return;
+        if (isIgnored(cid, author)) return;
+        if (mediaChanged) {
+          log14.info(
+            `edit ${mid}: \u5A92\u4F53 ${priorMedia.length} \u2192 ${afterMedia.length}` + (contentChanged ? "" : "\uFF08\u4EC5\u79FB\u9664/\u66F4\u6362\u9644\u4EF6\uFF0C\u6587\u5B57\u672A\u53D8\uFF09")
+          );
+        }
+        messageLog.recordEdit(
+          mid,
+          cid,
+          toAuthor(author),
+          previous,
+          guildId != null ? String(guildId) : void 0,
+          mediaChanged ? priorMedia : void 0
+        );
+      } catch (err) {
+        log14.debug(`post-store edit check failed for ${id}`, err);
+      }
+    }, 0);
   }
   function entryToRaw(entry) {
     const attachments = (entry.attachmentsRich ?? []).map((a, i) => ({
@@ -7497,6 +7589,10 @@ ${loc.channel ?? ""}`.toLowerCase();
       return () => unsubs.forEach((unsub) => unsub());
     }, []);
   }
+  function useLogRevision() {
+    const [, bump] = useState(0);
+    useEffect(() => messageLog.subscribe(() => bump((n) => n + 1)), []);
+  }
   function collectDeletedMedia(attachments, embeds) {
     const out = [];
     for (const a of attachments ?? []) {
@@ -7517,11 +7613,15 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
   function MessageExtras(props) {
     useMlogSettings();
+    useLogRevision();
+    const history = messageLog.getEdited().find(
+      (e) => e.id === props.messageId && e.channelId === props.channelId
+    )?.history;
     const s = settings.store;
     const nodes = [];
-    if (s.logEdits && props.history && props.history.length > 0) {
+    if (s.logEdits && history && history.length > 0) {
       nodes.push(
-        /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history", key: "hc-edit-history" }, props.history.map((version2, index) => {
+        /* @__PURE__ */ React.createElement("div", { className: "hc-edit-history", key: "hc-edit-history" }, history.map((version2, index) => {
           const time = formatDeletedAt(version2.at, "time");
           const media = version2.attachments?.length ? collectDeletedMedia(version2.attachments) : [];
           return /* @__PURE__ */ React.createElement(
@@ -7915,6 +8015,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         const channelId = message?.channel_id ?? message?.channelId;
         if (!id || !channelId) return null;
         if (isIgnored(String(channelId), message?.author)) return null;
+        reconcileMediaFromRender(message);
         const entry = messageLog.getEdited().find((e) => e.id === String(id) && e.channelId === String(channelId));
         const record2 = messageLog.findDeleted(String(channelId), String(id));
         const hasHistory = Boolean(entry && entry.history.length > 0);
@@ -7926,7 +8027,8 @@ ${loc.channel ?? ""}`.toLowerCase();
         return /* @__PURE__ */ React.createElement(
           MessageExtras,
           {
-            history: entry?.history,
+            channelId: String(channelId),
+            messageId: String(id),
             deletedAt: record2?.deletedAt,
             editedAt,
             isDeleted,
@@ -14302,8 +14404,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.17" : "dev",
-      build: true ? "2026-10-24 09:29:39" : "dev",
+      version: true ? "0.7.18" : "dev",
+      build: true ? "2026-10-24 09:35:56" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14334,8 +14436,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.17" : "dev",
-        build: true ? "2026-10-24 09:29:39" : "dev",
+        version: true ? "0.7.18" : "dev",
+        build: true ? "2026-10-24 09:35:56" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
