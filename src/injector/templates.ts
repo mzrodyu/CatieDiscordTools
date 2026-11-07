@@ -52,7 +52,22 @@ const PRELOAD = path.join(__dirname, "preload.js");
 // The auto-updated payload lives in a stable per-user dir: Discord installs each
 // client update into a fresh app-<version> folder and discards our shim, but the
 // %APPDATA%\Halcyon cache survives that.
-const PAYLOAD_URL = "https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.js";
+//
+// Two sources, tried in order. raw.githubusercontent.com is canonical, but it is
+// also the first host a mainland network / DNS pollution / a VPN that only
+// proxies SOME apps breaks — and this code runs in Discord's MAIN process, not
+// the renderer. That distinction is the whole bug: Node's https ignores the
+// Windows system proxy, so a Clash/v2ray "系统代理" setup made every update fail
+// silently. Electron's net goes through Chromium's network stack and honours
+// the system proxy / PAC, so it is the primary path; plain https stays as a
+// fallback for TUN-mode setups and for when net is unavailable. jsDelivr
+// mirrors the same repository and is reachable far more often from mainland
+// networks than raw.githubusercontent.com.
+const PAYLOAD_URLS = [
+  "https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.js",
+  "https://cdn.jsdelivr.net/gh/mzrodyu/CatieDiscordTools@main/dist/halcyon.js",
+  "https://ghproxy.net/https://raw.githubusercontent.com/mzrodyu/CatieDiscordTools/main/dist/halcyon.js"
+];
 
 function cacheDir() {
   const base =
@@ -63,50 +78,118 @@ function cacheDir() {
   return path.join(base, "Halcyon");
 }
 
-// Fire-and-forget refresh of the cached payload for the NEXT launch. Never blocks
-// boot, never throws: the renderer always runs whatever is already cached, so a
-// slow or failed fetch just means "no update this time". Deferred off the boot
-// path so a stalled socket can never compete with Discord starting up.
-function fetchInto(url, dest, hops) {
+// Cheap sanity check before a download replaces a good cache. Error pages and
+// proxy block screens are HTML; the payload is always JS that mentions its own
+// name. The old check only looked at length, so a 1 KB+ error page could win.
+function looksLikePayload(body) {
+  if (!body || body.length < 20000) return false;
+  try {
+    return body.toString("utf8", 0, Math.min(body.length, 4096)).indexOf("Halcyon") !== -1;
+  } catch (err) {
+    return false;
+  }
+}
+
+function writePayload(body, dest) {
+  try {
+    if (!looksLikePayload(body)) return;
+    const tmp = dest + "." + process.pid + ".tmp";
+    fs.writeFileSync(tmp, body);
+    fs.renameSync(tmp, dest); // atomic replace on Windows (MoveFileEx)
+  } catch (err) {
+    /* ignore — updating is best-effort */
+  }
+}
+
+// Primary: Chromium's network stack (honours the Windows system proxy / PAC).
+// Returns false when net is unavailable so the caller can fall back.
+function fetchViaElectron(url, dest, next) {
+  try {
+    const { net } = electron;
+    if (!net || typeof net.request !== "function") return false;
+    let settled = false;
+    let timer = null;
+    const done = (advance) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (advance) next();
+    };
+    const req = net.request({ method: "GET", url, redirect: "follow" });
+    req.setHeader("User-Agent", "Halcyon-Loader");
+    req.on("response", (res) => {
+      if (res.statusCode !== 200) {
+        res.resume();
+        done(true);
+        return;
+      }
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => {
+        writePayload(Buffer.concat(chunks), dest);
+        done(false);
+      });
+      res.on("error", () => done(true));
+    });
+    req.on("error", () => done(true));
+    timer = setTimeout(() => {
+      try { req.abort(); } catch (err) {}
+      done(true);
+    }, 12000);
+    req.end();
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+// Fallback: plain Node https (no proxy support; works direct / TUN).
+function fetchViaHttps(url, dest, hops, next) {
   const req = https.get(url, { headers: { "User-Agent": "Halcyon-Loader" } }, (res) => {
     const status = res.statusCode || 0;
     if (status >= 300 && status < 400 && res.headers.location && hops > 0) {
       res.resume();
       try {
-        fetchInto(new URL(res.headers.location, url).toString(), dest, hops - 1);
+        fetchViaHttps(new URL(res.headers.location, url).toString(), dest, hops - 1, next);
       } catch (err) {
-        /* bad redirect target — keep last-good cache */
+        next();
       }
       return;
     }
     if (status !== 200) {
       res.resume();
+      next();
       return;
     }
     const chunks = [];
     res.on("data", (c) => chunks.push(c));
     res.on("end", () => {
-      try {
-        const body = Buffer.concat(chunks);
-        // Guard against error pages / truncated bodies clobbering a good cache.
-        if (body.length < 1024) return;
-        const tmp = dest + "." + process.pid + ".tmp";
-        fs.writeFileSync(tmp, body);
-        fs.renameSync(tmp, dest); // atomic replace on Windows (MoveFileEx)
-      } catch (err) {
-        /* ignore — updating is best-effort */
-      }
+      writePayload(Buffer.concat(chunks), dest);
+      next();
     });
+    res.on("error", () => next());
   });
-  req.on("error", () => {});
+  req.on("error", () => next());
   req.setTimeout(10000, () => req.destroy());
 }
 
+// Fire-and-forget refresh of the cached payload for the NEXT launch. Never blocks
+// boot, never throws: the renderer always runs whatever is already cached, so a
+// slow or failed fetch just means "no update this time". Deferred off the boot
+// path so a stalled socket can never compete with Discord starting up.
 function refreshPayload() {
   try {
     const dir = cacheDir();
     fs.mkdirSync(dir, { recursive: true });
-    fetchInto(PAYLOAD_URL, path.join(dir, "halcyon.js"), 3);
+    const dest = path.join(dir, "halcyon.js");
+    let index = 0;
+    const tryNext = () => {
+      if (index >= PAYLOAD_URLS.length) return;
+      const url = PAYLOAD_URLS[index++];
+      if (fetchViaElectron(url, dest, tryNext)) return;
+      fetchViaHttps(url, dest, 3, tryNext);
+    };
+    tryNext();
   } catch (err) {
     /* best-effort */
   }

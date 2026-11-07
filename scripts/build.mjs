@@ -25,6 +25,13 @@ const dev = watch || process.argv.includes("--dev");
 
 const version = process.env.npm_package_version ?? JSON.parse(readFileSync(r("package.json"), "utf8")).version;
 
+// Stamped onto every renderer payload. The installer compares this against the
+// cached copy to decide whether a failed download should fall back to the
+// EMBEDDED payload (when the installer is newer) or keep the cache (when the
+// user already runs something newer). Keep the `Halcyon vX.Y.Z` shape — the
+// PowerShell side parses it with that exact pattern.
+const payloadBanner = `/*! Halcyon v${version} — https://github.com/mzrodyu/CatieDiscordTools */`;
+
 /** Shared options for anything that runs inside the Discord renderer. */
 const rendererCommon = {
   bundle: true,
@@ -81,7 +88,8 @@ const targets = [
     ...rendererCommon,
     entryPoints: [r("src/main.ts")],
     outfile: r("dist/halcyon.js"),
-    globalName: "Halcyon"
+    globalName: "Halcyon",
+    banner: { js: payloadBanner }
   },
   {
     // Browser-extension payload. Same renderer code, loaded via a MAIN-world
@@ -89,7 +97,8 @@ const targets = [
     ...rendererCommon,
     entryPoints: [r("src/extension/main.ts")],
     outfile: r("dist/extension/halcyon.js"),
-    globalName: "Halcyon"
+    globalName: "Halcyon",
+    banner: { js: payloadBanner }
   },
   {
     // Userscript build. Kept readable (no minify) so script managers and users

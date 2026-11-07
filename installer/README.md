@@ -18,7 +18,17 @@
 - **卸载**：删除壳、注销登录任务、清掉本地缓存，Discord 恢复原版。
 
 插件本体（`halcyon.js`）**已内置在安装器里**：联网时会从 GitHub 拉最新版，断网或下载失败就用
-内置副本，所以完全离线也能装好。内置副本只在缓存缺失时播种，不会覆盖已经自动更新到的新版本。
+内置副本，所以完全离线也能装好。内置副本按**版本号**播种：缓存缺失、或缓存比安装器内置的旧时
+才覆盖，已经自动更新到更新版本的话保持不动（以前只看「缓存存不存在」，导致下载失败时旧缓存会
+一直压着新安装器里的副本）。
+
+网络这一块安装器会自己兜底：先试你填的显式代理（窗口里「网络代理（可选）」留空就跳过），再试
+Windows 系统代理（Clash/v2ray 的「系统代理」就是它），最后直连；每个地址都会换 raw.githubusercontent.com
+→ jsDelivr → ghproxy 三个镜像再试一遍。只有三处都拿不到才回退到内置副本，并且安装日志会写出
+最后一次失败的真实原因，不再是笼统的「下载失败」。
+
+想先确认这台机器到底哪条路通：`run.cmd -SelfTest`（或设置环境变量 `HALCYON_SELFTEST_NET=1`
+后跑 `-SelfTest`），会逐个打印「代理 × 镜像」的成功/失败和错误文本。
 
 如果 Discord 正在运行，安装器会问你是否关闭并在完成后自动重启（壳只在全新启动时生效）。
 装好后在 Discord 里按 `Ctrl+Shift+H` 打开设置面板。
@@ -51,8 +61,10 @@ npm run build:installer
 
 **自动更新**（和网页油猴一样）：
 
-- 外壳**主进程**每次启动时用 Node https 从 GitHub 拉最新 `dist/halcyon.js`，原子写入
-  `%APPDATA%\Halcyon\halcyon.js`。主进程不受渲染进程 CSP 限制，能直连 raw.githubusercontent.com。
+- 外壳**主进程**每次启动时拉最新的 `dist/halcyon.js`，原子写入 `%APPDATA%\Halcyon\halcyon.js`。
+  这里走的是 **Electron 的 `net`**（Chromium 网络栈，认系统代理 / PAC），Node 的 `https` 只作为
+  备用——`https` 完全不看系统代理，所以以前开「系统代理」模式的梯子时主进程更新会静默失败。
+  镜像同样是 raw → jsDelivr → ghproxy，下载结果会先校验（长度 + 内容标记），错误页不会顶掉好缓存。
 - **preload** 只读本地缓存、用 executeJavaScript 注入主世界，启动零延迟、离线可用。
 - 更新「下次启动生效」（同 Tampermonkey）；失败 / 离线就继续用上次缓存，绝不因网络让 Discord 起不来。
 - 缓存放 `%APPDATA%\Halcyon` 而不是壳里，因为 Discord 客户端升级会换到新的 `app-<版本>` 目录、把旧壳
