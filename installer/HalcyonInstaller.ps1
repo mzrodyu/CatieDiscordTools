@@ -1059,7 +1059,7 @@ $txtProxy.Text = $env:HALCYON_PROXY
 $form.Controls.Add($txtProxy)
 
 $lblProxyHint = New-Object System.Windows.Forms.Label
-$lblProxyHint.Text = '如 http://127.0.0.1:7890，留空自动检测'
+$lblProxyHint.Text = '如 127.0.0.1:7890（留空自动）'
 $lblProxyHint.ForeColor = [System.Drawing.Color]::Gray
 $lblProxyHint.Location = New-Object System.Drawing.Point(390, 317)
 $lblProxyHint.AutoSize = $true
