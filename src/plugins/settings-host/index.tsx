@@ -452,7 +452,8 @@ export default definePlugin({
       // "$Root" alone does not mean "user settings". Require one of the
       // user-settings sections (`billing_section` / `user_section`) before
       // touching anything — guild and channel settings must come back exactly
-      // as Discord built them.
+      // as Discord built them. (Server settings on current builds take the
+      // legacy `getPredicateSections` path below, which is also scoped.)
       const billingIndex = layout.findIndex((n) => n?.key === "billing_section");
       const accountIndex = layout.findIndex((n) => n?.key === "user_section");
       if (billingIndex < 0 && accountIndex < 0) {

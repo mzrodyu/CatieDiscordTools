@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.20
+// @version      0.7.21
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-10-24 09:57:25" : "dev";
-      const version2 = true ? "0.7.20" : "dev";
+      const build = true ? "2026-11-07 10:50:45" : "dev";
+      const version2 = true ? "0.7.21" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4524,7 +4524,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.20" : "dev";
+    return true ? "0.7.21" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4616,7 +4616,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.20" : "dev";
+    const version2 = true ? "0.7.21" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -9410,7 +9410,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       log21.info("\u4EE5\u4E0B\u53EF\u9009 patch \u672A\u5339\u914D\uFF08\u4EC5\u5F71\u54CD\u9644\u5E26\u529F\u80FD\uFF0C\u4E0D\u5F71\u54CD\u8868\u60C5 / \u8D34\u7EB8\uFF09\uFF1A" + degraded.map(name).join("\u3001"));
     }
   }
-  var IS_BYPASSEABLE_INTENTION = `[${INTENT_CHAT},${INTENT_STICKER_EMOJI}].includes(fakeNitroIntention)`;
+  var IS_BYPASSEABLE_INTENTION = `[${INTENT_CHAT},${INTENT_STICKER_EMOJI}].includes(typeof fakeNitroIntention==="undefined"?-1:fakeNitroIntention)`;
   var fake_nitro_default = definePlugin({
     id: "fake-nitro",
     name: "\u5047 Nitro",
@@ -9475,7 +9475,11 @@ ${loc.channel ?? ""}`.toLowerCase();
             replace: "return true;"
           },
           {
-            match: /(?<=canStreamQuality:function\([\w$]+,[\w$]+\)\{)/,
+            // `canStreamQuality(quality, user)` takes TWO arguments — the single
+            // -param shape every other predicate here uses. Matching only the
+            // one-param form silently skipped this one and left "high" quality
+            // gated behind the server's boost tier.
+            match: /(?<=canStreamQuality:function\([\w$]+(?:,[\w$]+)?\)\{)/,
             replace: "return true;"
           },
           {
@@ -9494,7 +9498,13 @@ ${loc.channel ?? ""}`.toLowerCase();
       //    at this exact call site so our picker patches leave voice alone.
       {
         label: "voice call emoji stays native",
+        // Was `.getByName("fork_and_knife")` — that anchor is gone from current
+        // builds (the string survives only in the frecency seed list). Nothing
+        // here is load-bearing: if it misses, the voice picker simply gets the
+        // same unlock as text chat. Marked optional so the boot report doesn't
+        // flag it as a regression on every launch.
         find: '.getByName("fork_and_knife")',
+        optional: true,
         replacement: {
           match: /\.CHAT/,
           replace: ".STATUS"
@@ -9508,7 +9518,16 @@ ${loc.channel ?? ""}`.toLowerCase();
       //    into a URL anyway.
       {
         label: "emoji picker unlock",
-        find: ".GUILD_SUBSCRIPTION_UNAVAILABLE;",
+        // BOTH conditions must hold, and order must not matter. `.GUILD_
+        // SUBSCRIPTION_UNAVAILABLE;` on its own is a short, generic token, and
+        // the find selects EVERY module that contains it — including whatever
+        // settings surface happens to grow a copy of the locked-emoji check
+        // next, where these widenings land on a function that was never meant to
+        // be touched. Pair it with `getEmojiUnavailableReasons(`, a call name
+        // Discord's own picker code uses across module boundaries, so only the
+        // real emoji-utils module qualifies. Written as two lookaheads off `^`
+        // so the relative order of the strings in a future build doesn't matter.
+        find: /^(?=[\s\S]*\.GUILD_SUBSCRIPTION_UNAVAILABLE;)(?=[\s\S]*getEmojiUnavailableReasons\()/,
         replacement: [
           // Introduce `fakeNitroIntention`, bound to Discord's own intention
           // variable, so the widenings below can key off it.
@@ -9521,13 +9540,24 @@ ${loc.channel ?? ""}`.toLowerCase();
           // the intention variable out of the nearby
           // `isExternalEmojiAllowedForIntention(d)` call is what actually lands.
           //
-          // This one MUST match: patches #2–#5 below all reference
-          // `fakeNitroIntention`, so if this fails while they apply, the emoji
-          // function throws ReferenceError on every call and the picker greys
-          // out everything — which is exactly the "全是锁" symptom this fixes.
+          // This one SHOULD match, but no longer has to: the widenings below read
+          // the symbol through a `typeof` guard, so a miss degrades to "locked"
+          // instead of ReferenceError (see IS_BYPASSEABLE_INTENTION).
+          //
+          // Two anchors, both declaring with `var` on purpose. `var` may be
+          // declared twice in one scope; `const` may not, and if BOTH anchors
+          // matched we'd otherwise turn the module into a compile error — which
+          // `applyPatches` catches and throws away, silently reverting every
+          // other replacement in this spec. The second anchor (below the first)
+          // reads the intention straight out of the parameter destructuring, so
+          // it survives a reshuffle of the `.USE_EXTERNAL_EMOJIS` statement.
           {
             match: /(?<=\.USE_EXTERNAL_EMOJIS,[\w$]+\);)(?=.{0,300}?isExternalEmojiAllowedForIntention\)\(([\w$]+)\))/,
-            replace: "const fakeNitroIntention=$1;"
+            replace: "var fakeNitroIntention=$1;"
+          },
+          {
+            match: /(function [\w$]+\([\w$]+\)\{let\{emoji:[\w$]+,channel:[\w$]+,guildId:[\w$]+=[\w$]+\??\.getGuildId\(\),intention:([\w$]+)[^}]*\}=[\w$]+;)/,
+            replace: "$1var fakeNitroIntention=$2;"
           },
           // DISALLOW_EXTERNAL: bypass for our intentions.
           {
@@ -9573,7 +9603,13 @@ ${loc.channel ?? ""}`.toLowerCase();
       //    picker's own probe) short-circuit to "usable".
       {
         label: "subscription emoji unlock",
-        find: ".getUserIsAdmin(",
+        // `.getUserIsAdmin(` is a generic caller name, not a module signature:
+        // any settings/role-subscription module can contain it, and the 250-char
+        // match window below would then graft an unconditional `return false`
+        // onto an unrelated function. Require BOTH that call and a
+        // `getUserSubscriptionRoles(` call — the predicate helper we actually
+        // mean calls both — as order-independent lookaheads.
+        find: /^(?=[\s\S]*getUserSubscriptionRoles\()(?=[\s\S]*\.getUserIsAdmin\()/,
         replacement: {
           match: /(function [\w$]+\([\w$]+,[\w$]+)\)\{(.{0,250}\.getUserIsAdmin\(.+?return!1\})/,
           replace: "$1,fakeNitroOriginal){if(!fakeNitroOriginal)return false;$2"
@@ -9585,7 +9621,12 @@ ${loc.channel ?? ""}`.toLowerCase();
       //    them into image links.
       {
         label: "stickers always sendable",
-        find: '"SENDABLE"',
+        // Was bare `"SENDABLE"`. String literals are free real estate for a
+        // minifier, so that find also selects every module that merely *mentions*
+        // the enum — and the match then rewrites whichever `.available?` happens
+        // to come first in that module, which is not ours. Pin to the module that
+        // DEFINES the enum by also requiring its sibling member name.
+        find: /^(?=[\s\S]*"SENDABLE")(?=[\s\S]*SENDABLE_WITH_PREMIUM)/,
         replacement: {
           match: /[\w$]+\.available\?/,
           replace: "true?"
@@ -9642,7 +9683,10 @@ ${loc.channel ?? ""}`.toLowerCase();
         find: 'type:"GUILD_SOUNDBOARD_SOUND_CREATE"',
         all: true,
         replacement: {
-          match: /(?<=type:"(?:SOUNDBOARD_SOUNDS_RECEIVED|GUILD_SOUNDBOARD_SOUND_CREATE|GUILD_SOUNDBOARD_SOUND_UPDATE|GUILD_SOUNDBOARD_SOUNDS_UPDATE)".+?available:)[\w$]+\.available/,
+          // Bounded gap: `.+?` with `all` could pair an event type with an
+          // `available:` field hundreds of tokens away in the same (huge) reducer
+          // module and stomp an unrelated availability flag.
+          match: /(?<=type:"(?:SOUNDBOARD_SOUNDS_RECEIVED|GUILD_SOUNDBOARD_SOUND_CREATE|GUILD_SOUNDBOARD_SOUND_UPDATE|GUILD_SOUNDBOARD_SOUNDS_UPDATE)".{0,300}?available:)[\w$]+\.available/,
           replace: "true"
         }
       }
@@ -14546,8 +14590,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.20" : "dev",
-      build: true ? "2026-10-24 09:57:25" : "dev",
+      version: true ? "0.7.21" : "dev",
+      build: true ? "2026-11-07 10:50:45" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14578,8 +14622,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.20" : "dev",
-        build: true ? "2026-10-24 09:57:25" : "dev",
+        version: true ? "0.7.21" : "dev",
+        build: true ? "2026-11-07 10:50:45" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
