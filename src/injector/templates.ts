@@ -90,9 +90,36 @@ function looksLikePayload(body) {
   }
 }
 
+// The build stamps a /*! Halcyon vX.Y.Z */ banner. Mirrors can lag main
+// by minutes, and a lagging response must never downgrade a newer cache.
+function readVersion(body) {
+  try {
+    const head = body.toString("utf8", 0, Math.min(body.length, 4096));
+    const m = /Halcyon v(d+.d+(?:.d+)?)/.exec(head);
+    return m ? m[1] : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function compareVersions(a, b) {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  const n = Math.max(pa.length, pb.length);
+  for (let i = 0; i < n; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
 function writePayload(body, dest) {
   try {
     if (!looksLikePayload(body)) return;
+    const incoming = readVersion(body);
+    let current = null;
+    try { current = readVersion(fs.readFileSync(dest)); } catch (err) {}
+    if (current && (!incoming || compareVersions(incoming, current) <= 0)) return;
     const tmp = dest + "." + process.pid + ".tmp";
     fs.writeFileSync(tmp, body);
     fs.renameSync(tmp, dest); // atomic replace on Windows (MoveFileEx)

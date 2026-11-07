@@ -842,7 +842,7 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-07 10:59:56" : "dev";
+      const build = true ? "2026-11-07 11:02:36" : "dev";
       const version2 = true ? "0.7.22" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
@@ -14591,7 +14591,7 @@ ${tail}`;
     }
     const out = {
       version: true ? "0.7.22" : "dev",
-      build: true ? "2026-11-07 10:59:56" : "dev",
+      build: true ? "2026-11-07 11:02:36" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14623,7 +14623,7 @@ ${tail}`;
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
         version: true ? "0.7.22" : "dev",
-        build: true ? "2026-11-07 10:59:56" : "dev",
+        build: true ? "2026-11-07 11:02:36" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
