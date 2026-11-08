@@ -21,6 +21,7 @@
 import { definePlugin } from "../../core/plugin";
 import { React, mountDetached } from "../../core/common/react";
 import { classNamesContaining, probeSelectors } from "../../core/dom-probe";
+import { getSourcePatchReport } from "../../core/modules/webpack";
 import { injectStyles } from "../../ui/inject-styles";
 import { logger } from "../../core/logger";
 import { settings } from "./settings";
@@ -58,6 +59,7 @@ interface Mounted {
 let mounted: Mounted | undefined;
 let ensureTimer: ReturnType<typeof setInterval> | undefined;
 let unsubscribePosition: (() => void) | undefined;
+let patchCheckTimer: ReturnType<typeof setTimeout> | undefined;
 let warnedNoAnchor = false;
 
 interface AnchorHit {
@@ -211,15 +213,51 @@ function ensureMounted(): void {
   place(mounted.host, hit.element);
 }
 
+/**
+ * Report whether the name-deobfuscation patch landed on this build. Without it
+ * the list still appears, but every name reads "__hidden__" — a failure that is
+ * otherwise indistinguishable from "the server really has 100 hidden channels".
+ */
+function reportPatch(): void {
+  const mine = getSourcePatchReport().filter((p) => p.pluginId === "hidden-channels");
+  if (mine.length === 0) return;
+  if (mine.every((p) => p.applied)) {
+    log.info("频道名混淆补丁已生效");
+  } else {
+    log.warn(
+      "频道名混淆补丁未匹配当前 Discord 版本；列表仍会显示，但名字是 __hidden__。" +
+        "如果插件是刚启用的，请重启 Discord 再试。"
+    );
+  }
+}
+
 export default definePlugin({
   id: "hidden-channels",
   name: "隐藏频道列表",
   description:
-    "在频道列表里列出当前服务器中没有权限查看的频道，按分类分组显示名称与类型。只是展示：点击不会进入频道，也不会读取任何消息。",
+    "在频道列表里列出当前服务器中没有权限查看的频道，按分类分组显示真实名称与类型。只是展示：点击不会进入频道，也不会读取任何消息。",
   authors: [{ name: "caitemm" }],
   category: "utility",
 
   settings,
+
+  patches: [
+    {
+      // Discord's "2026-02-private-channel-hiding" experiment replaces the
+      // name (and topic) of every channel the member cannot view with
+      // "__hidden__" before the record reaches the client. The real values are
+      // still in the payload; flipping these two flags off keeps them intact,
+      // which is what makes the list show actual names instead of a wall of
+      // "__hidden__". Same seam Vencord's ShowHiddenChannels uses.
+      label: "private channel hiding off",
+      find: "2026-02-private-channel-hiding",
+      all: true,
+      replacement: {
+        match: /(?<=enableObfuscation|enableIntegrityCheck):\s*(?:!0|true)\b/g,
+        replace: ":false"
+      }
+    }
+  ],
 
   start() {
     injectStyles();
@@ -234,6 +272,8 @@ export default definePlugin({
       ensureMounted();
     });
 
+    patchCheckTimer = setTimeout(reportPatch, 4000);
+
     log.info("隐藏频道列表已启用");
   },
 
@@ -241,6 +281,10 @@ export default definePlugin({
     if (ensureTimer) {
       clearInterval(ensureTimer);
       ensureTimer = undefined;
+    }
+    if (patchCheckTimer) {
+      clearTimeout(patchCheckTimer);
+      patchCheckTimer = undefined;
     }
     unsubscribePosition?.();
     unsubscribePosition = undefined;

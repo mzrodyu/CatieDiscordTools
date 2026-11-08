@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.24
+// @version      0.7.25
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-08 18:18:33" : "dev";
-      const version2 = true ? "0.7.24" : "dev";
+      const build = true ? "2026-11-08 18:23:10" : "dev";
+      const version2 = true ? "0.7.25" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -3022,6 +3022,16 @@ ${slices.join("\n  ...  \n")}`
   flex: 0 0 auto;
 }
 
+.hc-hiddenchannels__hint {
+  margin: 2px 8px 4px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(255, 159, 10, 0.12);
+  color: var(--text-warning, #f0b232);
+  font-size: 11px;
+  line-height: 15px;
+}
+
 .hc-hiddenchannels__count {
   flex: 0 0 auto;
   min-width: 18px;
@@ -4658,7 +4668,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.24" : "dev";
+    return true ? "0.7.25" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4750,7 +4760,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.24" : "dev";
+    const version2 = true ? "0.7.25" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -14749,6 +14759,7 @@ ${tail}`;
     guildId: null,
     groups: [],
     total: 0,
+    obfuscated: 0,
     source: "none",
     canChecked: false
   };
@@ -14934,6 +14945,7 @@ ${tail}`;
       guildId,
       groups,
       total: hidden.length,
+      obfuscated: hidden.filter((channel) => channel.name === "__hidden__").length,
       source,
       canChecked
     };
@@ -14942,7 +14954,7 @@ ${tail}`;
     const groups = snapshot.groups.map(
       (group) => `${group.categoryId ?? ""}:${group.categoryName}:` + group.channels.map((channel) => `${channel.id}:${channel.type}:${channel.position}:${channel.name}`).join(",")
     ).join(";");
-    return `${snapshot.guildId ?? ""}|${snapshot.total}|${snapshot.source}|${groups}`;
+    return `${snapshot.guildId ?? ""}|${snapshot.total}|${snapshot.obfuscated}|${snapshot.source}|${groups}`;
   }
 
   // src/plugins/hidden-channels/ui/icons.tsx
@@ -15034,6 +15046,7 @@ ${tail}`;
     guildId: null,
     groups: [],
     total: 0,
+    obfuscated: 0,
     source: "none",
     canChecked: false
   };
@@ -15151,7 +15164,7 @@ ${tail}`;
           className: "hc-hiddenchannels__chevron" + (collapsed ? " hc-hiddenchannels__chevron--collapsed" : "")
         }
       )
-    ), collapsed ? null : /* @__PURE__ */ React.createElement("div", { className: "hc-hiddenchannels__body" }, groups.map((group, index) => /* @__PURE__ */ React.createElement(
+    ), snapshot.obfuscated > 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-hiddenchannels__hint" }, "\u9891\u9053\u540D\u88AB Discord \u6DF7\u6DC6\u6210 __hidden__ \u4E86\u3002\u91CD\u542F Discord \u8BA9\u63D2\u4EF6\u8865\u4E01\u751F\u6548\u540E\uFF0C\u8FD9\u91CC\u4F1A\u663E\u793A\u771F\u5B9E\u540D\u79F0\u3002") : null, collapsed ? null : /* @__PURE__ */ React.createElement("div", { className: "hc-hiddenchannels__body" }, groups.map((group, index) => /* @__PURE__ */ React.createElement(
       "div",
       {
         className: "hc-hiddenchannels__group",
@@ -15181,6 +15194,7 @@ ${tail}`;
   var mounted4;
   var ensureTimer2;
   var unsubscribePosition;
+  var patchCheckTimer;
   var warnedNoAnchor3 = false;
   function inGuildRail(node) {
     try {
@@ -15281,13 +15295,41 @@ ${tail}`;
     }
     place(mounted4.host, hit.element);
   }
+  function reportPatch2() {
+    const mine = getSourcePatchReport().filter((p) => p.pluginId === "hidden-channels");
+    if (mine.length === 0) return;
+    if (mine.every((p) => p.applied)) {
+      log47.info("\u9891\u9053\u540D\u6DF7\u6DC6\u8865\u4E01\u5DF2\u751F\u6548");
+    } else {
+      log47.warn(
+        "\u9891\u9053\u540D\u6DF7\u6DC6\u8865\u4E01\u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF1B\u5217\u8868\u4ECD\u4F1A\u663E\u793A\uFF0C\u4F46\u540D\u5B57\u662F __hidden__\u3002\u5982\u679C\u63D2\u4EF6\u662F\u521A\u542F\u7528\u7684\uFF0C\u8BF7\u91CD\u542F Discord \u518D\u8BD5\u3002"
+      );
+    }
+  }
   var hidden_channels_default = definePlugin({
     id: "hidden-channels",
     name: "\u9690\u85CF\u9891\u9053\u5217\u8868",
-    description: "\u5728\u9891\u9053\u5217\u8868\u91CC\u5217\u51FA\u5F53\u524D\u670D\u52A1\u5668\u4E2D\u6CA1\u6709\u6743\u9650\u67E5\u770B\u7684\u9891\u9053\uFF0C\u6309\u5206\u7C7B\u5206\u7EC4\u663E\u793A\u540D\u79F0\u4E0E\u7C7B\u578B\u3002\u53EA\u662F\u5C55\u793A\uFF1A\u70B9\u51FB\u4E0D\u4F1A\u8FDB\u5165\u9891\u9053\uFF0C\u4E5F\u4E0D\u4F1A\u8BFB\u53D6\u4EFB\u4F55\u6D88\u606F\u3002",
+    description: "\u5728\u9891\u9053\u5217\u8868\u91CC\u5217\u51FA\u5F53\u524D\u670D\u52A1\u5668\u4E2D\u6CA1\u6709\u6743\u9650\u67E5\u770B\u7684\u9891\u9053\uFF0C\u6309\u5206\u7C7B\u5206\u7EC4\u663E\u793A\u771F\u5B9E\u540D\u79F0\u4E0E\u7C7B\u578B\u3002\u53EA\u662F\u5C55\u793A\uFF1A\u70B9\u51FB\u4E0D\u4F1A\u8FDB\u5165\u9891\u9053\uFF0C\u4E5F\u4E0D\u4F1A\u8BFB\u53D6\u4EFB\u4F55\u6D88\u606F\u3002",
     authors: [{ name: "caitemm" }],
     category: "utility",
     settings: settings16,
+    patches: [
+      {
+        // Discord's "2026-02-private-channel-hiding" experiment replaces the
+        // name (and topic) of every channel the member cannot view with
+        // "__hidden__" before the record reaches the client. The real values are
+        // still in the payload; flipping these two flags off keeps them intact,
+        // which is what makes the list show actual names instead of a wall of
+        // "__hidden__". Same seam Vencord's ShowHiddenChannels uses.
+        label: "private channel hiding off",
+        find: "2026-02-private-channel-hiding",
+        all: true,
+        replacement: {
+          match: /(?<=enableObfuscation|enableIntegrityCheck):\s*(?:!0|true)\b/g,
+          replace: ":false"
+        }
+      }
+    ],
     start() {
       injectStyles();
       warnedNoAnchor3 = false;
@@ -15297,12 +15339,17 @@ ${tail}`;
         warnedNoAnchor3 = false;
         ensureMounted3();
       });
+      patchCheckTimer = setTimeout(reportPatch2, 4e3);
       log47.info("\u9690\u85CF\u9891\u9053\u5217\u8868\u5DF2\u542F\u7528");
     },
     stop() {
       if (ensureTimer2) {
         clearInterval(ensureTimer2);
         ensureTimer2 = void 0;
+      }
+      if (patchCheckTimer) {
+        clearTimeout(patchCheckTimer);
+        patchCheckTimer = void 0;
       }
       unsubscribePosition?.();
       unsubscribePosition = void 0;
@@ -15399,8 +15446,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.24" : "dev",
-      build: true ? "2026-11-08 18:18:33" : "dev",
+      version: true ? "0.7.25" : "dev",
+      build: true ? "2026-11-08 18:23:10" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -15431,8 +15478,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.24" : "dev",
-        build: true ? "2026-11-08 18:18:33" : "dev",
+        version: true ? "0.7.25" : "dev",
+        build: true ? "2026-11-08 18:23:10" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

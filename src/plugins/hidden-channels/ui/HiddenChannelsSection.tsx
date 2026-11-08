@@ -43,6 +43,7 @@ const EMPTY_SNAPSHOT: HiddenChannelsSnapshot = {
   guildId: null,
   groups: [],
   total: 0,
+  obfuscated: 0,
   source: "none",
   canChecked: false
 };
@@ -198,6 +199,12 @@ export function HiddenChannelsSection(): React.ReactElement | null {
           }
         />
       </button>
+
+      {snapshot.obfuscated > 0 ? (
+        <div className="hc-hiddenchannels__hint">
+          频道名被 Discord 混淆成 __hidden__ 了。重启 Discord 让插件补丁生效后，这里会显示真实名称。
+        </div>
+      ) : null}
 
       {collapsed ? null : (
         <div className="hc-hiddenchannels__body">

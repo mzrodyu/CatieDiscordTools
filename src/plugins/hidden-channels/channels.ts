@@ -61,6 +61,8 @@ export interface HiddenChannelsSnapshot {
   guildId: string | null;
   groups: HiddenGroup[];
   total: number;
+  /** How many names are still Discord's "__hidden__" placeholder. */
+  obfuscated: number;
   source: ChannelSource;
   /** True when at least one channel could be checked against the permission engine. */
   canChecked: boolean;
@@ -70,6 +72,7 @@ const EMPTY: HiddenChannelsSnapshot = {
   guildId: null,
   groups: [],
   total: 0,
+  obfuscated: 0,
   source: "none",
   canChecked: false
 };
@@ -337,6 +340,7 @@ export function collectHiddenChannels(guildId: string | null): HiddenChannelsSna
     guildId,
     groups,
     total: hidden.length,
+    obfuscated: hidden.filter((channel) => channel.name === "__hidden__").length,
     source,
     canChecked
   };
@@ -353,5 +357,5 @@ export function snapshotKey(snapshot: HiddenChannelsSnapshot): string {
           .join(",")
     )
     .join(";");
-  return `${snapshot.guildId ?? ""}|${snapshot.total}|${snapshot.source}|${groups}`;
+  return `${snapshot.guildId ?? ""}|${snapshot.total}|${snapshot.obfuscated}|${snapshot.source}|${groups}`;
 }
