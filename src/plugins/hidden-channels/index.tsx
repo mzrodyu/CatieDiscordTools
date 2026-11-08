@@ -30,12 +30,18 @@ import { HiddenChannelsSection } from "./ui/HiddenChannelsSection";
 const log = logger("hidden-channels");
 
 /**
- * Where the section attaches, most specific first. The channel sidebar's
- * scroller is the right home: appended to it, the section scrolls with the
- * channel list instead of floating outside it. Later entries are looser
- * fallbacks for a build that renames the intermediate wrappers.
+ * Where the section attaches. The primary anchor is the channel list's own
+ * items: Discord tags each of them `data-list-item-id="channels___<id>"`, which
+ * is distinct from the server rail's `guildsnav___…`. Climbing from an item to
+ * its scroller lands in the right server's channel list no matter how the
+ * surrounding layout classes are named.
+ *
+ * The class-prefix selectors are fallbacks only. They MUST skip anything inside
+ * the server rail (`guilds…`), because a build can put both columns under a
+ * common `sidebar_` wrapper — which is exactly how an earlier version of this
+ * anchor ended up drawing the section over the server icons.
  */
-const ANCHORS = [
+const FALLBACK_ANCHORS = [
   '[class*="sidebar_"] [class*="scroller_"]',
   '[class*="sidebar_"] [class*="container_"]',
   'nav[class*="container_"] [class*="scroller_"]'
@@ -59,15 +65,69 @@ interface AnchorHit {
   selector: string;
 }
 
-function firstMatch(): AnchorHit | null {
-  for (const selector of ANCHORS) {
+/** True when the node lives in the server (guild) rail, not a channel list. */
+function inGuildRail(node: Element): boolean {
+  try {
+    return node.closest('[class*="guilds"]') != null;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether an anchor points at a channel (two ids), not a server icon (one). */
+function isChannelLink(link: Element): boolean {
+  const href = link.getAttribute("href") ?? "";
+  return /\/channels\/[^/]+\/[^/?#]+/.test(href);
+}
+
+/**
+ * The scroller of the current server's channel list.
+ *
+ * Primary anchor: one of the list's own items, which Discord tags
+ * `data-list-item-id="channels___<id>"` — distinct from the server rail's
+ * `guildsnav___…`. Climbing to its scroller lands in the right column no matter
+ * what the surrounding layout classes are called. Everything below is a
+ * fallback, and every candidate is filtered to exclude the server rail.
+ */
+function findAnchor(): AnchorHit | null {
+  // 1. Discord's own channel-list item marker.
+  try {
+    const item = document.querySelector('[data-list-item-id^="channels___"]');
+    if (item && !inGuildRail(item)) {
+      const scroller = item.closest('[class*="scroller_"]');
+      return {
+        element: scroller ?? item.parentElement ?? item,
+        selector: 'data-list-item-id="channels___…"'
+      };
+    }
+  } catch {
+    // fall through
+  }
+
+  // 2. A real channel link. The server rail's icons also link to /channels/,
+  //    but only with a guild id; a channel link carries a second id.
+  try {
+    for (const link of document.querySelectorAll('a[href*="/channels/"]')) {
+      if (!isChannelLink(link) || inGuildRail(link)) continue;
+      const scroller = link.closest('[class*="scroller_"]');
+      if (scroller) return { element: scroller, selector: "channel link → scroller" };
+    }
+  } catch {
+    // fall through
+  }
+
+  // 3. Class-prefix fallbacks, never the server rail.
+  for (const selector of FALLBACK_ANCHORS) {
     try {
-      const element = document.querySelector(selector);
-      if (element) return { element, selector };
+      for (const element of document.querySelectorAll(selector)) {
+        if (inGuildRail(element)) continue;
+        return { element, selector };
+      }
     } catch {
       // A selector this engine rejects; try the next.
     }
   }
+
   return null;
 }
 
@@ -128,7 +188,7 @@ function place(host: HTMLElement, anchor: Element): void {
  * `querySelector` and a parent check.
  */
 function ensureMounted(): void {
-  const hit = firstMatch();
+  const hit = findAnchor();
   if (!hit) {
     if (!warnedNoAnchor) {
       warnedNoAnchor = true;
@@ -207,9 +267,25 @@ export default definePlugin({
             html: mounted.host.innerHTML.slice(0, 200)
           }
         : null,
-      anchors: probeSelectors(ANCHORS),
+      anchor: (() => {
+        try {
+          const hit = findAnchor();
+          return hit ? hit.selector : null;
+        } catch {
+          return "error";
+        }
+      })(),
+      channelItems: (() => {
+        try {
+          return document.querySelectorAll('[data-list-item-id^="channels___"]').length;
+        } catch {
+          return -1;
+        }
+      })(),
+      fallbackAnchors: probeSelectors(FALLBACK_ANCHORS),
       classHints: {
         sidebar: classNamesContaining("sidebar"),
+        guilds: classNamesContaining("guilds"),
         scroller: classNamesContaining("scroller"),
         container: classNamesContaining("container")
       },

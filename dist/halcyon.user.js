@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.23
+// @version      0.7.24
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-08 18:09:24" : "dev";
-      const version2 = true ? "0.7.23" : "dev";
+      const build = true ? "2026-11-08 18:14:08" : "dev";
+      const version2 = true ? "0.7.24" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4658,7 +4658,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.23" : "dev";
+    return true ? "0.7.24" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4750,7 +4750,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.23" : "dev";
+    const version2 = true ? "0.7.24" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -15172,7 +15172,7 @@ ${tail}`;
 
   // src/plugins/hidden-channels/index.tsx
   var log47 = logger("hidden-channels");
-  var ANCHORS2 = [
+  var FALLBACK_ANCHORS = [
     '[class*="sidebar_"] [class*="scroller_"]',
     '[class*="sidebar_"] [class*="container_"]',
     'nav[class*="container_"] [class*="scroller_"]'
@@ -15182,11 +15182,43 @@ ${tail}`;
   var ensureTimer2;
   var unsubscribePosition;
   var warnedNoAnchor3 = false;
-  function firstMatch2() {
-    for (const selector of ANCHORS2) {
+  function inGuildRail(node) {
+    try {
+      return node.closest('[class*="guilds"]') != null;
+    } catch {
+      return false;
+    }
+  }
+  function isChannelLink(link) {
+    const href = link.getAttribute("href") ?? "";
+    return /\/channels\/[^/]+\/[^/?#]+/.test(href);
+  }
+  function findAnchor() {
+    try {
+      const item = document.querySelector('[data-list-item-id^="channels___"]');
+      if (item && !inGuildRail(item)) {
+        const scroller = item.closest('[class*="scroller_"]');
+        return {
+          element: scroller ?? item.parentElement ?? item,
+          selector: 'data-list-item-id="channels___\u2026"'
+        };
+      }
+    } catch {
+    }
+    try {
+      for (const link of document.querySelectorAll('a[href*="/channels/"]')) {
+        if (!isChannelLink(link) || inGuildRail(link)) continue;
+        const scroller = link.closest('[class*="scroller_"]');
+        if (scroller) return { element: scroller, selector: "channel link \u2192 scroller" };
+      }
+    } catch {
+    }
+    for (const selector of FALLBACK_ANCHORS) {
       try {
-        const element = document.querySelector(selector);
-        if (element) return { element, selector };
+        for (const element of document.querySelectorAll(selector)) {
+          if (inGuildRail(element)) continue;
+          return { element, selector };
+        }
       } catch {
       }
     }
@@ -15233,7 +15265,7 @@ ${tail}`;
     }
   }
   function ensureMounted3() {
-    const hit = firstMatch2();
+    const hit = findAnchor();
     if (!hit) {
       if (!warnedNoAnchor3) {
         warnedNoAnchor3 = true;
@@ -15292,9 +15324,25 @@ ${tail}`;
           attached: document.contains(mounted4.host),
           html: mounted4.host.innerHTML.slice(0, 200)
         } : null,
-        anchors: probeSelectors(ANCHORS2),
+        anchor: (() => {
+          try {
+            const hit = findAnchor();
+            return hit ? hit.selector : null;
+          } catch {
+            return "error";
+          }
+        })(),
+        channelItems: (() => {
+          try {
+            return document.querySelectorAll('[data-list-item-id^="channels___"]').length;
+          } catch {
+            return -1;
+          }
+        })(),
+        fallbackAnchors: probeSelectors(FALLBACK_ANCHORS),
         classHints: {
           sidebar: classNamesContaining("sidebar"),
+          guilds: classNamesContaining("guilds"),
           scroller: classNamesContaining("scroller"),
           container: classNamesContaining("container")
         },
@@ -15351,8 +15399,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.23" : "dev",
-      build: true ? "2026-11-08 18:09:24" : "dev",
+      version: true ? "0.7.24" : "dev",
+      build: true ? "2026-11-08 18:14:08" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -15383,8 +15431,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.23" : "dev",
-        build: true ? "2026-11-08 18:09:24" : "dev",
+        version: true ? "0.7.24" : "dev",
+        build: true ? "2026-11-08 18:14:08" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
