@@ -111,7 +111,7 @@ function looksLikePayload(body) {
 function readVersion(body) {
   try {
     const head = body.toString("utf8", 0, Math.min(body.length, 4096));
-    const m = /Halcyon v(d+.d+(?:.d+)?)/.exec(head);
+    const m = /Halcyon v(\d+\.\d+(?:\.\d+)?)/.exec(head);
     return m ? m[1] : null;
   } catch (err) {
     return null;
