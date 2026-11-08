@@ -114,6 +114,14 @@ export const SelectedChannelStore = lazy<any>(
 );
 
 /**
+ * The guild (server) the user is currently looking at, or null in DMs.
+ * Resolved by registered name through Flux's own store registry (`lazyStore`),
+ * like QuestsStore: the `getGuildId` shape is generic enough that a lookalike
+ * could win a shape scan, and the name is stable across releases.
+ */
+export const SelectedGuildStore = lazyStore<any>("SelectedGuildStore");
+
+/**
  * Guilds (servers) the current account has joined. Resolved by store name for
  * the same reason as ChannelStore — a `getGuild`/`getGuilds` shape-alike can
  * shadow the real store and hand back an empty guild map.

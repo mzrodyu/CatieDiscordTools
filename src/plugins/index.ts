@@ -24,6 +24,7 @@ import silentTyping from "./silent-typing";
 import memberCount from "./member-count";
 import whoReacted from "./who-reacted";
 import platformIndicators from "./platform-indicators";
+import hiddenChannels from "./hidden-channels";
 
 export const plugins: Plugin[] = [
   settingsHost,
@@ -44,5 +45,6 @@ export const plugins: Plugin[] = [
   silentTyping,
   memberCount,
   whoReacted,
-  platformIndicators
+  platformIndicators,
+  hiddenChannels
 ];
