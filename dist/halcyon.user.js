@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.25
+// @version      0.7.26
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -562,7 +562,7 @@ ${slices.join("\n  ...  \n")}`
         }
         return "";
       };
-      const nameOf2 = (t) => t && (t.displayName || t.name) || t && t.type && (t.type.displayName || t.type.name) || "";
+      const nameOf = (t) => t && (t.displayName || t.name) || t && t.type && (t.type.displayName || t.type.name) || "";
       const queue = [root];
       let walked = 0;
       const buildLayoutHits = [];
@@ -575,7 +575,7 @@ ${slices.join("\n  ...  \n")}`
         const t = f.type;
         if (t && (typeof t === "function" || typeof t === "object")) {
           const s = srcOf(t);
-          const n = nameOf2(t) || "anon";
+          const n = nameOf(t) || "anon";
           const patched = s.includes("__halcyon_self__");
           if (s.includes("buildLayout")) buildLayoutHits.push({ name: n, patched });
           if (s.includes("getPredicateSections")) gpsHits.push({ name: n, patched });
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-08 18:23:10" : "dev";
-      const version2 = true ? "0.7.25" : "dev";
+      const build = true ? "2026-11-08 18:30:49" : "dev";
+      const version2 = true ? "0.7.26" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -2976,150 +2976,6 @@ ${slices.join("\n  ...  \n")}`
   margin: 8px 12px 4px;
 }
 
-/* --- Hidden channels (hidden-channels plugin) ---------------------------- */
-
-/*
- * Appended to Discord's guild channel list, so literal values and Discord's own
- * CSS variables \u2014 the \`--hc-*\` tokens are scoped to \`.halcyon\` and do not reach
- * this far into the client's tree. Rows are deliberately inert: the channels
- * are the ones the client refuses to open, so a row only names one (or copies
- * its id, per settings).
- */
-.hc-hiddenchannels-host {
-  display: contents;
-}
-
-.hc-hiddenchannels {
-  margin: 8px 8px 12px;
-  padding-top: 6px;
-  border-top: 1px solid var(--background-modifier-accent, rgba(79, 84, 92, 0.48));
-}
-
-.hc-hiddenchannels__head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--channels-default, #949ba4);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.hc-hiddenchannels__head:hover {
-  background: var(--background-modifier-hover, rgba(79, 84, 92, 0.16));
-  color: var(--interactive-hover, #dcddde);
-}
-
-.hc-hiddenchannels__title {
-  flex: 0 0 auto;
-}
-
-.hc-hiddenchannels__hint {
-  margin: 2px 8px 4px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  background: rgba(255, 159, 10, 0.12);
-  color: var(--text-warning, #f0b232);
-  font-size: 11px;
-  line-height: 15px;
-}
-
-.hc-hiddenchannels__count {
-  flex: 0 0 auto;
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: rgba(128, 132, 142, 0.16);
-  color: var(--text-muted, #949ba4);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 16px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.hc-hiddenchannels__chevron {
-  flex: 0 0 auto;
-  margin-left: auto;
-  opacity: 0.7;
-  transition: transform 200ms ease;
-}
-
-.hc-hiddenchannels__chevron--collapsed {
-  transform: rotate(-90deg);
-}
-
-.hc-hiddenchannels__body {
-  padding-bottom: 2px;
-}
-
-.hc-hiddenchannels__group-name {
-  padding: 8px 8px 2px;
-  color: var(--channels-default, #949ba4);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 12px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hc-hiddenchannels__row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--channels-default, #949ba4);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 18px;
-  text-align: left;
-  cursor: pointer;
-  opacity: 0.85;
-}
-
-.hc-hiddenchannels__row:hover {
-  background: var(--background-modifier-hover, rgba(79, 84, 92, 0.16));
-  color: var(--interactive-hover, #dcddde);
-  opacity: 1;
-}
-
-.hc-hiddenchannels__icon {
-  flex: 0 0 auto;
-  opacity: 0.8;
-}
-
-.hc-hiddenchannels__name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hc-hiddenchannels__id {
-  flex: 0 0 auto;
-  color: var(--text-muted, #949ba4);
-  font-family: var(--hc-font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
-  font-size: 10px;
-  opacity: 0.6;
-}
-
 /* --- Reactor list card (who-reacted plugin) ------------------------------- */
 /*
  * Our own floating surface on document.body, hosted inside a \`.halcyon\`
@@ -4319,17 +4175,17 @@ ${components_default}`;
     }, []);
     return list;
   }
-  function useSettingsSnapshot(settings17) {
+  function useSettingsSnapshot(settings16) {
     const [, bump] = useState(0);
     useEffect(() => {
-      const unsubscribes4 = Object.keys(settings17.schema).map(
-        (key) => settings17.subscribe(key, () => bump((n) => n + 1))
+      const unsubscribes4 = Object.keys(settings16.schema).map(
+        (key) => settings16.subscribe(key, () => bump((n) => n + 1))
       );
       return () => {
         for (const off of unsubscribes4) off();
       };
-    }, [settings17]);
-    return settings17.store;
+    }, [settings16]);
+    return settings16.store;
   }
 
   // src/ui/settings/SettingsForm.tsx
@@ -4345,16 +4201,16 @@ ${components_default}`;
       return false;
     }
   }
-  function SettingsForm({ settings: settings17 }) {
-    const store = useSettingsSnapshot(settings17);
+  function SettingsForm({ settings: settings16 }) {
+    const store = useSettingsSnapshot(settings16);
     const keys = useMemo(
-      () => Object.keys(settings17.schema).filter((key) => !settings17.schema[key].hidden),
-      [settings17]
+      () => Object.keys(settings16.schema).filter((key) => !settings16.schema[key].hidden),
+      [settings16]
     );
     const [draft, setDraft] = useState(() => seed(store, keys));
     useEffect(() => {
       setDraft(seed(store, keys));
-    }, [settings17]);
+    }, [settings16]);
     if (keys.length === 0) return null;
     const dirty = keys.filter((key) => !equal(draft[key], store[key]));
     const save = () => {
@@ -4363,7 +4219,7 @@ ${components_default}`;
     const discard = () => setDraft(seed(store, keys));
     const sections = [];
     for (const key of keys) {
-      const title = settings17.schema[key].group ?? "\u8BBE\u7F6E";
+      const title = settings16.schema[key].group ?? "\u8BBE\u7F6E";
       const last = sections[sections.length - 1];
       if (last && last.title === title) last.keys.push(key);
       else sections.push({ title, keys: [key] });
@@ -4372,7 +4228,7 @@ ${components_default}`;
       SettingField,
       {
         key,
-        def: settings17.schema[key],
+        def: settings16.schema[key],
         value: draft[key],
         onChange: (next) => setDraft((prev) => ({ ...prev, [key]: next }))
       }
@@ -4668,7 +4524,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.25" : "dev";
+    return true ? "0.7.26" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4760,7 +4616,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.25" : "dev";
+    const version2 = true ? "0.7.26" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -5519,7 +5375,6 @@ ${components_default}`;
   var SelectedChannelStore = lazy(
     (m) => m?.getName?.() === "SelectedChannelStore" || typeof m?.getChannelId === "function" && typeof m?.getLastSelectedChannelId === "function" && typeof m?.__halcyon_probe__ === "undefined"
   );
-  var SelectedGuildStore = lazyStore("SelectedGuildStore");
   var GuildStore = lazy(
     (m) => m?.getName?.() === "GuildStore" || m?.constructor?.displayName === "GuildStore"
   );
@@ -7268,7 +7123,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
       scheduleSweep();
     });
-    const attach5 = () => {
+    const attach4 = () => {
       const target = document.documentElement ?? document.body;
       if (!target) return false;
       sweepDeletedRows();
@@ -7280,10 +7135,10 @@ ${loc.channel ?? ""}`.toLowerCase();
       });
       return true;
     };
-    if (!attach5()) {
+    if (!attach4()) {
       let tries = 0;
       const timer3 = setInterval(() => {
-        if (attach5() || ++tries > 100) clearInterval(timer3);
+        if (attach4() || ++tries > 100) clearInterval(timer3);
       }, 100);
     }
     if (tintInterval) clearInterval(tintInterval);
@@ -10119,13 +9974,13 @@ ${loc.channel ?? ""}`.toLowerCase();
     }
   }
   function subscribeToDraft(onChange2) {
-    const detach3 = [];
+    const detach2 = [];
     for (const candidate of [DraftStore, EditMessageStore]) {
       try {
         const store = candidate;
         if (typeof store?.addChangeListener === "function") {
           store.addChangeListener(onChange2);
-          detach3.push(() => {
+          detach2.push(() => {
             try {
               store.removeChangeListener?.(onChange2);
             } catch {
@@ -10136,9 +9991,9 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
     }
     return {
-      attached: detach3.length > 0,
+      attached: detach2.length > 0,
       off: () => {
-        for (const off of detach3) off();
+        for (const off of detach2) off();
       }
     };
   }
@@ -14688,716 +14543,6 @@ ${tail}`;
     }
   });
 
-  // src/plugins/hidden-channels/settings.ts
-  var settings16 = defineSettings({
-    position: {
-      group: "\u663E\u793A",
-      type: "select",
-      default: "bottom",
-      label: "\u663E\u793A\u4F4D\u7F6E",
-      description: "\u9690\u85CF\u9891\u9053\u5217\u8868\u653E\u5728\u9891\u9053\u5217\u8868\u7684\u5E95\u90E8\u8FD8\u662F\u9876\u90E8\u3002",
-      options: [
-        { value: "bottom", label: "\u5217\u8868\u5E95\u90E8" },
-        { value: "top", label: "\u5217\u8868\u9876\u90E8" }
-      ]
-    },
-    groupByCategory: {
-      group: "\u663E\u793A",
-      type: "boolean",
-      default: true,
-      label: "\u6309\u5206\u7C7B\u5206\u7EC4",
-      description: "\u6309 Discord \u7684\u5206\u7C7B\u540D\u79F0\u5206\u7EC4\u3002\u5173\u95ED\u540E\u5408\u5E76\u6210\u4E00\u4E2A\u5217\u8868\uFF0C\u6309\u540D\u79F0\u6392\u5E8F\u3002"
-    },
-    showCount: {
-      group: "\u663E\u793A",
-      type: "boolean",
-      default: true,
-      label: "\u663E\u793A\u6570\u91CF",
-      description: "\u5728\u6807\u9898\u65C1\u663E\u793A\u9690\u85CF\u9891\u9053\u7684\u6570\u91CF\u3002"
-    },
-    showIds: {
-      group: "\u663E\u793A",
-      type: "boolean",
-      default: false,
-      label: "\u663E\u793A\u9891\u9053 ID",
-      description: "\u5728\u9891\u9053\u540D\u53F3\u4FA7\u663E\u793A\u9891\u9053 ID\uFF0C\u65B9\u4FBF\u590D\u5236\u6216\u5BF9\u7167\u3002"
-    },
-    defaultCollapsed: {
-      group: "\u663E\u793A",
-      type: "boolean",
-      default: false,
-      label: "\u9ED8\u8BA4\u6298\u53E0",
-      description: "\u542F\u52A8\u65F6\u9ED8\u8BA4\u6536\u8D77\u5217\u8868\uFF0C\u70B9\u6807\u9898\u5C55\u5F00\u3002"
-    },
-    clickAction: {
-      group: "\u4EA4\u4E92",
-      type: "select",
-      default: "toast",
-      label: "\u70B9\u51FB\u9891\u9053\u65F6",
-      description: "\u8FD9\u4E9B\u9891\u9053\u6CA1\u6709\u67E5\u770B\u6743\u9650\uFF0C\u70B9\u51FB\u4E0D\u4F1A\u8DF3\u8F6C\uFF0C\u4E5F\u4E0D\u4F1A\u8BFB\u53D6\u4EFB\u4F55\u6D88\u606F\u3002",
-      options: [
-        { value: "toast", label: "\u63D0\u793A\u6CA1\u6709\u6743\u9650" },
-        { value: "copy", label: "\u590D\u5236\u9891\u9053 ID" }
-      ]
-    }
-  });
-
-  // src/plugins/hidden-channels/channels.ts
-  var CHANNEL_TYPES = {
-    TEXT: 0,
-    VOICE: 2,
-    CATEGORY: 4,
-    ANNOUNCEMENT: 5,
-    STAGE: 13,
-    DIRECTORY: 14,
-    FORUM: 15,
-    MEDIA: 16
-  };
-  var VIEW_CHANNEL = 1n << 10n;
-  var VIRTUAL_CHANNEL_IDS = /* @__PURE__ */ new Set(["browse", "customize", "guide"]);
-  var EMPTY = {
-    guildId: null,
-    groups: [],
-    total: 0,
-    obfuscated: 0,
-    source: "none",
-    canChecked: false
-  };
-  function currentGuildId() {
-    try {
-      const selected = SelectedGuildStore.getGuildId?.();
-      if (selected) return String(selected);
-    } catch {
-    }
-    try {
-      const channelId = SelectedChannelStore.getChannelId?.();
-      if (channelId) {
-        const channel = ChannelStore.getChannel?.(channelId);
-        if (channel?.guild_id) return String(channel.guild_id);
-      }
-    } catch {
-    }
-    return null;
-  }
-  function collectChannels(value, byId, depth = 0) {
-    if (value == null || depth > 5 || byId.size > 5e3) return;
-    if (Array.isArray(value)) {
-      for (const item of value) collectChannels(item, byId, depth + 1);
-      return;
-    }
-    if (value instanceof Map) {
-      for (const item of value.values()) collectChannels(item, byId, depth + 1);
-      return;
-    }
-    if (typeof value !== "object") return;
-    if (value.id != null) {
-      byId.set(String(value.id), value);
-      return;
-    }
-    if (value.channel) {
-      collectChannels(value.channel, byId, depth + 1);
-      return;
-    }
-    let values;
-    try {
-      values = Object.values(value);
-    } catch {
-      return;
-    }
-    for (const item of values) collectChannels(item, byId, depth + 1);
-  }
-  function readAllChannels(guildId) {
-    const byId = /* @__PURE__ */ new Map();
-    try {
-      const value = ChannelStore.getMutableGuildChannelsForGuild?.(guildId);
-      if (value != null) {
-        collectChannels(value, byId);
-        if (byId.size > 0) return { channels: [...byId.values()], source: "channel-store" };
-      }
-    } catch {
-    }
-    try {
-      const value = ChannelStore.getGuildChannels?.(guildId);
-      if (value != null) {
-        collectChannels(value, byId);
-        if (byId.size > 0) return { channels: [...byId.values()], source: "visible-only" };
-      }
-    } catch {
-    }
-    try {
-      const guild = GuildStore.getGuild?.(guildId);
-      const ids = guild?.channels;
-      if (Array.isArray(ids)) {
-        for (const id of ids) {
-          try {
-            const channel = ChannelStore.getChannel?.(id);
-            if (channel?.id != null) byId.set(String(channel.id), channel);
-          } catch {
-          }
-        }
-        if (byId.size > 0) return { channels: [...byId.values()], source: "guild-record" };
-      }
-    } catch {
-    }
-    try {
-      collectChannels(GuildChannelStore.getChannels?.(guildId), byId);
-      if (byId.size > 0) return { channels: [...byId.values()], source: "visible-only" };
-    } catch {
-    }
-    return { channels: [], source: "none" };
-  }
-  function readVisibleIds(guildId) {
-    const byId = /* @__PURE__ */ new Map();
-    try {
-      collectChannels(GuildChannelStore.getChannels?.(guildId), byId);
-    } catch {
-    }
-    return new Set(byId.keys());
-  }
-  function canView(channel, visibleIds) {
-    try {
-      if (typeof PermissionStore.can === "function") {
-        const answer = PermissionStore.can(VIEW_CHANNEL, channel);
-        if (typeof answer === "boolean") return answer;
-      }
-    } catch {
-    }
-    try {
-      if (typeof PermissionStore.getChannelPermissions === "function") {
-        const bits = PermissionStore.getChannelPermissions(channel);
-        if (bits != null) return (BigInt(bits) & VIEW_CHANNEL) !== 0n;
-      }
-    } catch {
-    }
-    if (visibleIds.size > 0) return visibleIds.has(String(channel.id));
-    return null;
-  }
-  function parentIdOf(channel) {
-    const id = channel?.parent_id ?? channel?.parentId;
-    return id == null || id === "" ? null : String(id);
-  }
-  function nameOf(channel) {
-    const name = channel?.name;
-    return typeof name === "string" && name.length > 0 ? name : String(channel?.id ?? "");
-  }
-  function positionOf(channel) {
-    const position = Number(channel?.position);
-    return Number.isFinite(position) ? position : 0;
-  }
-  function compareEntries(a, b) {
-    if (a.position !== b.position) return a.position - b.position;
-    return a.name.localeCompare(b.name, "zh-CN");
-  }
-  function collectHiddenChannels(guildId) {
-    if (!guildId) return EMPTY;
-    const { channels, source } = readAllChannels(guildId);
-    if (source === "none") return { ...EMPTY, guildId, source };
-    const visibleIds = source === "visible-only" ? /* @__PURE__ */ new Set() : readVisibleIds(guildId);
-    const hidden = [];
-    let canChecked = false;
-    for (const channel of channels) {
-      const type = Number(channel?.type);
-      if (type === CHANNEL_TYPES.CATEGORY || type === CHANNEL_TYPES.DIRECTORY) continue;
-      if (VIRTUAL_CHANNEL_IDS.has(String(channel?.id))) continue;
-      const view = canView(channel, visibleIds);
-      if (view !== null) canChecked = true;
-      if (view !== false) continue;
-      hidden.push({
-        id: String(channel.id),
-        name: nameOf(channel),
-        type: Number.isFinite(type) ? type : -1,
-        position: positionOf(channel),
-        parentId: parentIdOf(channel)
-      });
-    }
-    const groupsById = /* @__PURE__ */ new Map();
-    for (const channel of hidden) {
-      const key = channel.parentId ?? "";
-      let group = groupsById.get(key);
-      if (!group) {
-        let category = null;
-        if (channel.parentId) {
-          try {
-            category = ChannelStore.getChannel?.(channel.parentId) ?? null;
-          } catch {
-            category = null;
-          }
-        }
-        group = {
-          categoryId: channel.parentId,
-          categoryName: category ? nameOf(category) : "\u672A\u5206\u7C7B",
-          position: category ? positionOf(category) : Number.MAX_SAFE_INTEGER,
-          channels: []
-        };
-        groupsById.set(key, group);
-      }
-      group.channels.push(channel);
-    }
-    const groups = [...groupsById.values()];
-    for (const group of groups) group.channels.sort(compareEntries);
-    groups.sort(
-      (a, b) => compareEntries(
-        { position: a.position, name: a.categoryName },
-        { position: b.position, name: b.categoryName }
-      )
-    );
-    return {
-      guildId,
-      groups,
-      total: hidden.length,
-      obfuscated: hidden.filter((channel) => channel.name === "__hidden__").length,
-      source,
-      canChecked
-    };
-  }
-  function snapshotKey(snapshot) {
-    const groups = snapshot.groups.map(
-      (group) => `${group.categoryId ?? ""}:${group.categoryName}:` + group.channels.map((channel) => `${channel.id}:${channel.type}:${channel.position}:${channel.name}`).join(",")
-    ).join(";");
-    return `${snapshot.guildId ?? ""}|${snapshot.total}|${snapshot.obfuscated}|${snapshot.source}|${groups}`;
-  }
-
-  // src/plugins/hidden-channels/ui/icons.tsx
-  function Glyph2({
-    size: size2 = 16,
-    className,
-    children
-  }) {
-    return /* @__PURE__ */ React.createElement(
-      "svg",
-      {
-        className,
-        width: size2,
-        height: size2,
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        strokeWidth: 1.5,
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        "aria-hidden": "true"
-      },
-      children
-    );
-  }
-  function LockIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("rect", { x: "5", y: "10.5", width: "14", height: "9", rx: "2.5" }), /* @__PURE__ */ React.createElement("path", { d: "M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" }));
-  }
-  function ChevronIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M7 10l5 5 5-5" }));
-  }
-  function TextChannelIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M9.5 4.5 8 19.5M16 4.5l-1.5 15M4.5 9h15M4 15h15" }));
-  }
-  function VoiceChannelIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M4 9.5v5h3l4 3.5v-12l-4 3.5H4z" }), /* @__PURE__ */ React.createElement("path", { d: "M15 9a4 4 0 0 1 0 6" }), /* @__PURE__ */ React.createElement("path", { d: "M17.5 6.5a7.5 7.5 0 0 1 0 11" }));
-  }
-  function AnnouncementIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M4 10v4a1 1 0 0 0 1 1h2l7 4V5L7 9H5a1 1 0 0 0-1 1z" }), /* @__PURE__ */ React.createElement("path", { d: "M17 9a4 4 0 0 1 0 6" }), /* @__PURE__ */ React.createElement("path", { d: "M19.5 6.5a7.5 7.5 0 0 1 0 11" }));
-  }
-  function StageIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("rect", { x: "9", y: "3.5", width: "6", height: "10", rx: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6" }));
-  }
-  function ForumIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("path", { d: "M4.5 6.5h9.5a2 2 0 0 1 2 2v3.5a2 2 0 0 1-2 2H9l-4.5 3v-10.5z" }), /* @__PURE__ */ React.createElement("path", { d: "M18 9.5h1.5a2 2 0 0 1 2 2v3.5a2 2 0 0 1-2 2H18v2.5l-3-2.5" }));
-  }
-  function MediaIcon(props) {
-    return /* @__PURE__ */ React.createElement(Glyph2, { ...props }, /* @__PURE__ */ React.createElement("rect", { x: "4", y: "5", width: "16", height: "14", rx: "2" }), /* @__PURE__ */ React.createElement("circle", { cx: "9", cy: "10", r: "1.5" }), /* @__PURE__ */ React.createElement("path", { d: "M5 17l4.5-4.5 3 3L16 12l4 4" }));
-  }
-  function channelIcon(type) {
-    switch (type) {
-      case CHANNEL_TYPES.TEXT:
-        return TextChannelIcon;
-      case CHANNEL_TYPES.VOICE:
-        return VoiceChannelIcon;
-      case CHANNEL_TYPES.ANNOUNCEMENT:
-        return AnnouncementIcon;
-      case CHANNEL_TYPES.STAGE:
-        return StageIcon;
-      case CHANNEL_TYPES.FORUM:
-        return ForumIcon;
-      case CHANNEL_TYPES.MEDIA:
-        return MediaIcon;
-      default:
-        return TextChannelIcon;
-    }
-  }
-
-  // src/plugins/hidden-channels/ui/HiddenChannelsSection.tsx
-  var WATCHED_ACTIONS3 = [
-    "CHANNEL_SELECT",
-    "GUILD_SELECT",
-    "GUILD_CREATE",
-    "GUILD_UPDATE",
-    "GUILD_DELETE",
-    "CHANNEL_CREATE",
-    "CHANNEL_UPDATE",
-    "CHANNEL_DELETE",
-    "CHANNEL_OVERWRITES_UPDATE",
-    "GUILD_ROLE_CREATE",
-    "GUILD_ROLE_UPDATE",
-    "GUILD_ROLE_DELETE",
-    "GUILD_MEMBER_UPDATE",
-    "GUILD_MEMBER_REMOVE",
-    "GUILD_MEMBERS_CHUNK"
-  ];
-  var POLL_MS3 = 5e3;
-  var EMPTY_SNAPSHOT = {
-    guildId: null,
-    groups: [],
-    total: 0,
-    obfuscated: 0,
-    source: "none",
-    canChecked: false
-  };
-  function readSnapshot() {
-    try {
-      return collectHiddenChannels(currentGuildId());
-    } catch {
-      return EMPTY_SNAPSHOT;
-    }
-  }
-  function useSnapshot() {
-    const [snapshot, setSnapshot] = useState(readSnapshot);
-    useEffect(() => {
-      let live = true;
-      const refresh = () => {
-        if (!live) return;
-        const next = readSnapshot();
-        setSnapshot((prev) => snapshotKey(prev) === snapshotKey(next) ? prev : next);
-      };
-      refresh();
-      const offs = WATCHED_ACTIONS3.map((type) => flux.subscribe(type, refresh));
-      const timer3 = setInterval(refresh, POLL_MS3);
-      const settingOffs = Object.keys(settings16.schema).map(
-        (key) => settings16.subscribe(key, () => setSnapshot((prev) => ({ ...prev })))
-      );
-      return () => {
-        live = false;
-        clearInterval(timer3);
-        for (const off of offs) off();
-        for (const off of settingOffs) off();
-      };
-    }, []);
-    return snapshot;
-  }
-  async function copyChannelId(id) {
-    try {
-      await navigator.clipboard.writeText(id);
-      showToast("\u5DF2\u590D\u5236\u9891\u9053 ID", "success");
-      return;
-    } catch {
-    }
-    try {
-      const area = document.createElement("textarea");
-      area.value = id;
-      area.style.position = "fixed";
-      area.style.opacity = "0";
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand("copy");
-      area.remove();
-      showToast("\u5DF2\u590D\u5236\u9891\u9053 ID", "success");
-    } catch {
-      showToast("\u590D\u5236\u5931\u8D25", "failure");
-    }
-  }
-  function Row({
-    channel,
-    showId,
-    clickAction
-  }) {
-    const Icon = channelIcon(channel.type);
-    const label = channel.name || channel.id;
-    const onClick2 = () => {
-      if (clickAction === "copy") {
-        void copyChannelId(channel.id);
-      } else {
-        showToast(`\u6CA1\u6709\u6743\u9650\u67E5\u770B\u8FD9\u4E2A\u9891\u9053\uFF1A#${label}`, "info");
-      }
-    };
-    return /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "hc-hiddenchannels__row",
-        onClick: onClick2,
-        title: clickAction === "copy" ? `\u70B9\u51FB\u590D\u5236\u9891\u9053 ID \xB7 ${channel.id}` : `\u6CA1\u6709\u6743\u9650\u67E5\u770B \xB7 ${channel.id}`
-      },
-      /* @__PURE__ */ React.createElement(Icon, { size: 16, className: "hc-hiddenchannels__icon" }),
-      /* @__PURE__ */ React.createElement("span", { className: "hc-hiddenchannels__name" }, label),
-      showId ? /* @__PURE__ */ React.createElement("span", { className: "hc-hiddenchannels__id" }, channel.id) : null
-    );
-  }
-  function HiddenChannelsSection() {
-    const snapshot = useSnapshot();
-    const s = settings16.store;
-    const [collapsed, setCollapsed] = useState(Boolean(s.defaultCollapsed));
-    useEffect(
-      () => settings16.subscribe("defaultCollapsed", (next) => setCollapsed(Boolean(next))),
-      []
-    );
-    if (!snapshot.guildId || snapshot.total === 0) return null;
-    const groups = s.groupByCategory ? snapshot.groups : [
-      {
-        categoryId: null,
-        categoryName: "",
-        position: 0,
-        channels: snapshot.groups.flatMap((group) => group.channels).sort((a, b) => a.name.localeCompare(b.name, "zh-CN"))
-      }
-    ];
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-hiddenchannels" }, /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "hc-hiddenchannels__head",
-        onClick: () => setCollapsed((value) => !value),
-        "aria-expanded": !collapsed
-      },
-      /* @__PURE__ */ React.createElement(LockIcon, { size: 14, className: "hc-hiddenchannels__icon" }),
-      /* @__PURE__ */ React.createElement("span", { className: "hc-hiddenchannels__title" }, "\u9690\u85CF\u9891\u9053"),
-      s.showCount ? /* @__PURE__ */ React.createElement("span", { className: "hc-hiddenchannels__count" }, snapshot.total) : null,
-      /* @__PURE__ */ React.createElement(
-        ChevronIcon,
-        {
-          size: 14,
-          className: "hc-hiddenchannels__chevron" + (collapsed ? " hc-hiddenchannels__chevron--collapsed" : "")
-        }
-      )
-    ), snapshot.obfuscated > 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-hiddenchannels__hint" }, "\u9891\u9053\u540D\u88AB Discord \u6DF7\u6DC6\u6210 __hidden__ \u4E86\u3002\u91CD\u542F Discord \u8BA9\u63D2\u4EF6\u8865\u4E01\u751F\u6548\u540E\uFF0C\u8FD9\u91CC\u4F1A\u663E\u793A\u771F\u5B9E\u540D\u79F0\u3002") : null, collapsed ? null : /* @__PURE__ */ React.createElement("div", { className: "hc-hiddenchannels__body" }, groups.map((group, index) => /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        className: "hc-hiddenchannels__group",
-        key: group.categoryId ?? `flat-${index}`
-      },
-      s.groupByCategory && group.categoryName ? /* @__PURE__ */ React.createElement("div", { className: "hc-hiddenchannels__group-name", title: group.categoryName }, group.categoryName) : null,
-      group.channels.map((channel) => /* @__PURE__ */ React.createElement(
-        Row,
-        {
-          key: channel.id,
-          channel,
-          showId: s.showIds,
-          clickAction: s.clickAction
-        }
-      ))
-    ))));
-  }
-
-  // src/plugins/hidden-channels/index.tsx
-  var log47 = logger("hidden-channels");
-  var FALLBACK_ANCHORS = [
-    '[class*="sidebar_"] [class*="scroller_"]',
-    '[class*="sidebar_"] [class*="container_"]',
-    'nav[class*="container_"] [class*="scroller_"]'
-  ];
-  var ENSURE_MS3 = 1e3;
-  var mounted4;
-  var ensureTimer2;
-  var unsubscribePosition;
-  var patchCheckTimer;
-  var warnedNoAnchor3 = false;
-  function inGuildRail(node) {
-    try {
-      return node.closest('[class*="guilds"]') != null;
-    } catch {
-      return false;
-    }
-  }
-  function isChannelLink(link) {
-    const href = link.getAttribute("href") ?? "";
-    return /\/channels\/[^/]+\/[^/?#]+/.test(href);
-  }
-  function findAnchor() {
-    try {
-      const item = document.querySelector('[data-list-item-id^="channels___"]');
-      if (item && !inGuildRail(item)) {
-        const scroller = item.closest('[class*="scroller_"]');
-        return {
-          element: scroller ?? item.parentElement ?? item,
-          selector: 'data-list-item-id="channels___\u2026"'
-        };
-      }
-    } catch {
-    }
-    try {
-      for (const link of document.querySelectorAll('a[href*="/channels/"]')) {
-        if (!isChannelLink(link) || inGuildRail(link)) continue;
-        const scroller = link.closest('[class*="scroller_"]');
-        if (scroller) return { element: scroller, selector: "channel link \u2192 scroller" };
-      }
-    } catch {
-    }
-    for (const selector of FALLBACK_ANCHORS) {
-      try {
-        for (const element of document.querySelectorAll(selector)) {
-          if (inGuildRail(element)) continue;
-          return { element, selector };
-        }
-      } catch {
-      }
-    }
-    return null;
-  }
-  function detach2() {
-    if (!mounted4) return;
-    const { host: host5, unmount: unmount5 } = mounted4;
-    mounted4 = void 0;
-    try {
-      unmount5();
-    } catch {
-    }
-    host5.remove();
-  }
-  function attach4(anchor2) {
-    const host5 = document.createElement("div");
-    host5.className = "hc-hiddenchannels-host";
-    host5.setAttribute("data-hc-plugin", "hidden-channels");
-    try {
-      if (settings16.store.position === "top") anchor2.insertBefore(host5, anchor2.firstChild);
-      else anchor2.appendChild(host5);
-    } catch (err) {
-      log47.debug("\u65E0\u6CD5\u63D2\u5165\u9690\u85CF\u9891\u9053\u5217\u8868", err);
-      return;
-    }
-    try {
-      const unmount5 = mountDetached(React.createElement(HiddenChannelsSection), host5);
-      mounted4 = { host: host5, unmount: unmount5 };
-    } catch (err) {
-      host5.remove();
-      log47.error("\u6302\u8F7D\u9690\u85CF\u9891\u9053\u5217\u8868\u5931\u8D25", err);
-    }
-  }
-  function place(host5, anchor2) {
-    const top = settings16.store.position === "top";
-    const correctlyPlaced = top ? host5.parentElement === anchor2 && anchor2.firstElementChild === host5 : host5.parentElement === anchor2 && anchor2.lastElementChild === host5;
-    if (correctlyPlaced) return;
-    try {
-      if (top) anchor2.insertBefore(host5, anchor2.firstChild);
-      else anchor2.appendChild(host5);
-    } catch (err) {
-      log47.debug("\u91CD\u65B0\u653E\u7F6E\u9690\u85CF\u9891\u9053\u5217\u8868\u5931\u8D25", err);
-    }
-  }
-  function ensureMounted3() {
-    const hit = findAnchor();
-    if (!hit) {
-      if (!warnedNoAnchor3) {
-        warnedNoAnchor3 = true;
-        log47.warn(
-          "\u627E\u4E0D\u5230\u9891\u9053\u5217\u8868\u5BB9\u5668\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
-        );
-      }
-      return;
-    }
-    if (!mounted4) {
-      attach4(hit.element);
-      return;
-    }
-    place(mounted4.host, hit.element);
-  }
-  function reportPatch2() {
-    const mine = getSourcePatchReport().filter((p) => p.pluginId === "hidden-channels");
-    if (mine.length === 0) return;
-    if (mine.every((p) => p.applied)) {
-      log47.info("\u9891\u9053\u540D\u6DF7\u6DC6\u8865\u4E01\u5DF2\u751F\u6548");
-    } else {
-      log47.warn(
-        "\u9891\u9053\u540D\u6DF7\u6DC6\u8865\u4E01\u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF1B\u5217\u8868\u4ECD\u4F1A\u663E\u793A\uFF0C\u4F46\u540D\u5B57\u662F __hidden__\u3002\u5982\u679C\u63D2\u4EF6\u662F\u521A\u542F\u7528\u7684\uFF0C\u8BF7\u91CD\u542F Discord \u518D\u8BD5\u3002"
-      );
-    }
-  }
-  var hidden_channels_default = definePlugin({
-    id: "hidden-channels",
-    name: "\u9690\u85CF\u9891\u9053\u5217\u8868",
-    description: "\u5728\u9891\u9053\u5217\u8868\u91CC\u5217\u51FA\u5F53\u524D\u670D\u52A1\u5668\u4E2D\u6CA1\u6709\u6743\u9650\u67E5\u770B\u7684\u9891\u9053\uFF0C\u6309\u5206\u7C7B\u5206\u7EC4\u663E\u793A\u771F\u5B9E\u540D\u79F0\u4E0E\u7C7B\u578B\u3002\u53EA\u662F\u5C55\u793A\uFF1A\u70B9\u51FB\u4E0D\u4F1A\u8FDB\u5165\u9891\u9053\uFF0C\u4E5F\u4E0D\u4F1A\u8BFB\u53D6\u4EFB\u4F55\u6D88\u606F\u3002",
-    authors: [{ name: "caitemm" }],
-    category: "utility",
-    settings: settings16,
-    patches: [
-      {
-        // Discord's "2026-02-private-channel-hiding" experiment replaces the
-        // name (and topic) of every channel the member cannot view with
-        // "__hidden__" before the record reaches the client. The real values are
-        // still in the payload; flipping these two flags off keeps them intact,
-        // which is what makes the list show actual names instead of a wall of
-        // "__hidden__". Same seam Vencord's ShowHiddenChannels uses.
-        label: "private channel hiding off",
-        find: "2026-02-private-channel-hiding",
-        all: true,
-        replacement: {
-          match: /(?<=enableObfuscation|enableIntegrityCheck):\s*(?:!0|true)\b/g,
-          replace: ":false"
-        }
-      }
-    ],
-    start() {
-      injectStyles();
-      warnedNoAnchor3 = false;
-      ensureMounted3();
-      ensureTimer2 = setInterval(ensureMounted3, ENSURE_MS3);
-      unsubscribePosition = settings16.subscribe("position", () => {
-        warnedNoAnchor3 = false;
-        ensureMounted3();
-      });
-      patchCheckTimer = setTimeout(reportPatch2, 4e3);
-      log47.info("\u9690\u85CF\u9891\u9053\u5217\u8868\u5DF2\u542F\u7528");
-    },
-    stop() {
-      if (ensureTimer2) {
-        clearInterval(ensureTimer2);
-        ensureTimer2 = void 0;
-      }
-      if (patchCheckTimer) {
-        clearTimeout(patchCheckTimer);
-        patchCheckTimer = void 0;
-      }
-      unsubscribePosition?.();
-      unsubscribePosition = void 0;
-      detach2();
-      log47.info("\u9690\u85CF\u9891\u9053\u5217\u8868\u5DF2\u79FB\u9664");
-    },
-    /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
-    probe() {
-      const guildId = currentGuildId();
-      let snapshot;
-      try {
-        snapshot = collectHiddenChannels(guildId);
-      } catch (err) {
-        snapshot = { error: String(err) };
-      }
-      return {
-        guildId,
-        mounted: mounted4 ? {
-          attached: document.contains(mounted4.host),
-          html: mounted4.host.innerHTML.slice(0, 200)
-        } : null,
-        anchor: (() => {
-          try {
-            const hit = findAnchor();
-            return hit ? hit.selector : null;
-          } catch {
-            return "error";
-          }
-        })(),
-        channelItems: (() => {
-          try {
-            return document.querySelectorAll('[data-list-item-id^="channels___"]').length;
-          } catch {
-            return -1;
-          }
-        })(),
-        fallbackAnchors: probeSelectors(FALLBACK_ANCHORS),
-        classHints: {
-          sidebar: classNamesContaining("sidebar"),
-          guilds: classNamesContaining("guilds"),
-          scroller: classNamesContaining("scroller"),
-          container: classNamesContaining("container")
-        },
-        snapshot
-      };
-    }
-  });
-
   // src/plugins/index.ts
   var plugins = [
     settings_host_default,
@@ -15418,12 +14563,11 @@ ${tail}`;
     silent_typing_default,
     member_count_default,
     who_reacted_default,
-    platform_indicators_default,
-    hidden_channels_default
+    platform_indicators_default
   ];
 
   // src/core/probe.ts
-  var log48 = logger("probe");
+  var log47 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -15446,8 +14590,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.25" : "dev",
-      build: true ? "2026-11-08 18:23:10" : "dev",
+      version: true ? "0.7.26" : "dev",
+      build: true ? "2026-11-08 18:30:49" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -15460,14 +14604,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log48.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log47.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log49 = logger("userscript");
+  var log48 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -15478,8 +14622,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.25" : "dev",
-        build: true ? "2026-11-08 18:23:10" : "dev",
+        version: true ? "0.7.26" : "dev",
+        build: true ? "2026-11-08 18:30:49" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -15496,6 +14640,6 @@ ${tail}`;
       };
     } catch {
     }
-    log49.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log49.error("userscript boot failed", err));
+    log48.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log48.error("userscript boot failed", err));
 })();
