@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.29
+// @version      0.7.30
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-19 09:04:31" : "dev";
-      const version2 = true ? "0.7.29" : "dev";
+      const build = true ? "2026-11-19 12:06:23" : "dev";
+      const version2 = true ? "0.7.30" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -2603,9 +2603,75 @@ ${slices.join("\n  ...  \n")}`
 .hc-cleaner__list {
   display: flex;
   flex-direction: column;
+  max-height: min(520px, 60vh);
+  overflow: auto;
+  user-select: text;
+}
+.hc-cleaner__listbar {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__listbar .hc-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  font-size: var(--hc-text-footnote);
+}
+.hc-cleaner__listbar-actions {
+  display: flex;
+  flex-shrink: 0;
+}
+.hc-cleaner__listmore {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  padding: var(--hc-space-2) var(--hc-space-4);
+  border-top: 1px solid var(--hc-separator);
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+}
+.hc-cleaner__listmore span:first-child {
+  flex: 1;
+}
+.hc-cleaner__check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--hc-red);
+  cursor: pointer;
+}
+/* Unticked = kept: dim it so what survives the flush is obvious at a glance. */
+.hc-cleaner__item[data-off="true"] .hc-cleaner__item-time,
+.hc-cleaner__item[data-off="true"] .hc-cleaner__item-text {
+  opacity: 0.45;
+}
+.hc-cleaner__item-channel {
+  margin-right: var(--hc-space-2);
+  color: var(--hc-label-secondary);
+}
+.hc-cleaner__tag {
+  display: inline-block;
+  margin-right: var(--hc-space-2);
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--hc-fill-secondary);
+  color: var(--hc-label-secondary);
+  font-size: var(--hc-text-caption1);
+}
+.hc-cleaner__emoji {
+  width: 1.375em;
+  height: 1.375em;
+  vertical-align: bottom;
+  object-fit: contain;
 }
 .hc-cleaner__item {
   display: flex;
+  align-items: flex-start;
+  cursor: pointer;
   gap: var(--hc-space-3);
   padding: var(--hc-space-2) var(--hc-space-4);
   font-size: var(--hc-text-footnote);
@@ -3383,6 +3449,32 @@ ${slices.join("\n  ...  \n")}`
 }
 .hc-cleaner-toolbtn:active {
   color: var(--interactive-active, #fff);
+}
+
+/* Message-range picking mode: the settings surface is hidden and the user
+ * clicks a message in Discord's chat. Lives outside .halcyon, so literals. */
+body.hc-cleaner-picking [id^="chat-messages-"] {
+  cursor: crosshair !important;
+}
+body.hc-cleaner-picking [id^="chat-messages-"]:hover {
+  outline: 2px solid #ff453a;
+  outline-offset: -2px;
+  background: rgba(255, 69, 58, 0.12);
+}
+.hc-cleaner-pickhint {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #ff453a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 
@@ -4619,7 +4711,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.29" : "dev";
+    return true ? "0.7.30" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4711,7 +4803,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.29" : "dev";
+    const version2 = true ? "0.7.30" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -8787,6 +8879,10 @@ ${loc.channel ?? ""}`.toLowerCase();
   var SEARCH_DELAY_MS = 1200;
   var MAX_INDEXING_ATTEMPTS = 10;
   var MAX_EMPTY_PAGE_ATTEMPTS = 3;
+  function isDeletableType(type) {
+    if (typeof type !== "number") return true;
+    return type === 0 || type >= 6 && type <= 21;
+  }
   async function resolveSearchScope(token, target) {
     let guildId = target.guildId.trim();
     const channelId = target.channelId.trim();
@@ -8830,13 +8926,35 @@ ${loc.channel ?? ""}`.toLowerCase();
     for (const date of [opts.after, opts.before]) {
       if (date && !Number.isFinite(date.getTime())) throw new Error("\u8BF7\u586B\u5199\u6709\u6548\u7684\u65F6\u95F4\u8303\u56F4\u3002");
     }
-    if (opts.after && opts.before && opts.after >= opts.before) throw new Error("\u8D77\u59CB\u65F6\u95F4\u5FC5\u987B\u65E9\u4E8E\u7ED3\u675F\u65F6\u95F4\u3002");
+    const afterId = opts.afterId?.trim() || "";
+    const beforeId = opts.beforeId?.trim() || "";
+    for (const id of [afterId, beforeId]) {
+      if (id && !SNOWFLAKE.test(id)) throw new Error("\u6D88\u606F\u533A\u95F4\u9700\u8981\u586B\u5199\u6709\u6548\u7684\u6D88\u606F ID\u3002");
+    }
+    const after = afterId ? null : opts.after;
+    const before = beforeId ? null : opts.before;
+    const minId = afterId ? BigInt(afterId) : after ? BigInt(tsToSf(after)) : null;
+    const maxId = beforeId ? BigInt(beforeId) : before ? BigInt(tsToSf(before)) : null;
+    if (minId !== null && maxId !== null && minId >= maxId) {
+      throw new Error(afterId || beforeId ? "\u6D88\u606F\u533A\u95F4\u7684\u8D77\u70B9\u5FC5\u987B\u65E9\u4E8E\u7EC8\u70B9\u3002" : "\u8D77\u59CB\u65F6\u95F4\u5FC5\u987B\u65E9\u4E8E\u7ED3\u675F\u65F6\u95F4\u3002");
+    }
+    let pattern = null;
+    if (opts.pattern?.trim()) {
+      try {
+        pattern = new RegExp(opts.pattern.trim(), "i");
+      } catch {
+        throw new Error("\u6B63\u5219\u8868\u8FBE\u5F0F\u65E0\u6548\uFF0C\u8BF7\u68C0\u67E5\u7B5B\u9009\u6761\u4EF6\u3002");
+      }
+    }
     const scope = await resolveSearchScope(token, opts);
     const params = searchParams(scope, meId);
+    if (opts.content?.trim()) params.set("content", opts.content.trim());
+    if (opts.hasLink) params.append("has", "link");
+    if (opts.hasFile) params.append("has", "file");
     params.set("sort_by", "timestamp");
     params.set("sort_order", opts.order);
-    if (opts.after) params.set("min_id", tsToSf(opts.after));
-    if (opts.before) params.set("max_id", tsToSf(opts.before));
+    if (minId !== null) params.set("min_id", String(minId));
+    if (maxId !== null) params.set("max_id", String(maxId));
     const seen = /* @__PURE__ */ new Set();
     const expectedChannel = opts.serverWide ? "" : opts.channelId.trim();
     let offset = 0;
@@ -8881,17 +8999,26 @@ ${loc.channel ?? ""}`.toLowerCase();
           seen.add(m.id);
           newHits++;
           const time = new Date(m.timestamp).getTime();
-          if (m.author?.id !== meId || !SNOWFLAKE.test(m.channel_id) || expectedChannel && m.channel_id !== expectedChannel || skipList.has(m.id) || !Number.isFinite(time) || opts.after && time < opts.after.getTime() || opts.before && time > opts.before.getTime()) {
+          if (m.author?.id !== meId || !SNOWFLAKE.test(m.channel_id) || expectedChannel && m.channel_id !== expectedChannel || skipList.has(m.id) || !Number.isFinite(time) || after && time < after.getTime() || before && time > before.getTime() || afterId && BigInt(m.id) <= BigInt(afterId) || beforeId && BigInt(m.id) >= BigInt(beforeId) || !isDeletableType(m.type) || m.pinned === true && !opts.includePinned || pattern && !pattern.test(m.content ?? "")) {
             filtered++;
             continue;
           }
-          out.push({ id: m.id, channelId: m.channel_id, content: m.content ?? "", timestamp: m.timestamp });
+          out.push({
+            id: m.id,
+            channelId: m.channel_id,
+            content: m.content ?? "",
+            timestamp: m.timestamp,
+            pinned: m.pinned === true,
+            attachments: Array.isArray(m.attachments) ? m.attachments.length : 0,
+            embeds: Array.isArray(m.embeds) ? m.embeds.length : 0,
+            stickers: Array.isArray(m.sticker_items) ? m.sticker_items.map((s) => s?.name || "\u8D34\u7EB8") : []
+          });
           if (out.length >= opts.limit) break;
         }
         if (out.length >= opts.limit) break;
       }
       if (hits > 0 && newHits === 0) throw new Error("\u641C\u7D22\u63A5\u53E3\u8FD4\u56DE\u91CD\u590D\u5206\u9875\uFF0C\u8BF7\u7A0D\u540E\u91CD\u65B0\u9884\u89C8\u3002");
-      onProgress("\u68C0\u7D22\u4E2D", `\u7B2C ${page} \u9875 \xB7 \u641C\u7D22\u547D\u4E2D ${total ?? "\u672A\u77E5"} \u6761\uFF0C\u5DF2\u627E\u5230 ${out.length} \u6761${filtered ? `\uFF08\u672C\u9875\u8FC7\u6EE4 ${filtered} \u6761\u975E\u672C\u4EBA/\u975E\u672C\u9891\u9053\u7B49\u7ED3\u679C\uFF09` : ""}`);
+      onProgress("\u68C0\u7D22\u4E2D", `\u7B2C ${page} \u9875 \xB7 \u641C\u7D22\u547D\u4E2D ${total ?? "\u672A\u77E5"} \u6761\uFF0C\u5DF2\u627E\u5230 ${out.length} \u6761${filtered ? `\uFF08\u672C\u9875\u8FC7\u6EE4 ${filtered} \u6761\u4E0D\u7B26\u5408\u6761\u4EF6\u7684\u7ED3\u679C\uFF09` : ""}`);
       offset += res.messages.length;
       if (res.messages.length === 0 || out.length >= opts.limit || (total !== null ? offset >= total : res.messages.length < SEARCH_PAGE_SIZE)) break;
       page++;
@@ -8913,7 +9040,8 @@ ${loc.channel ?? ""}`.toLowerCase();
         skipped++;
         if (!String(e?.message ?? "").includes("404")) skipList.add(m.id);
         log18.warn(`skip ${m.id}: ${e?.message ?? e}`);
-        onItem?.(m, false, String(e?.message ?? e));
+        const raw = String(e?.message ?? e);
+        onItem?.(m, false, raw.includes("50083") ? "\u6240\u5728\u5E16\u5B50\u5DF2\u5F52\u6863\uFF0C\u65E0\u6CD5\u5220\u9664" : raw);
       }
       onProgress("\u5220\u9664\u4E2D", `\u5DF2\u5220\u9664 ${deleted} / ${messages.length}${skipped ? `\uFF08\u8DF3\u8FC7 ${skipped}\uFF09` : ""}`);
       const elapsed = Date.now() - t0;
@@ -8928,6 +9056,49 @@ ${loc.channel ?? ""}`.toLowerCase();
     const total = searchTotal(res);
     if (total === null) throw new Error("\u641C\u7D22\u54CD\u5E94\u7F3A\u5C11\u53D1\u8A00\u603B\u6570\uFF0C\u8BF7\u7A0D\u540E\u91CD\u65B0\u7EDF\u8BA1\u3002");
     return { total, indexing: false };
+  }
+
+  // src/plugins/message-cleaner/pick-message.ts
+  var PICKING_CLASS = "hc-cleaner-picking";
+  var MESSAGE_SELECTOR = '[id^="chat-messages-"], [id^="message-content-"]';
+  function pickMessage(hint) {
+    let finish = () => {
+    };
+    const promise = new Promise((resolve) => {
+      const banner = document.createElement("div");
+      banner.className = "hc-cleaner-pickhint";
+      banner.textContent = `${hint}\uFF08\u6309 Esc \u53D6\u6D88\uFF09`;
+      document.body.appendChild(banner);
+      document.body.classList.add(PICKING_CLASS);
+      const onClick2 = (e) => {
+        const row = e.target?.closest?.(MESSAGE_SELECTOR);
+        if (!row) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        finish(row.id.match(/(\d{15,25})$/)?.[1] ?? null);
+      };
+      const onKey = (e) => {
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        finish(null);
+      };
+      let done = false;
+      finish = (id) => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("click", onClick2, true);
+        window.removeEventListener("keydown", onKey, true);
+        document.body.classList.remove(PICKING_CLASS);
+        banner.remove();
+        resolve(id);
+      };
+      window.addEventListener("click", onClick2, true);
+      window.addEventListener("keydown", onKey, true);
+    });
+    return { promise, cancel: () => finish(null) };
   }
 
   // src/plugins/message-cleaner/ui/CleanerPage.tsx
@@ -8950,6 +9121,39 @@ ${loc.channel ?? ""}`.toLowerCase();
     if (Number.isNaN(date.getTime())) return "";
     return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
   }
+  var LIST_PAGE = 200;
+  var CUSTOM_EMOJI = /<(a?):(\w+):(\d{15,25})>/g;
+  function renderContent2(text) {
+    const out = [];
+    let last = 0;
+    for (const m of text.matchAll(CUSTOM_EMOJI)) {
+      const at = m.index ?? 0;
+      if (at > last) out.push(text.slice(last, at));
+      out.push(
+        /* @__PURE__ */ React.createElement(
+          "img",
+          {
+            key: `${at}-${m[3]}`,
+            className: "hc-cleaner__emoji",
+            src: `https://cdn.discordapp.com/emojis/${m[3]}.${m[1] ? "gif" : "webp"}?size=32`,
+            alt: `:${m[2]}:`,
+            title: `:${m[2]}:`
+          }
+        )
+      );
+      last = at + m[0].length;
+    }
+    if (last < text.length) out.push(text.slice(last));
+    return out;
+  }
+  function tagsOf(m) {
+    const tags = [];
+    if (m.pinned) tags.push("\u7F6E\u9876");
+    if (m.attachments) tags.push(`\u9644\u4EF6\xD7${m.attachments}`);
+    for (const name of m.stickers) tags.push(`\u8D34\u7EB8 ${name}`);
+    if (m.embeds) tags.push(`\u5D4C\u5165\xD7${m.embeds}`);
+    return tags;
+  }
   function CleanerPage() {
     const [token, setToken] = useState("");
     const [guildId, setGuildId] = useState("");
@@ -8959,9 +9163,28 @@ ${loc.channel ?? ""}`.toLowerCase();
     const [channelName, setChannelName] = useState("");
     const [afterStr, setAfterStr] = useState("");
     const [beforeStr, setBeforeStr] = useState("");
+    const [afterId, setAfterId] = useState("");
+    const [beforeId, setBeforeId] = useState("");
+    const rootRef = useRef(null);
+    const pickRef = useRef(null);
+    const [contentQuery, setContentQuery] = useState("");
+    const [hasLink, setHasLink] = useState(false);
+    const [hasFile, setHasFile] = useState(false);
+    const [includePinned, setIncludePinned] = useState(false);
+    const [pattern, setPattern] = useState("");
     const [order, setOrder] = useState(settings4.store.order);
     const [mode, setMode] = useState("idle");
-    const [previewed, setPreviewed] = useState([]);
+    const [previewed, setPreviewedRaw] = useState([]);
+    const [excluded, setExcluded] = useState(/* @__PURE__ */ new Set());
+    const [listQuery, setListQuery] = useState("");
+    const [shown, setShown] = useState(LIST_PAGE);
+    const [channelNames, setChannelNames] = useState({});
+    const setPreviewed = (next) => {
+      setPreviewedRaw(next);
+      setExcluded(/* @__PURE__ */ new Set());
+      setListQuery("");
+      setShown(LIST_PAGE);
+    };
     const [state, setState] = useState("\u5F85\u673A");
     const [detail, setDetail] = useState("\u5148\u83B7\u53D6 Token\uFF0C\u9009\u597D\u8303\u56F4\u5E76\u9884\u89C8\uFF0C\u786E\u8BA4\u540E\u518D\u5220\u9664\u3002");
     const [statCount, setStatCount] = useState(null);
@@ -9067,7 +9290,54 @@ ${loc.channel ?? ""}`.toLowerCase();
       limit: settings4.store.limit,
       delayMs: settings4.store.delayMs,
       after: afterStr ? new Date(afterStr) : null,
-      before: beforeStr ? new Date(beforeStr) : null
+      before: beforeStr ? new Date(beforeStr) : null,
+      content: contentQuery.trim(),
+      hasLink,
+      hasFile,
+      includePinned,
+      pattern: pattern.trim(),
+      afterId: afterId.trim(),
+      beforeId: beforeId.trim()
+    });
+    useEffect(() => () => pickRef.current?.cancel(), []);
+    const onPick = async (side) => {
+      const surface = rootRef.current?.closest(".hc-overlay");
+      if (!surface) {
+        progress("\u65E0\u6CD5\u9009\u53D6", "\u5F53\u524D\u754C\u9762\u65E0\u6CD5\u4E34\u65F6\u9690\u85CF\uFF0C\u8BF7\u624B\u52A8\u7C98\u8D34\u6D88\u606F ID\uFF08\u53F3\u952E\u6D88\u606F \u2192 \u590D\u5236\u6D88\u606F ID\uFF09\u3002");
+        return;
+      }
+      surface.style.display = "none";
+      const pick = pickMessage(
+        side === "after" ? "\u70B9\u51FB\u4E00\u6761\u6D88\u606F\uFF1A\u53EA\u6E05\u7406\u5B83\u4E4B\u540E\u7684\u6D88\u606F" : "\u70B9\u51FB\u4E00\u6761\u6D88\u606F\uFF1A\u53EA\u6E05\u7406\u5B83\u4E4B\u524D\u7684\u6D88\u606F"
+      );
+      pickRef.current = pick;
+      const id = await pick.promise;
+      pickRef.current = null;
+      surface.style.display = "";
+      if (!id) {
+        progress("\u5DF2\u53D6\u6D88\u9009\u53D6", "");
+        return;
+      }
+      if (side === "after") setAfterId(id);
+      else setBeforeId(id);
+      progress("\u5DF2\u9009\u53D6\u6D88\u606F", `${side === "after" ? "\u8D77\u70B9" : "\u7EC8\u70B9"}\u6D88\u606F ID ${id}\uFF08\u8BE5\u6D88\u606F\u672C\u8EAB\u4E0D\u4F1A\u88AB\u5220\u9664\uFF09`);
+    };
+    const query = listQuery.trim().toLowerCase();
+    const matching = query ? previewed.filter((m) => m.content.toLowerCase().includes(query) || m.id.includes(query)) : previewed;
+    const selected = previewed.filter((m) => !excluded.has(m.id));
+    const toggleOne = (id) => setExcluded((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+    const bulkSelect = (kind) => setExcluded((prev) => {
+      const next = new Set(prev);
+      for (const m of matching) {
+        const off = kind === "none" || kind === "invert" && !prev.has(m.id);
+        if (off) next.add(m.id);
+        else next.delete(m.id);
+      }
+      return next;
     });
     const onAutoToken = () => {
       const tok = extractToken();
@@ -9186,7 +9456,14 @@ ${loc.channel ?? ""}`.toLowerCase();
       try {
         const found = await collect(tok, opts, meId, progress, ctrlRef.current);
         setPreviewed(found);
-        progress(ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u9884\u89C8\u5B8C\u6210", `\u627E\u5230 ${found.length} \u6761\u4F60\u7684\u6D88\u606F\u3002`);
+        progress(
+          ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u9884\u89C8\u5B8C\u6210",
+          `\u627E\u5230 ${found.length} \u6761\u4F60\u7684\u6D88\u606F\u3002\u9ED8\u8BA4\u5168\u90E8\u52FE\u9009\uFF0C\u53D6\u6D88\u52FE\u9009\u5373\u53EF\u4FDD\u7559\u3002`
+        );
+        if (opts.serverWide && found.length > 0) {
+          fetchChannels(tok, opts.guildId).then((list) => setChannelNames(Object.fromEntries(list.map((c) => [c.id, c.name])))).catch(() => {
+          });
+        }
       } catch (err) {
         progress("\u5931\u8D25", err.message ?? String(err));
         log19.error("preview failed", err);
@@ -9199,6 +9476,11 @@ ${loc.channel ?? ""}`.toLowerCase();
         progress("\u8BF7\u5148\u9884\u89C8", "");
         return;
       }
+      const targets = selected;
+      if (targets.length === 0) {
+        progress("\u672A\u52FE\u9009\u6D88\u606F", "\u8BF7\u81F3\u5C11\u52FE\u9009\u4E00\u6761\u8981\u5220\u9664\u7684\u6D88\u606F\u3002");
+        return;
+      }
       let tok;
       try {
         tok = requireToken();
@@ -9209,22 +9491,37 @@ ${loc.channel ?? ""}`.toLowerCase();
       const opts = buildOptions();
       ctrlRef.current = { stopped: false };
       setMode("deleting");
-      progress("\u5220\u9664\u4E2D", `0 / ${previewed.length}`);
+      const kept = previewed.length - targets.length;
+      pushLog("info", `\u5F00\u59CB\u5220\u9664\u5DF2\u52FE\u9009\u7684 ${targets.length} \u6761${kept ? `\uFF0C\u4FDD\u7559\u672A\u52FE\u9009\u7684 ${kept} \u6761` : ""}\u3002`);
+      progress("\u5220\u9664\u4E2D", `0 / ${targets.length}`);
+      const done = /* @__PURE__ */ new Set();
+      const failed = /* @__PURE__ */ new Set();
       try {
-        const result = await remove(tok, previewed, opts, progress, ctrlRef.current, (m, ok, error) => {
+        const result = await remove(tok, targets, opts, progress, ctrlRef.current, (m, ok, error) => {
           const text = m.content.trim().replace(/\s+/g, " ").slice(0, 80);
-          if (ok) pushLog("success", `\u5DF2\u5220\u9664 ${m.id}${text ? ` \xB7 ${text}` : "\uFF08\u65E0\u6587\u672C\uFF09"}`);
-          else pushLog("warn", `\u8DF3\u8FC7 ${m.id} \xB7 ${error ?? "\u672A\u77E5\u9519\u8BEF"}`);
+          if (ok) {
+            done.add(m.id);
+            pushLog("success", `\u5DF2\u5220\u9664 ${m.id}${text ? ` \xB7 ${text}` : "\uFF08\u65E0\u6587\u672C\uFF09"}`);
+          } else {
+            failed.add(m.id);
+            pushLog("warn", `\u8DF3\u8FC7 ${m.id} \xB7 ${error ?? "\u672A\u77E5\u9519\u8BEF"}`);
+          }
         });
         progress(
           ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u5B8C\u6210",
-          `\u5DF2\u5220\u9664 ${result.deleted} \u6761${result.skipped ? `\uFF0C\u8DF3\u8FC7 ${result.skipped} \u6761` : ""}\u3002`
+          `\u5DF2\u5220\u9664 ${result.deleted} \u6761${result.skipped ? `\uFF0C\u8DF3\u8FC7 ${result.skipped} \u6761` : ""}${kept ? `\uFF0C\u4FDD\u7559 ${kept} \u6761` : ""}\u3002`
         );
-        setPreviewed([]);
       } catch (err) {
         progress("\u5931\u8D25", err.message ?? String(err));
         log19.error("delete failed", err);
       } finally {
+        setPreviewedRaw((prev) => prev.filter((m) => !done.has(m.id)));
+        setExcluded((prev) => {
+          const next = new Set(prev);
+          for (const id of done) next.delete(id);
+          for (const id of failed) next.add(id);
+          return next;
+        });
         setMode("idle");
       }
     };
@@ -9293,7 +9590,15 @@ ${loc.channel ?? ""}`.toLowerCase();
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, ch.name)
       ))));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u53EA\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u5EFA\u8BAE\u5148\u9884\u89C8\uFF0C\u786E\u8BA4\u8303\u56F4\u540E\u518D\u5220\u9664\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID", guildName && /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__resolved" }, guildName)))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID", channelName && /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__resolved" }, channelName)))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running2 }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running2 }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner", ref: rootRef }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u53EA\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u5EFA\u8BAE\u5148\u9884\u89C8\uFF0C\u786E\u8BA4\u8303\u56F4\u540E\u518D\u5220\u9664\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID", guildName && /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__resolved" }, guildName)))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID", channelName && /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__resolved" }, channelName)))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running2 }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running2 }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(
+      Section,
+      {
+        title: "\u6D88\u606F\u533A\u95F4",
+        note: "\u53EF\u9009\u3002\u53EA\u6E05\u7406\u4E24\u6761\u6D88\u606F\u4E4B\u95F4\u7684\u5185\u5BB9\uFF0C\u6240\u9009\u7684\u4E24\u6761\u6D88\u606F\u672C\u8EAB\u4E0D\u4F1A\u88AB\u5220\u3002\u586B\u4E86\u6D88\u606F ID \u7684\u4E00\u4FA7\u4F1A\u8986\u76D6\u4E0A\u9762\u5BF9\u5E94\u7684\u65F6\u95F4\u3002"
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5728\u6B64\u6D88\u606F\u4E4B\u540E")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", disabled: running2, onClick: () => onPick("after") }, "\u9009\u53D6")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: afterId, onChange: setAfterId, placeholder: "\u8D77\u70B9\u6D88\u606F ID\uFF0C\u7559\u7A7A\u4E0D\u9650" }))),
+      /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5728\u6B64\u6D88\u606F\u4E4B\u524D")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", disabled: running2, onClick: () => onPick("before") }, "\u9009\u53D6")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: beforeId, onChange: setBeforeId, placeholder: "\u7EC8\u70B9\u6D88\u606F ID\uFF0C\u7559\u7A7A\u4E0D\u9650" })))
+    ), /* @__PURE__ */ React.createElement(Section, { title: "\u7B5B\u9009", note: "\u53EF\u9009\u3002\u53EA\u9884\u89C8 / \u5220\u9664\u7B26\u5408\u6761\u4EF6\u7684\u6D88\u606F\uFF1B\u4FEE\u6539\u540E\u9700\u91CD\u65B0\u9884\u89C8\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5305\u542B\u6587\u672C"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: contentQuery, onChange: setContentQuery, placeholder: "\u53EA\u627E\u5305\u542B\u8FD9\u6BB5\u6587\u5B57\u7684\u6D88\u606F" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u53EA\u8981\u5E26\u94FE\u63A5\u7684")), /* @__PURE__ */ React.createElement(Toggle, { checked: hasLink, onChange: setHasLink, "aria-label": "\u53EA\u8981\u5E26\u94FE\u63A5\u7684" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u53EA\u8981\u5E26\u6587\u4EF6\u7684")), /* @__PURE__ */ React.createElement(Toggle, { checked: hasFile, onChange: setHasFile, "aria-label": "\u53EA\u8981\u5E26\u6587\u4EF6\u7684" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5305\u542B\u7F6E\u9876\u6D88\u606F"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5173\u95ED\u65F6\u7F6E\u9876\u6D88\u606F\u4E0D\u4F1A\u8FDB\u5165\u9884\u89C8\uFF0C\u4E5F\u4E0D\u4F1A\u88AB\u5220\u9664\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: includePinned, onChange: setIncludePinned, "aria-label": "\u5305\u542B\u7F6E\u9876\u6D88\u606F" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6B63\u5219\u5339\u914D"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u53EA\u4FDD\u7559\u6587\u672C\u5339\u914D\u8BE5\u6B63\u5219\u7684\u6D88\u606F\uFF08\u4E0D\u533A\u5206\u5927\u5C0F\u5199\uFF09\u3002"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: pattern, onChange: setPattern, placeholder: "\u4F8B\u5982 ^\u54C8+$" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
       Select,
       {
         value: order,
@@ -9308,11 +9613,11 @@ ${loc.channel ?? ""}`.toLowerCase();
       {
         variant: "destructive",
         icon: /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }),
-        disabled: running2 || previewed.length === 0,
+        disabled: running2 || selected.length === 0,
         onClick: onDelete
       },
-      "\u5220\u9664\u9884\u89C8\uFF08",
-      previewed.length,
+      "\u5220\u9664\u5DF2\u9009\uFF08",
+      selected.length,
       "\uFF09"
     )), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-state" }, state), detail && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-detail" }, detail)), /* @__PURE__ */ React.createElement(Section, { title: "\u8FD0\u884C\u65E5\u5FD7", note: "\u9884\u89C8\u4E0E\u5220\u9664\u7684\u6BCF\u4E00\u6B65\u90FD\u8BB0\u5728\u8FD9\u91CC\uFF0C\u53EF\u968F\u65F6\u6E05\u7A7A\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__logbar" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__logcount" }, logs.length, " \u6761"), /* @__PURE__ */ React.createElement(
       Button,
@@ -9336,7 +9641,41 @@ ${loc.channel ?? ""}`.toLowerCase();
         "aria-live": "polite"
       },
       logs.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__log-empty" }, "\u6682\u65E0\u65E5\u5FD7\u3002\u70B9\u300C\u9884\u89C8\u300D\u5F00\u59CB\u3002") : logs.map((entry) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__log-row", "data-level": entry.level, key: entry.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__log-time" }, entry.time), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__log-level" }, entry.level.toUpperCase()), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__log-text" }, entry.text)))
-    )), previewed.length > 0 && /* @__PURE__ */ React.createElement(Section, { title: `\u9884\u89C8\u7ED3\u679C\uFF08${previewed.length}\uFF09` }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__list" }, previewed.slice(0, 50).map((m) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__item", key: m.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-time" }, formatTs(m.timestamp)), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-text" }, m.content.trim() || "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09"))), previewed.length > 50 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u2026\u8FD8\u6709 ", previewed.length - 50, " \u6761\u672A\u5C55\u793A"))), /* @__PURE__ */ React.createElement(Section, { title: "\u7EDF\u8BA1", note: "\u7EDF\u8BA1\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u5386\u53F2\u53D1\u8A00\u603B\u6570\uFF08\u8C03\u7528\u641C\u7D22\u63A5\u53E3\uFF09\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onCount }, "\u7EDF\u8BA1\u6211\u7684\u53D1\u8A00\u6570")), statCount != null && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cleaner__stat" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-num" }, statCount), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-unit" }, "\u6761"))));
+    )), previewed.length > 0 && /* @__PURE__ */ React.createElement(
+      Section,
+      {
+        title: `\u9884\u89C8\u7ED3\u679C\uFF08\u5DF2\u9009 ${selected.length} / ${previewed.length}\uFF09`,
+        note: "\u52FE\u9009\u7684\u4F1A\u88AB\u5220\u9664\uFF1B\u60F3\u4FDD\u7559\u7684\u6D88\u606F\u53D6\u6D88\u52FE\u9009\u5373\u53EF\u3002"
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__listbar" }, /* @__PURE__ */ React.createElement(
+        TextInput,
+        {
+          value: listQuery,
+          onChange: (v) => {
+            setListQuery(v);
+            setShown(LIST_PAGE);
+          },
+          placeholder: "\u5728\u9884\u89C8\u4E2D\u67E5\u627E\u2026"
+        }
+      ), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__listbar-actions" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", disabled: running2, onClick: () => bulkSelect("all") }, "\u5168\u9009"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", disabled: running2, onClick: () => bulkSelect("none") }, "\u5168\u4E0D\u9009"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", disabled: running2, onClick: () => bulkSelect("invert") }, "\u53CD\u9009"))),
+      query && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u5339\u914D ", matching.length, " \u6761\uFF0C\u5168\u9009 / \u5168\u4E0D\u9009 / \u53CD\u9009\u53EA\u4F5C\u7528\u4E8E\u8FD9\u4E9B\u5339\u914D\u9879\u3002"),
+      /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__list" }, matching.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u6CA1\u6709\u5339\u914D\u7684\u6D88\u606F\u3002"), matching.slice(0, shown).map((m) => {
+        const text = m.content.trim();
+        const tags = tagsOf(m);
+        const channel = serverWide ? channelNames[m.channelId] ?? `\u2026${m.channelId.slice(-6)}` : "";
+        return /* @__PURE__ */ React.createElement("label", { className: "hc-cleaner__item", "data-off": excluded.has(m.id), key: m.id }, /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            className: "hc-cleaner__check",
+            type: "checkbox",
+            checked: !excluded.has(m.id),
+            disabled: running2,
+            onChange: () => toggleOne(m.id)
+          }
+        ), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-time" }, formatTs(m.timestamp)), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-text" }, channel && /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-channel" }, "#", channel), tags.map((t) => /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__tag", key: t }, t)), text ? renderContent2(text) : tags.length === 0 && "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09"));
+      })),
+      matching.length > shown && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__listmore" }, /* @__PURE__ */ React.createElement("span", null, "\u5DF2\u663E\u793A ", shown, " / ", matching.length, " \u6761"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => setShown((n) => n + LIST_PAGE) }, "\u518D\u663E\u793A ", Math.min(LIST_PAGE, matching.length - shown), " \u6761"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: () => setShown(matching.length) }, "\u663E\u793A\u5168\u90E8"))
+    ), /* @__PURE__ */ React.createElement(Section, { title: "\u7EDF\u8BA1", note: "\u7EDF\u8BA1\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u5386\u53F2\u53D1\u8A00\u603B\u6570\uFF08\u8C03\u7528\u641C\u7D22\u63A5\u53E3\uFF09\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onCount }, "\u7EDF\u8BA1\u6211\u7684\u53D1\u8A00\u6570")), statCount != null && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cleaner__stat" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-num" }, statCount), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-unit" }, "\u6761"))));
   }
 
   // src/plugins/message-cleaner/toolbar-button.tsx
@@ -14941,8 +15280,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.29" : "dev",
-      build: true ? "2026-11-19 09:04:31" : "dev",
+      version: true ? "0.7.30" : "dev",
+      build: true ? "2026-11-19 12:06:23" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14973,8 +15312,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.29" : "dev",
-        build: true ? "2026-11-19 09:04:31" : "dev",
+        version: true ? "0.7.30" : "dev",
+        build: true ? "2026-11-19 12:06:23" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

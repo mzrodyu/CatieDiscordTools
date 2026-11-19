@@ -21,7 +21,25 @@ export interface CleanTarget {
   serverWide: boolean;
 }
 
-export interface CleanOptions extends CleanTarget {
+/** Optional narrowing, mirroring Undiscord's "筛选过滤" block. */
+export interface CleanFilters {
+  /** Server-side: only messages containing this text. */
+  content?: string;
+  /** Server-side: only messages with a link. */
+  hasLink?: boolean;
+  /** Server-side: only messages with a file. */
+  hasFile?: boolean;
+  /** Pinned messages are kept unless this is set. */
+  includePinned?: boolean;
+  /** Client-side: only messages whose text matches this regex (case-insensitive). */
+  pattern?: string;
+  /** Only messages after this message id. Takes precedence over `after`. */
+  afterId?: string;
+  /** Only messages before this message id. Takes precedence over `before`. */
+  beforeId?: string;
+}
+
+export interface CleanOptions extends CleanTarget, CleanFilters {
   order: "asc" | "desc";
   limit: number;
   delayMs: number;
@@ -34,6 +52,10 @@ export interface CollectedMessage {
   channelId: string;
   content: string;
   timestamp: string;
+  pinned: boolean;
+  attachments: number;
+  embeds: number;
+  stickers: string[];
 }
 
 export interface Controller {
@@ -250,6 +272,17 @@ interface SearchMessage {
   hit?: boolean;
   content?: string;
   timestamp: string;
+  type?: number;
+  pinned?: boolean;
+  attachments?: unknown[];
+  embeds?: unknown[];
+  sticker_items?: { name?: string }[];
+}
+
+/** System messages (joins, boosts, pins…) can't be deleted; same set as Undiscord. */
+function isDeletableType(type: unknown): boolean {
+  if (typeof type !== "number") return true;
+  return type === 0 || (type >= 6 && type <= 21);
 }
 
 interface SearchResponse {
@@ -322,14 +355,35 @@ export async function collect(
   for (const date of [opts.after, opts.before]) {
     if (date && !Number.isFinite(date.getTime())) throw new Error("请填写有效的时间范围。");
   }
-  if (opts.after && opts.before && opts.after >= opts.before) throw new Error("起始时间必须早于结束时间。");
+  // A message id bound replaces the date bound on the same side (as in Undiscord).
+  const afterId = opts.afterId?.trim() || "";
+  const beforeId = opts.beforeId?.trim() || "";
+  for (const id of [afterId, beforeId]) {
+    if (id && !SNOWFLAKE.test(id)) throw new Error("消息区间需要填写有效的消息 ID。");
+  }
+  const after = afterId ? null : opts.after;
+  const before = beforeId ? null : opts.before;
+  const minId = afterId ? BigInt(afterId) : after ? BigInt(tsToSf(after)) : null;
+  const maxId = beforeId ? BigInt(beforeId) : before ? BigInt(tsToSf(before)) : null;
+  if (minId !== null && maxId !== null && minId >= maxId) {
+    throw new Error(afterId || beforeId ? "消息区间的起点必须早于终点。" : "起始时间必须早于结束时间。");
+  }
+
+  let pattern: RegExp | null = null;
+  if (opts.pattern?.trim()) {
+    try { pattern = new RegExp(opts.pattern.trim(), "i"); }
+    catch { throw new Error("正则表达式无效，请检查筛选条件。"); }
+  }
 
   const scope = await resolveSearchScope(token, opts);
   const params = searchParams(scope, meId);
+  if (opts.content?.trim()) params.set("content", opts.content.trim());
+  if (opts.hasLink) params.append("has", "link");
+  if (opts.hasFile) params.append("has", "file");
   params.set("sort_by", "timestamp");
   params.set("sort_order", opts.order);
-  if (opts.after) params.set("min_id", tsToSf(opts.after));
-  if (opts.before) params.set("max_id", tsToSf(opts.before));
+  if (minId !== null) params.set("min_id", String(minId));
+  if (maxId !== null) params.set("max_id", String(maxId));
 
   const seen = new Set<string>();
   const expectedChannel = opts.serverWide ? "" : opts.channelId.trim();
@@ -385,20 +439,34 @@ export async function collect(
           !SNOWFLAKE.test(m.channel_id) ||
           (expectedChannel && m.channel_id !== expectedChannel) ||
           skipList.has(m.id) || !Number.isFinite(time) ||
-          (opts.after && time < opts.after.getTime()) ||
-          (opts.before && time > opts.before.getTime())
+          (after && time < after.getTime()) ||
+          (before && time > before.getTime()) ||
+          (afterId && BigInt(m.id) <= BigInt(afterId)) ||
+          (beforeId && BigInt(m.id) >= BigInt(beforeId)) ||
+          !isDeletableType(m.type) ||
+          (m.pinned === true && !opts.includePinned) ||
+          (pattern && !pattern.test(m.content ?? ""))
         ) {
           filtered++;
           continue;
         }
-        out.push({ id: m.id, channelId: m.channel_id, content: m.content ?? "", timestamp: m.timestamp });
+        out.push({
+          id: m.id,
+          channelId: m.channel_id,
+          content: m.content ?? "",
+          timestamp: m.timestamp,
+          pinned: m.pinned === true,
+          attachments: Array.isArray(m.attachments) ? m.attachments.length : 0,
+          embeds: Array.isArray(m.embeds) ? m.embeds.length : 0,
+          stickers: Array.isArray(m.sticker_items) ? m.sticker_items.map((s) => s?.name || "贴纸") : []
+        });
         if (out.length >= opts.limit) break;
       }
       if (out.length >= opts.limit) break;
     }
     if (hits > 0 && newHits === 0) throw new Error("搜索接口返回重复分页，请稍后重新预览。");
 
-    onProgress("检索中", `第 ${page} 页 · 搜索命中 ${total ?? "未知"} 条，已找到 ${out.length} 条${filtered ? `（本页过滤 ${filtered} 条非本人/非本频道等结果）` : ""}`);
+    onProgress("检索中", `第 ${page} 页 · 搜索命中 ${total ?? "未知"} 条，已找到 ${out.length} 条${filtered ? `（本页过滤 ${filtered} 条不符合条件的结果）` : ""}`);
     // Offset advances by raw search groups, not accepted/filtered messages.
     // If Discord returns a short intermediate page, trust total_results and
     // continue rather than prematurely reporting a partial preview as done.
@@ -436,7 +504,9 @@ export async function remove(
       skipped++;
       if (!String(e?.message ?? "").includes("404")) skipList.add(m.id);
       log.warn(`skip ${m.id}: ${e?.message ?? e}`);
-      onItem?.(m, false, String(e?.message ?? e));
+      const raw = String(e?.message ?? e);
+      // Archived thread: Discord refuses the delete until it is unarchived.
+      onItem?.(m, false, raw.includes("50083") ? "所在帖子已归档，无法删除" : raw);
     }
     onProgress("删除中", `已删除 ${deleted} / ${messages.length}${skipped ? `（跳过 ${skipped}）` : ""}`);
     const elapsed = Date.now() - t0;

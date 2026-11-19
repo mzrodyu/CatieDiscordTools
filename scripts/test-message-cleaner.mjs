@@ -12,7 +12,7 @@ const bundle = await build({
   platform: "node",
   logLevel: "silent"
 });
-const { collect, count } = await import(
+const { collect, count, remove } = await import(
   `data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`
 );
 
@@ -46,10 +46,11 @@ const page = (messages, total = messages.length) => ({
 const fortyFour = Array.from({ length: 44 }, (_, i) => message(44 - i));
 const realFetch = globalThis.fetch;
 const realSetTimeout = globalThis.setTimeout;
-let calls, waits, handle;
+let calls, waits, handle, allowDelete;
 
 beforeEach(() => {
   calls = [];
+  allowDelete = false;
   waits = [];
   handle = () => { throw new Error("Unexpected API request"); };
   globalThis.fetch = async (input, init = {}) => {
@@ -59,7 +60,7 @@ beforeEach(() => {
       method: init.method ?? "GET", headers: init.headers
     };
     calls.push(request);
-    assert.equal(request.method, "GET", "preview/count must never send a deletion");
+    if (!allowDelete) assert.equal(request.method, "GET", "preview/count must never send a deletion");
     return handle(request);
   };
   // Exercise retries without waiting in real time; retain requested delays for assertions.
@@ -274,4 +275,108 @@ test("failed channel resolution is surfaced rather than guessed to be a DM", asy
   };
   await assert.rejects(preview(options({ guildId: "" })), /API 403/);
   assert.equal(searchCalls().length, 0);
+});
+
+test("content / link / file filters are sent to the search endpoint", async () => {
+  serve([message(1)]);
+  await preview(options({ content: " hello ", hasLink: true, hasFile: true }));
+  const q = searchCalls()[0].url.searchParams;
+  assert.equal(q.get("content"), "hello");
+  assert.deepEqual(q.getAll("has"), ["link", "file"]);
+});
+
+test("no filter options means no content/has parameters", async () => {
+  serve([message(1)]);
+  await preview();
+  const q = searchCalls()[0].url.searchParams;
+  assert.equal(q.has("content"), false);
+  assert.equal(q.has("has"), false);
+});
+
+test("pinned messages are kept out of the preview unless includePinned is set", async () => {
+  const list = [message(1, { pinned: true }), message(2)];
+  serve(list);
+  assert.deepEqual(ids(await preview()), [message(2).id]);
+  const withPinned = await preview(options({ includePinned: true }));
+  assert.deepEqual(ids(withPinned), ids(list));
+  assert.equal(withPinned[0].pinned, true);
+});
+
+test("undeletable system messages never enter the preview", async () => {
+  serve([message(1, { type: 7 }), message(2, { type: 3 }), message(3, { type: 19 }), message(4, { type: 46 })]);
+  assert.deepEqual(ids(await preview()), [message(1).id, message(3).id]);
+});
+
+test("regex pattern filters hits case-insensitively; an invalid one fails before any request", async () => {
+  serve([message(1, { content: "Hello" }), message(2, { content: "bye" })]);
+  assert.deepEqual(ids(await preview(options({ pattern: "^hel" }))), [message(1).id]);
+  calls.length = 0;
+  await assert.rejects(preview(options({ pattern: "(" })), /正则/);
+  assert.equal(calls.length, 0);
+});
+
+test("preview rows carry attachment / sticker / embed info", async () => {
+  serve([message(1, { content: "", attachments: [{}, {}], embeds: [{}], sticker_items: [{ name: "wave" }] })]);
+  const [row] = await preview();
+  assert.equal(row.attachments, 2);
+  assert.equal(row.embeds, 1);
+  assert.deepEqual(row.stickers, ["wave"]);
+});
+
+test("remove deletes exactly the messages it is given, nothing else from the preview", async () => {
+  serve([message(1), message(2), message(3)]);
+  const found = await preview();
+  calls.length = 0;
+  allowDelete = true;
+  handle = () => new Response(null, { status: 204 });
+  const chosen = found.filter((m) => m.id !== message(2).id);
+  const result = await remove("fixture-token", chosen, options(), () => {}, { stopped: false });
+  assert.deepEqual(result, { deleted: 2, skipped: 0 });
+  assert.deepEqual(
+    calls.map((r) => `${r.method} ${r.path}`),
+    chosen.map((m) => `DELETE /channels/${CHANNEL}/messages/${m.id}`)
+  );
+});
+
+test("an archived-thread delete (50083) is reported as a skip and the run continues", async () => {
+  serve([message(11), message(12)]);
+  const found = await preview();
+  allowDelete = true;
+  handle = ({ path }) => path.endsWith(message(11).id)
+    ? response({ code: 50083, message: "Thread is archived" }, 400)
+    : new Response(null, { status: 204 });
+  const items = [];
+  const result = await remove("fixture-token", found, options(), () => {}, { stopped: false },
+    (m, ok, error) => items.push({ id: m.id, ok, error }));
+  assert.deepEqual(result, { deleted: 1, skipped: 1 });
+  assert.match(items[0].error, /归档/);
+  assert.equal(items[1].ok, true);
+});
+
+test("message-id bounds are sent as min_id/max_id, override dates, and exclude the bounds themselves", async () => {
+  const list = [message(5), message(4), message(3), message(2), message(1)];
+  serve(list);
+  const found = await preview(options({
+    afterId: message(1).id, beforeId: message(5).id,
+    after: new Date("2030-01-01T00:00:00.000Z"), before: new Date("2010-01-01T00:00:00.000Z")
+  }));
+  assert.deepEqual(ids(found), [message(4).id, message(3).id, message(2).id]);
+  const q = searchCalls()[0].url.searchParams;
+  assert.equal(q.get("min_id"), message(1).id);
+  assert.equal(q.get("max_id"), message(5).id);
+});
+
+test("a message-id bound on one side keeps the date bound on the other", async () => {
+  serve([message(2)]);
+  const before = new Date("2027-01-01T00:00:00.000Z");
+  await preview(options({ afterId: message(1).id, before }));
+  const q = searchCalls()[0].url.searchParams;
+  assert.equal(q.get("min_id"), message(1).id);
+  assert.equal(q.get("max_id"), String((BigInt(before.getTime()) - 1420070400000n) << 22n));
+});
+
+test("invalid or reversed message-id bounds fail before any request", async () => {
+  await assert.rejects(preview(options({ afterId: "abc" })), /消息 ID/);
+  await assert.rejects(preview(options({ afterId: message(5).id, beforeId: message(1).id })), /消息区间/);
+  assert.equal(calls.length, 0);
 });

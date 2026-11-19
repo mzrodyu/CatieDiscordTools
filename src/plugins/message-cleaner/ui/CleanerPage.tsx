@@ -4,8 +4,10 @@
 // - Token input + auto-extract
 // - Guild/channel picker (REST)
 // - Time range filter (after/before)
+// - Message range (after/before a message id, click-to-pick in chat)
+// - Content filters (text / link / file / pinned / regex)
 // - Order selector
-// - Preview → Delete flow
+// - Preview → pick what to keep → Delete selected
 // - Stats query
 
 import { useRef, useState, useEffect } from "../../../core/common/react";
@@ -37,6 +39,7 @@ import {
   type GuildInfo,
   type ChannelInfo
 } from "../cleaner";
+import { pickMessage, type MessagePick } from "../pick-message";
 
 const log = logger("message-cleaner");
 
@@ -75,6 +78,43 @@ function formatTs(ts: string): string {
   return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
 
+/** Rows mounted at once; a 5000-message preview would otherwise stall the panel. */
+const LIST_PAGE = 200;
+
+const CUSTOM_EMOJI = /<(a?):(\w+):(\d{15,25})>/g;
+
+/** Message text with custom emoji shown as images instead of raw `<:name:id>`. */
+function renderContent(text: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(CUSTOM_EMOJI)) {
+    const at = m.index ?? 0;
+    if (at > last) out.push(text.slice(last, at));
+    out.push(
+      <img
+        key={`${at}-${m[3]}`}
+        className="hc-cleaner__emoji"
+        src={`https://cdn.discordapp.com/emojis/${m[3]}.${m[1] ? "gif" : "webp"}?size=32`}
+        alt={`:${m[2]}:`}
+        title={`:${m[2]}:`}
+      />
+    );
+    last = at + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+/** What a message carries besides text, so non-text rows aren't a blank line. */
+function tagsOf(m: CollectedMessage): string[] {
+  const tags: string[] = [];
+  if (m.pinned) tags.push("置顶");
+  if (m.attachments) tags.push(`附件×${m.attachments}`);
+  for (const name of m.stickers) tags.push(`贴纸 ${name}`);
+  if (m.embeds) tags.push(`嵌入×${m.embeds}`);
+  return tags;
+}
+
 export function CleanerPage(): React.ReactElement {
   // Token
   const [token, setToken] = useState("");
@@ -88,11 +128,36 @@ export function CleanerPage(): React.ReactElement {
   // Time range
   const [afterStr, setAfterStr] = useState("");
   const [beforeStr, setBeforeStr] = useState("");
+  // Message range (ids; each overrides the date bound on its side)
+  const [afterId, setAfterId] = useState("");
+  const [beforeId, setBeforeId] = useState("");
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const pickRef = useRef<MessagePick | null>(null);
+  // Filters
+  const [contentQuery, setContentQuery] = useState("");
+  const [hasLink, setHasLink] = useState(false);
+  const [hasFile, setHasFile] = useState(false);
+  const [includePinned, setIncludePinned] = useState(false);
+  const [pattern, setPattern] = useState("");
   // Order
   const [order, setOrder] = useState<string>(settings.store.order);
   // Runtime
   const [mode, setMode] = useState<Mode>("idle");
-  const [previewed, setPreviewed] = useState<CollectedMessage[]>([]);
+  const [previewed, setPreviewedRaw] = useState<CollectedMessage[]>([]);
+  // Everything previewed is selected unless its id is in here — unticking a
+  // row is how a message is kept.
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [listQuery, setListQuery] = useState("");
+  const [shown, setShown] = useState(LIST_PAGE);
+  // Channel id → name for server-wide previews (best-effort).
+  const [channelNames, setChannelNames] = useState<Record<string, string>>({});
+  /** Replace the preview and reset everything that referred to the old one. */
+  const setPreviewed = (next: CollectedMessage[]) => {
+    setPreviewedRaw(next);
+    setExcluded(new Set());
+    setListQuery("");
+    setShown(LIST_PAGE);
+  };
   const [state, setState] = useState("待机");
   const [detail, setDetail] = useState("先获取 Token，选好范围并预览，确认后再删除。");
   const [statCount, setStatCount] = useState<number | null>(null);
@@ -221,8 +286,66 @@ export function CleanerPage(): React.ReactElement {
     limit: settings.store.limit,
     delayMs: settings.store.delayMs,
     after: afterStr ? new Date(afterStr) : null,
-    before: beforeStr ? new Date(beforeStr) : null
+    before: beforeStr ? new Date(beforeStr) : null,
+    content: contentQuery.trim(),
+    hasLink,
+    hasFile,
+    includePinned,
+    pattern: pattern.trim(),
+    afterId: afterId.trim(),
+    beforeId: beforeId.trim()
   });
+
+  // --- Pick a message in chat as a range bound ---
+  useEffect(() => () => pickRef.current?.cancel(), []);
+
+  const onPick = async (side: "after" | "before") => {
+    // Only Halcyon's own overlay can be hidden to reveal the chat underneath.
+    const surface = rootRef.current?.closest<HTMLElement>(".hc-overlay");
+    if (!surface) {
+      progress("无法选取", "当前界面无法临时隐藏，请手动粘贴消息 ID（右键消息 → 复制消息 ID）。");
+      return;
+    }
+    surface.style.display = "none";
+    const pick = pickMessage(
+      side === "after" ? "点击一条消息：只清理它之后的消息" : "点击一条消息：只清理它之前的消息"
+    );
+    pickRef.current = pick;
+    const id = await pick.promise;
+    pickRef.current = null;
+    surface.style.display = "";
+    if (!id) { progress("已取消选取", ""); return; }
+    if (side === "after") setAfterId(id);
+    else setBeforeId(id);
+    progress("已选取消息", `${side === "after" ? "起点" : "终点"}消息 ID ${id}（该消息本身不会被删除）`);
+  };
+
+  // --- Preview selection ---
+  const query = listQuery.trim().toLowerCase();
+  const matching = query
+    ? previewed.filter((m) => m.content.toLowerCase().includes(query) || m.id.includes(query))
+    : previewed;
+  const selected = previewed.filter((m) => !excluded.has(m.id));
+
+  const toggleOne = (id: string) =>
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  // Bulk actions apply to the rows matching the list filter, so "search for
+  // the one to keep → 全不选" works without touching the rest.
+  const bulkSelect = (kind: "all" | "none" | "invert") =>
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      for (const m of matching) {
+        const off = kind === "none" || (kind === "invert" && !prev.has(m.id));
+        if (off) next.add(m.id);
+        else next.delete(m.id);
+      }
+      return next;
+    });
 
   // --- Token ---
   const onAutoToken = () => {
@@ -339,7 +462,15 @@ export function CleanerPage(): React.ReactElement {
     try {
       const found = await collect(tok, opts, meId, progress, ctrlRef.current);
       setPreviewed(found);
-      progress(ctrlRef.current.stopped ? "已停止" : "预览完成", `找到 ${found.length} 条你的消息。`);
+      progress(
+        ctrlRef.current.stopped ? "已停止" : "预览完成",
+        `找到 ${found.length} 条你的消息。默认全部勾选，取消勾选即可保留。`
+      );
+      if (opts.serverWide && found.length > 0) {
+        fetchChannels(tok, opts.guildId)
+          .then((list) => setChannelNames(Object.fromEntries(list.map((c) => [c.id, c.name]))))
+          .catch(() => {});
+      }
     } catch (err: any) {
       progress("失败", err.message ?? String(err));
       log.error("preview failed", err);
@@ -351,27 +482,41 @@ export function CleanerPage(): React.ReactElement {
   // --- Delete ---
   const onDelete = async () => {
     if (previewed.length === 0) { progress("请先预览", ""); return; }
+    const targets = selected;
+    if (targets.length === 0) { progress("未勾选消息", "请至少勾选一条要删除的消息。"); return; }
     let tok: string;
     try { tok = requireToken(); } catch (e: any) { progress("失败", e.message); return; }
     const opts = buildOptions();
     ctrlRef.current = { stopped: false };
     setMode("deleting");
-    progress("删除中", `0 / ${previewed.length}`);
+    const kept = previewed.length - targets.length;
+    pushLog("info", `开始删除已勾选的 ${targets.length} 条${kept ? `，保留未勾选的 ${kept} 条` : ""}。`);
+    progress("删除中", `0 / ${targets.length}`);
+    const done = new Set<string>();
+    const failed = new Set<string>();
     try {
-      const result = await remove(tok, previewed, opts, progress, ctrlRef.current, (m, ok, error) => {
+      const result = await remove(tok, targets, opts, progress, ctrlRef.current, (m, ok, error) => {
         const text = m.content.trim().replace(/\s+/g, " ").slice(0, 80);
-        if (ok) pushLog("success", `已删除 ${m.id}${text ? ` · ${text}` : "（无文本）"}`);
-        else pushLog("warn", `跳过 ${m.id} · ${error ?? "未知错误"}`);
+        if (ok) { done.add(m.id); pushLog("success", `已删除 ${m.id}${text ? ` · ${text}` : "（无文本）"}`); }
+        else { failed.add(m.id); pushLog("warn", `跳过 ${m.id} · ${error ?? "未知错误"}`); }
       });
       progress(
         ctrlRef.current.stopped ? "已停止" : "完成",
-        `已删除 ${result.deleted} 条${result.skipped ? `，跳过 ${result.skipped} 条` : ""}。`
+        `已删除 ${result.deleted} 条${result.skipped ? `，跳过 ${result.skipped} 条` : ""}${kept ? `，保留 ${kept} 条` : ""}。`
       );
-      setPreviewed([]);
     } catch (err: any) {
       progress("失败", err.message ?? String(err));
       log.error("delete failed", err);
     } finally {
+      // Deleted rows leave the list; kept rows stay visible and unticked, and
+      // failures are unticked too so a second click can't hammer them again.
+      setPreviewedRaw((prev) => prev.filter((m) => !done.has(m.id)));
+      setExcluded((prev) => {
+        const next = new Set(prev);
+        for (const id of done) next.delete(id);
+        for (const id of failed) next.add(id);
+        return next;
+      });
       setMode("idle");
     }
   };
@@ -457,7 +602,7 @@ export function CleanerPage(): React.ReactElement {
 
   // --- Main page ---
   return (
-    <div className="hc-cleaner">
+    <div className="hc-cleaner" ref={rootRef}>
       <div className="hc-inline-note hc-inline-note--danger">
         <WarningIcon size={18} />
         <span>只删除<strong>你自己</strong>发送的消息。建议先预览，确认范围后再删除。</span>
@@ -549,6 +694,69 @@ export function CleanerPage(): React.ReactElement {
         </div>
       </Section>
 
+      {/* Message range */}
+      <Section
+        title="消息区间"
+        note="可选。只清理两条消息之间的内容，所选的两条消息本身不会被删。填了消息 ID 的一侧会覆盖上面对应的时间。"
+      >
+        <div className="hc-cell">
+          <div className="hc-cell--row">
+            <div className="hc-cell__main"><div className="hc-cell__label">在此消息之后</div></div>
+            <Button size="sm" variant="secondary" disabled={running} onClick={() => onPick("after")}>选取</Button>
+          </div>
+          <div className="hc-cell__control">
+            <TextInput value={afterId} onChange={setAfterId} placeholder="起点消息 ID，留空不限" />
+          </div>
+        </div>
+        <div className="hc-cell">
+          <div className="hc-cell--row">
+            <div className="hc-cell__main"><div className="hc-cell__label">在此消息之前</div></div>
+            <Button size="sm" variant="secondary" disabled={running} onClick={() => onPick("before")}>选取</Button>
+          </div>
+          <div className="hc-cell__control">
+            <TextInput value={beforeId} onChange={setBeforeId} placeholder="终点消息 ID，留空不限" />
+          </div>
+        </div>
+      </Section>
+
+      {/* Filters */}
+      <Section title="筛选" note="可选。只预览 / 删除符合条件的消息；修改后需重新预览。">
+        <div className="hc-cell">
+          <div className="hc-cell--row">
+            <div className="hc-cell__main"><div className="hc-cell__label">包含文本</div></div>
+          </div>
+          <div className="hc-cell__control">
+            <TextInput value={contentQuery} onChange={setContentQuery} placeholder="只找包含这段文字的消息" />
+          </div>
+        </div>
+        <div className="hc-cell hc-cell--row">
+          <div className="hc-cell__main"><div className="hc-cell__label">只要带链接的</div></div>
+          <Toggle checked={hasLink} onChange={setHasLink} aria-label="只要带链接的" />
+        </div>
+        <div className="hc-cell hc-cell--row">
+          <div className="hc-cell__main"><div className="hc-cell__label">只要带文件的</div></div>
+          <Toggle checked={hasFile} onChange={setHasFile} aria-label="只要带文件的" />
+        </div>
+        <div className="hc-cell hc-cell--row">
+          <div className="hc-cell__main">
+            <div className="hc-cell__label">包含置顶消息</div>
+            <div className="hc-cell__desc">关闭时置顶消息不会进入预览，也不会被删除。</div>
+          </div>
+          <Toggle checked={includePinned} onChange={setIncludePinned} aria-label="包含置顶消息" />
+        </div>
+        <div className="hc-cell">
+          <div className="hc-cell--row">
+            <div className="hc-cell__main">
+              <div className="hc-cell__label">正则匹配</div>
+              <div className="hc-cell__desc">只保留文本匹配该正则的消息（不区分大小写）。</div>
+            </div>
+          </div>
+          <div className="hc-cell__control">
+            <TextInput value={pattern} onChange={setPattern} placeholder="例如 ^哈+$" />
+          </div>
+        </div>
+      </Section>
+
       {/* Order */}
       <Section title="方向">
         <div className="hc-cell hc-cell--row">
@@ -577,10 +785,10 @@ export function CleanerPage(): React.ReactElement {
           <Button
             variant="destructive"
             icon={<TrashIcon size={16} />}
-            disabled={running || previewed.length === 0}
+            disabled={running || selected.length === 0}
             onClick={onDelete}
           >
-            删除预览（{previewed.length}）
+            删除已选（{selected.length}）
           </Button>
         )}
       </div>
@@ -627,16 +835,59 @@ export function CleanerPage(): React.ReactElement {
 
       {/* Preview list */}
       {previewed.length > 0 && (
-        <Section title={`预览结果（${previewed.length}）`}>
-          <div className="hc-cleaner__list">
-            {previewed.slice(0, 50).map((m) => (
-              <div className="hc-cleaner__item" key={m.id}>
-                <span className="hc-cleaner__item-time">{formatTs(m.timestamp)}</span>
-                <span className="hc-cleaner__item-text">{m.content.trim() || "（无文本内容）"}</span>
-              </div>
-            ))}
-            {previewed.length > 50 && <div className="hc-cleaner__more">…还有 {previewed.length - 50} 条未展示</div>}
+        <Section
+          title={`预览结果（已选 ${selected.length} / ${previewed.length}）`}
+          note="勾选的会被删除；想保留的消息取消勾选即可。"
+        >
+          <div className="hc-cleaner__listbar">
+            <TextInput
+              value={listQuery}
+              onChange={(v) => { setListQuery(v); setShown(LIST_PAGE); }}
+              placeholder="在预览中查找…"
+            />
+            <div className="hc-cleaner__listbar-actions">
+              <Button size="sm" variant="plain" disabled={running} onClick={() => bulkSelect("all")}>全选</Button>
+              <Button size="sm" variant="plain" disabled={running} onClick={() => bulkSelect("none")}>全不选</Button>
+              <Button size="sm" variant="plain" disabled={running} onClick={() => bulkSelect("invert")}>反选</Button>
+            </div>
           </div>
+          {query && (
+            <div className="hc-cleaner__more">
+              匹配 {matching.length} 条，全选 / 全不选 / 反选只作用于这些匹配项。
+            </div>
+          )}
+          <div className="hc-cleaner__list">
+            {matching.length === 0 && <div className="hc-cleaner__more">没有匹配的消息。</div>}
+            {matching.slice(0, shown).map((m) => {
+              const text = m.content.trim();
+              const tags = tagsOf(m);
+              const channel = serverWide ? channelNames[m.channelId] ?? `…${m.channelId.slice(-6)}` : "";
+              return (
+                <label className="hc-cleaner__item" data-off={excluded.has(m.id)} key={m.id}>
+                  <input
+                    className="hc-cleaner__check"
+                    type="checkbox"
+                    checked={!excluded.has(m.id)}
+                    disabled={running}
+                    onChange={() => toggleOne(m.id)}
+                  />
+                  <span className="hc-cleaner__item-time">{formatTs(m.timestamp)}</span>
+                  <span className="hc-cleaner__item-text">
+                    {channel && <span className="hc-cleaner__item-channel">#{channel}</span>}
+                    {tags.map((t) => <span className="hc-cleaner__tag" key={t}>{t}</span>)}
+                    {text ? renderContent(text) : tags.length === 0 && "（无文本内容）"}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {matching.length > shown && (
+            <div className="hc-cleaner__listmore">
+              <span>已显示 {shown} / {matching.length} 条</span>
+              <Button size="sm" variant="secondary" onClick={() => setShown((n) => n + LIST_PAGE)}>再显示 {Math.min(LIST_PAGE, matching.length - shown)} 条</Button>
+              <Button size="sm" variant="plain" onClick={() => setShown(matching.length)}>显示全部</Button>
+            </div>
+          )}
         </Section>
       )}
 
