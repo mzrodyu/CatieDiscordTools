@@ -1575,6 +1575,59 @@
   color: var(--hc-label-secondary);
 }
 
+/* Run log — the reference 冲水 script's console, kept monospace and scrollable
+ * so a long flush stays readable without pushing the page around. */
+.hc-cleaner__logbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--hc-space-2) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__logcount {
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__log {
+  max-height: 220px;
+  overflow: auto;
+  padding: var(--hc-space-2) 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 11.5px;
+  line-height: 1.55;
+  user-select: text;
+}
+.hc-cleaner__log-empty {
+  padding: var(--hc-space-3) var(--hc-space-4);
+  color: var(--hc-label-tertiary);
+}
+.hc-cleaner__log-row {
+  display: flex;
+  gap: var(--hc-space-2);
+  padding: 1px var(--hc-space-4);
+  color: var(--hc-label-secondary);
+  word-break: break-word;
+}
+.hc-cleaner__log-time {
+  flex-shrink: 0;
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__log-level {
+  flex-shrink: 0;
+  width: 44px;
+  font-weight: 600;
+  color: var(--hc-accent);
+}
+.hc-cleaner__log-row[data-level="success"] .hc-cleaner__log-level { color: var(--hc-green); }
+.hc-cleaner__log-row[data-level="warn"] .hc-cleaner__log-level { color: var(--hc-orange); }
+.hc-cleaner__log-row[data-level="error"] .hc-cleaner__log-level { color: var(--hc-red); }
+.hc-cleaner__log-text {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── message-cleaner picker ─────────────────────────────────────────────── */
 .hc-cleaner__picker-head {
   display: flex;
@@ -2228,6 +2281,36 @@
   color: var(--interactive-hover, #dbdee1);
 }
 .hc-mlog-toolbtn:active {
+  color: var(--interactive-active, #fff);
+}
+
+
+/* --- Message-cleaner button in the channel header toolbar ---------------- */
+/* Same treatment as the message-log button: reads as one of Discord's own
+ * header icons, 24px hit target, muted until hover. Decorates Discord's
+ * toolbar, so literal values + Discord CSS variables. */
+.hc-cleaner-toolbtn-host {
+  display: inline-flex;
+  align-items: center;
+}
+.hc-cleaner-toolbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--interactive-normal, #b5bac1);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.hc-cleaner-toolbtn:hover {
+  color: var(--interactive-hover, #dbdee1);
+}
+.hc-cleaner-toolbtn:active {
   color: var(--interactive-active, #fff);
 }
 

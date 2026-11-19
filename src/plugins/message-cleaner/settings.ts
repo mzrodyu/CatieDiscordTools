@@ -1,8 +1,10 @@
 // message-cleaner settings.
 //
 // Only the tunable defaults the operate page reads at run time: how many to
-// take, how fast to delete, which end to start from, and whether to confirm.
-// The page itself carries the scope pickers and the run/preview/delete actions.
+// take, how fast to delete, and which end to start from. The page itself
+// carries the scope pickers and the run/preview/delete actions. Deletion is
+// already limited to the signed-in account, so there is no confirm gate —
+// preview + the delete button is the whole flow.
 
 import { defineSettings } from "../../core/settings";
 
@@ -37,12 +39,5 @@ export const settings = defineSettings({
     min: 300,
     max: 30000,
     step: 100
-  },
-  confirmBeforeDelete: {
-    group: "默认参数",
-    type: "boolean",
-    default: true,
-    label: "删除前二次确认",
-    description: "点「删除」后弹出确认框，避免误删。"
   }
 });

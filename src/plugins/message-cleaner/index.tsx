@@ -13,6 +13,7 @@ import { logger } from "../../core/logger";
 import { TrashIcon } from "../../icons";
 import { settings } from "./settings";
 import { CleanerPage } from "./ui/CleanerPage";
+import { startCleanerToolbarButton, stopCleanerToolbarButton } from "./toolbar-button";
 
 const log = logger("message-cleaner");
 
@@ -32,10 +33,14 @@ export default definePlugin({
   },
 
   start() {
+    // Channel-header shortcut straight to the cleaner page (current channel
+    // pre-filled), same pattern as message-logger's clock button.
+    startCleanerToolbarButton();
     log.info("message-cleaner ready");
   },
 
   stop() {
     // Page-only plugin: no patches or listeners to tear down.
+    stopCleanerToolbarButton();
   }
 });

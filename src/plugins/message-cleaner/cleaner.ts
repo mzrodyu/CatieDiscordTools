@@ -151,6 +151,21 @@ export function currentTarget(): CleanTarget | null {
   } catch { return null; }
 }
 
+// The header button opens the settings panel, which mounts the page a tick
+// later — hand the "current channel" target over through a one-shot slot so
+// the page starts already aimed at the channel whose header was clicked.
+let pendingTarget: CleanTarget | null = null;
+
+export function setPendingTarget(target: CleanTarget | null): void {
+  pendingTarget = target;
+}
+
+export function takePendingTarget(): CleanTarget | null {
+  const target = pendingTarget;
+  pendingTarget = null;
+  return target;
+}
+
 // --- Picker (REST, same endpoints as the original 冲水 script) -------------
 
 export async function fetchGuilds(token: string): Promise<GuildInfo[]> {
@@ -272,7 +287,8 @@ export async function remove(
   messages: CollectedMessage[],
   opts: CleanOptions,
   onProgress: Progress,
-  ctrl: Controller
+  ctrl: Controller,
+  onItem?: (message: CollectedMessage, ok: boolean, error?: string) => void
 ): Promise<{ deleted: number; skipped: number }> {
   let deleted = 0;
   let skipped = 0;
@@ -282,10 +298,12 @@ export async function remove(
     try {
       await apiFetch(token, `/channels/${m.channelId || opts.channelId}/messages/${m.id}`, { method: "DELETE" });
       deleted++;
+      onItem?.(m, true);
     } catch (e: any) {
       skipped++;
       if (!String(e?.message ?? "").includes("404")) skipList.add(m.id);
       log.warn(`skip ${m.id}: ${e?.message ?? e}`);
+      onItem?.(m, false, String(e?.message ?? e));
     }
     onProgress("删除中", `已删除 ${deleted} / ${messages.length}${skipped ? `（跳过 ${skipped}）` : ""}`);
     const elapsed = Date.now() - t0;

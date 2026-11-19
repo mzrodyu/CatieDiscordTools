@@ -25,6 +25,7 @@ import {
   extractToken,
   fetchUserId,
   currentTarget,
+  takePendingTarget,
   fetchGuilds,
   fetchChannels,
   type CollectedMessage,
@@ -38,12 +39,38 @@ import {
 const log = logger("message-cleaner");
 
 type Mode = "idle" | "previewing" | "deleting";
+type LogLevel = "info" | "success" | "warn" | "error";
+
+interface LogEntry {
+  id: number;
+  time: string;
+  level: LogLevel;
+  text: string;
+}
+
+/** Keep the log pane bounded — a 5000-message flush would otherwise grow it forever. */
+const LOG_LIMIT = 500;
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function clockTime(d: Date): string {
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+}
+
+/** Map a progress headline onto a log level, so the pane reads at a glance. */
+function levelOf(state: string): LogLevel {
+  if (/失败|错误|无效|不可用/.test(state)) return "error";
+  if (/停止|跳过|索引|限速|重试/.test(state)) return "warn";
+  if (/完成|已删除|成功/.test(state)) return "success";
+  return "info";
+}
 
 function formatTs(ts: string): string {
   const date = new Date(ts);
   if (Number.isNaN(date.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
 
 export function CleanerPage(): React.ReactElement {
@@ -58,8 +85,6 @@ export function CleanerPage(): React.ReactElement {
   const [beforeStr, setBeforeStr] = useState("");
   // Order
   const [order, setOrder] = useState<string>(settings.store.order);
-  // Confirmation
-  const [disclaimer, setDisclaimer] = useState(false);
   // Runtime
   const [mode, setMode] = useState<Mode>("idle");
   const [previewed, setPreviewed] = useState<CollectedMessage[]>([]);
@@ -80,17 +105,64 @@ export function CleanerPage(): React.ReactElement {
   const ctrlRef = useRef<Controller>({ stopped: false });
   const running = mode !== "idle";
 
-  // Auto-extract token on mount
+  // --- Run log (mirrors the reference 冲水 script's log pane) ---
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const logSeq = useRef(0);
+  const logBoxRef = useRef<HTMLDivElement | null>(null);
+
+  const pushLog = (level: LogLevel, text: string) => {
+    const entry: LogEntry = { id: ++logSeq.current, time: clockTime(new Date()), level, text };
+    setLogs((prev) => {
+      const next = [...prev, entry];
+      return next.length > LOG_LIMIT ? next.slice(next.length - LOG_LIMIT) : next;
+    });
+  };
+
+  // Progress updates drive both the status line and the log pane, so every
+  // scan/delete step shows up there without extra plumbing in cleaner.ts.
+  const progress = (s: string, d: string) => {
+    setState(s);
+    setDetail(d);
+    // The delete loop reports once per message; per-item entries below cover
+    // that, so the counter line stays out of the log to keep it readable.
+    if (s === "删除中") return;
+    pushLog(levelOf(s), d ? `${s} — ${d}` : s);
+  };
+
+  // Follow the tail unless the user scrolled up to read something.
   useEffect(() => {
+    const el = logBoxRef.current;
+    if (el && autoScroll) el.scrollTop = el.scrollHeight;
+  }, [logs, autoScroll]);
+
+  const onLogScroll = () => {
+    const el = logBoxRef.current;
+    if (!el) return;
+    setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 24);
+  };
+
+  // Auto-extract token on mount. When the header button opened this page it
+  // also handed over the channel the user was looking at, so start aimed there.
+  useEffect(() => {
+    const target = takePendingTarget();
+    if (target) {
+      setGuildId(target.guildId);
+      setChannelId(target.channelId);
+      setServerWide(target.serverWide);
+    }
     const tok = extractToken();
     if (tok) {
       setToken(tok);
       setState("已获取 Token");
-      setDetail("可点击「列表」选择频道，或手动填写 ID。");
+      setDetail(target ? "已填入当前频道，可直接预览。" : "可点击「列表」选择频道，或手动填写 ID。");
+      pushLog("info", target
+        ? `已获取 Token，目标频道 ${target.channelId}`
+        : "已获取 Token");
+    } else {
+      pushLog("warn", "未自动获取到 Token，请手动粘贴。");
     }
   }, []);
-
-  const progress = (s: string, d: string) => { setState(s); setDetail(d); };
 
   const requireToken = (): string => {
     const t = token.trim();
@@ -230,10 +302,6 @@ export function CleanerPage(): React.ReactElement {
   // --- Delete ---
   const onDelete = async () => {
     if (previewed.length === 0) { progress("请先预览", ""); return; }
-    if (settings.store.confirmBeforeDelete) {
-      const ok = window.confirm(`将删除 ${previewed.length} 条消息，删除不可恢复，确认继续？`);
-      if (!ok) return;
-    }
     let tok: string;
     try { tok = requireToken(); } catch (e: any) { progress("失败", e.message); return; }
     const opts = buildOptions();
@@ -241,7 +309,11 @@ export function CleanerPage(): React.ReactElement {
     setMode("deleting");
     progress("删除中", `0 / ${previewed.length}`);
     try {
-      const result = await remove(tok, previewed, opts, progress, ctrlRef.current);
+      const result = await remove(tok, previewed, opts, progress, ctrlRef.current, (m, ok, error) => {
+        const text = m.content.trim().replace(/\s+/g, " ").slice(0, 80);
+        if (ok) pushLog("success", `已删除 ${m.id}${text ? ` · ${text}` : "（无文本）"}`);
+        else pushLog("warn", `跳过 ${m.id} · ${error ?? "未知错误"}`);
+      });
       progress(
         ctrlRef.current.stopped ? "已停止" : "完成",
         `已删除 ${result.deleted} 条${result.skipped ? `，跳过 ${result.skipped} 条` : ""}。`
@@ -339,7 +411,7 @@ export function CleanerPage(): React.ReactElement {
     <div className="hc-cleaner">
       <div className="hc-inline-note hc-inline-note--danger">
         <WarningIcon size={18} />
-        <span>删除不可恢复，且只会删除<strong>你自己</strong>发送的消息。请务必先预览确认。</span>
+        <span>只删除<strong>你自己</strong>发送的消息。建议先预览，确认范围后再删除。</span>
       </div>
 
       {/* Token */}
@@ -433,16 +505,6 @@ export function CleanerPage(): React.ReactElement {
         </div>
       </Section>
 
-      {/* Confirm */}
-      <Section title="确认" note="删除是不可逆操作，请先预览再删除。">
-        <div className="hc-cell hc-cell--row">
-          <div className="hc-cell__main">
-            <div className="hc-cell__label">我确认只删除自己的消息，且明白不可恢复</div>
-          </div>
-          <Toggle checked={disclaimer} onChange={setDisclaimer} aria-label="确认" />
-        </div>
-      </Section>
-
       {/* Actions */}
       <div className="hc-cleaner__actions">
         {mode === "previewing" ? (
@@ -456,7 +518,7 @@ export function CleanerPage(): React.ReactElement {
           <Button
             variant="destructive"
             icon={<TrashIcon size={16} />}
-            disabled={running || !disclaimer || previewed.length === 0}
+            disabled={running || previewed.length === 0}
             onClick={onDelete}
           >
             删除预览（{previewed.length}）
@@ -469,6 +531,40 @@ export function CleanerPage(): React.ReactElement {
         <div className="hc-cleaner__status-state">{state}</div>
         {detail && <div className="hc-cleaner__status-detail">{detail}</div>}
       </div>
+
+      {/* Run log */}
+      <Section title="运行日志" note="预览与删除的每一步都记在这里，可随时清空。">
+        <div className="hc-cleaner__logbar">
+          <span className="hc-cleaner__logcount">{logs.length} 条</span>
+          <Button
+            size="sm"
+            variant="plain"
+            disabled={logs.length === 0}
+            onClick={() => { setLogs([]); setAutoScroll(true); }}
+          >
+            清空
+          </Button>
+        </div>
+        <div
+          className="hc-cleaner__log"
+          ref={logBoxRef}
+          onScroll={onLogScroll}
+          role="log"
+          aria-live="polite"
+        >
+          {logs.length === 0 ? (
+            <div className="hc-cleaner__log-empty">暂无日志。点「预览」开始。</div>
+          ) : (
+            logs.map((entry) => (
+              <div className="hc-cleaner__log-row" data-level={entry.level} key={entry.id}>
+                <span className="hc-cleaner__log-time">{entry.time}</span>
+                <span className="hc-cleaner__log-level">{entry.level.toUpperCase()}</span>
+                <span className="hc-cleaner__log-text">{entry.text}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </Section>
 
       {/* Preview list */}
       {previewed.length > 0 && (

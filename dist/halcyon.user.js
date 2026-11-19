@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.26
+// @version      0.7.27
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-08 18:30:49" : "dev";
-      const version2 = true ? "0.7.26" : "dev";
+      const build = true ? "2026-11-19 07:44:03" : "dev";
+      const version2 = true ? "0.7.27" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -2634,6 +2634,59 @@ ${slices.join("\n  ...  \n")}`
   color: var(--hc-label-secondary);
 }
 
+/* Run log \u2014 the reference \u51B2\u6C34 script's console, kept monospace and scrollable
+ * so a long flush stays readable without pushing the page around. */
+.hc-cleaner__logbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--hc-space-2) var(--hc-space-4);
+  border-bottom: 1px solid var(--hc-separator);
+}
+.hc-cleaner__logcount {
+  font-size: var(--hc-text-caption1);
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__log {
+  max-height: 220px;
+  overflow: auto;
+  padding: var(--hc-space-2) 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 11.5px;
+  line-height: 1.55;
+  user-select: text;
+}
+.hc-cleaner__log-empty {
+  padding: var(--hc-space-3) var(--hc-space-4);
+  color: var(--hc-label-tertiary);
+}
+.hc-cleaner__log-row {
+  display: flex;
+  gap: var(--hc-space-2);
+  padding: 1px var(--hc-space-4);
+  color: var(--hc-label-secondary);
+  word-break: break-word;
+}
+.hc-cleaner__log-time {
+  flex-shrink: 0;
+  color: var(--hc-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.hc-cleaner__log-level {
+  flex-shrink: 0;
+  width: 44px;
+  font-weight: 600;
+  color: var(--hc-accent);
+}
+.hc-cleaner__log-row[data-level="success"] .hc-cleaner__log-level { color: var(--hc-green); }
+.hc-cleaner__log-row[data-level="warn"] .hc-cleaner__log-level { color: var(--hc-orange); }
+.hc-cleaner__log-row[data-level="error"] .hc-cleaner__log-level { color: var(--hc-red); }
+.hc-cleaner__log-text {
+  flex: 1;
+  min-width: 0;
+}
+
 /* \u2500\u2500 message-cleaner picker \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .hc-cleaner__picker-head {
   display: flex;
@@ -3287,6 +3340,36 @@ ${slices.join("\n  ...  \n")}`
   color: var(--interactive-hover, #dbdee1);
 }
 .hc-mlog-toolbtn:active {
+  color: var(--interactive-active, #fff);
+}
+
+
+/* --- Message-cleaner button in the channel header toolbar ---------------- */
+/* Same treatment as the message-log button: reads as one of Discord's own
+ * header icons, 24px hit target, muted until hover. Decorates Discord's
+ * toolbar, so literal values + Discord CSS variables. */
+.hc-cleaner-toolbtn-host {
+  display: inline-flex;
+  align-items: center;
+}
+.hc-cleaner-toolbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--interactive-normal, #b5bac1);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.hc-cleaner-toolbtn:hover {
+  color: var(--interactive-hover, #dbdee1);
+}
+.hc-cleaner-toolbtn:active {
   color: var(--interactive-active, #fff);
 }
 
@@ -4524,7 +4607,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.26" : "dev";
+    return true ? "0.7.27" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4616,7 +4699,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.26" : "dev";
+    const version2 = true ? "0.7.27" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -7137,8 +7220,8 @@ ${loc.channel ?? ""}`.toLowerCase();
     };
     if (!attach4()) {
       let tries = 0;
-      const timer3 = setInterval(() => {
-        if (attach4() || ++tries > 100) clearInterval(timer3);
+      const timer4 = setInterval(() => {
+        if (attach4() || ++tries > 100) clearInterval(timer4);
       }, 100);
     }
     if (tintInterval) clearInterval(tintInterval);
@@ -7690,17 +7773,17 @@ ${loc.channel ?? ""}`.toLowerCase();
     };
     const first = sweep();
     log14.info(`recorder attached to ${first} dispatcher instance(s)`);
-    const timer3 = setInterval(() => {
+    const timer4 = setInterval(() => {
       if (hooked.size >= MAX_DISPATCHERS) {
-        clearInterval(timer3);
+        clearInterval(timer4);
         return;
       }
       const added = sweep();
       if (added > 0) log14.info(`recorder attached to ${added} late dispatcher instance(s)`);
     }, 5e3);
-    const stopTimer = setTimeout(() => clearInterval(timer3), 6e4);
+    const stopTimer = setTimeout(() => clearInterval(timer4), 6e4);
     return () => {
-      clearInterval(timer3);
+      clearInterval(timer4);
       clearTimeout(stopTimer);
       undo.forEach((u) => u());
     };
@@ -8549,13 +8632,6 @@ ${loc.channel ?? ""}`.toLowerCase();
       min: 300,
       max: 3e4,
       step: 100
-    },
-    confirmBeforeDelete: {
-      group: "\u9ED8\u8BA4\u53C2\u6570",
-      type: "boolean",
-      default: true,
-      label: "\u5220\u9664\u524D\u4E8C\u6B21\u786E\u8BA4",
-      description: "\u70B9\u300C\u5220\u9664\u300D\u540E\u5F39\u51FA\u786E\u8BA4\u6846\uFF0C\u907F\u514D\u8BEF\u5220\u3002"
     }
   });
 
@@ -8644,6 +8720,15 @@ ${loc.channel ?? ""}`.toLowerCase();
     } catch {
       return null;
     }
+  }
+  var pendingTarget = null;
+  function setPendingTarget(target) {
+    pendingTarget = target;
+  }
+  function takePendingTarget() {
+    const target = pendingTarget;
+    pendingTarget = null;
+    return target;
   }
   async function fetchGuilds(token) {
     const guilds = await apiFetch(token, "/users/@me/guilds");
@@ -8740,7 +8825,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     }
     return out;
   }
-  async function remove(token, messages, opts, onProgress, ctrl) {
+  async function remove(token, messages, opts, onProgress, ctrl, onItem) {
     let deleted = 0;
     let skipped = 0;
     for (const m of messages) {
@@ -8749,10 +8834,12 @@ ${loc.channel ?? ""}`.toLowerCase();
       try {
         await apiFetch(token, `/channels/${m.channelId || opts.channelId}/messages/${m.id}`, { method: "DELETE" });
         deleted++;
+        onItem?.(m, true);
       } catch (e) {
         skipped++;
         if (!String(e?.message ?? "").includes("404")) skipList.add(m.id);
         log18.warn(`skip ${m.id}: ${e?.message ?? e}`);
+        onItem?.(m, false, String(e?.message ?? e));
       }
       onProgress("\u5220\u9664\u4E2D", `\u5DF2\u5220\u9664 ${deleted} / ${messages.length}${skipped ? `\uFF08\u8DF3\u8FC7 ${skipped}\uFF09` : ""}`);
       const elapsed = Date.now() - t0;
@@ -8779,11 +8866,23 @@ ${loc.channel ?? ""}`.toLowerCase();
 
   // src/plugins/message-cleaner/ui/CleanerPage.tsx
   var log19 = logger("message-cleaner");
+  var LOG_LIMIT = 500;
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+  function clockTime(d) {
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  }
+  function levelOf(state) {
+    if (/失败|错误|无效|不可用/.test(state)) return "error";
+    if (/停止|跳过|索引|限速|重试/.test(state)) return "warn";
+    if (/完成|已删除|成功/.test(state)) return "success";
+    return "info";
+  }
   function formatTs(ts) {
     const date = new Date(ts);
     if (Number.isNaN(date.getTime())) return "";
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
   }
   function CleanerPage() {
     const [token, setToken] = useState("");
@@ -8793,7 +8892,6 @@ ${loc.channel ?? ""}`.toLowerCase();
     const [afterStr, setAfterStr] = useState("");
     const [beforeStr, setBeforeStr] = useState("");
     const [order, setOrder] = useState(settings4.store.order);
-    const [disclaimer, setDisclaimer] = useState(false);
     const [mode, setMode] = useState("idle");
     const [previewed, setPreviewed] = useState([]);
     const [state, setState] = useState("\u5F85\u673A");
@@ -8808,18 +8906,49 @@ ${loc.channel ?? ""}`.toLowerCase();
     const [pickerError, setPickerError] = useState("");
     const ctrlRef = useRef({ stopped: false });
     const running2 = mode !== "idle";
+    const [logs, setLogs] = useState([]);
+    const [autoScroll, setAutoScroll] = useState(true);
+    const logSeq = useRef(0);
+    const logBoxRef = useRef(null);
+    const pushLog = (level, text) => {
+      const entry = { id: ++logSeq.current, time: clockTime(/* @__PURE__ */ new Date()), level, text };
+      setLogs((prev) => {
+        const next = [...prev, entry];
+        return next.length > LOG_LIMIT ? next.slice(next.length - LOG_LIMIT) : next;
+      });
+    };
+    const progress = (s, d) => {
+      setState(s);
+      setDetail(d);
+      if (s === "\u5220\u9664\u4E2D") return;
+      pushLog(levelOf(s), d ? `${s} \u2014 ${d}` : s);
+    };
     useEffect(() => {
+      const el = logBoxRef.current;
+      if (el && autoScroll) el.scrollTop = el.scrollHeight;
+    }, [logs, autoScroll]);
+    const onLogScroll = () => {
+      const el = logBoxRef.current;
+      if (!el) return;
+      setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 24);
+    };
+    useEffect(() => {
+      const target = takePendingTarget();
+      if (target) {
+        setGuildId(target.guildId);
+        setChannelId(target.channelId);
+        setServerWide(target.serverWide);
+      }
       const tok = extractToken();
       if (tok) {
         setToken(tok);
         setState("\u5DF2\u83B7\u53D6 Token");
-        setDetail("\u53EF\u70B9\u51FB\u300C\u5217\u8868\u300D\u9009\u62E9\u9891\u9053\uFF0C\u6216\u624B\u52A8\u586B\u5199 ID\u3002");
+        setDetail(target ? "\u5DF2\u586B\u5165\u5F53\u524D\u9891\u9053\uFF0C\u53EF\u76F4\u63A5\u9884\u89C8\u3002" : "\u53EF\u70B9\u51FB\u300C\u5217\u8868\u300D\u9009\u62E9\u9891\u9053\uFF0C\u6216\u624B\u52A8\u586B\u5199 ID\u3002");
+        pushLog("info", target ? `\u5DF2\u83B7\u53D6 Token\uFF0C\u76EE\u6807\u9891\u9053 ${target.channelId}` : "\u5DF2\u83B7\u53D6 Token");
+      } else {
+        pushLog("warn", "\u672A\u81EA\u52A8\u83B7\u53D6\u5230 Token\uFF0C\u8BF7\u624B\u52A8\u7C98\u8D34\u3002");
       }
     }, []);
-    const progress = (s, d) => {
-      setState(s);
-      setDetail(d);
-    };
     const requireToken = () => {
       const t = token.trim();
       if (!t) throw new Error("\u8BF7\u5148\u83B7\u53D6\u6216\u586B\u5165 Token\u3002");
@@ -8961,10 +9090,6 @@ ${loc.channel ?? ""}`.toLowerCase();
         progress("\u8BF7\u5148\u9884\u89C8", "");
         return;
       }
-      if (settings4.store.confirmBeforeDelete) {
-        const ok = window.confirm(`\u5C06\u5220\u9664 ${previewed.length} \u6761\u6D88\u606F\uFF0C\u5220\u9664\u4E0D\u53EF\u6062\u590D\uFF0C\u786E\u8BA4\u7EE7\u7EED\uFF1F`);
-        if (!ok) return;
-      }
       let tok;
       try {
         tok = requireToken();
@@ -8977,7 +9102,11 @@ ${loc.channel ?? ""}`.toLowerCase();
       setMode("deleting");
       progress("\u5220\u9664\u4E2D", `0 / ${previewed.length}`);
       try {
-        const result = await remove(tok, previewed, opts, progress, ctrlRef.current);
+        const result = await remove(tok, previewed, opts, progress, ctrlRef.current, (m, ok, error) => {
+          const text = m.content.trim().replace(/\s+/g, " ").slice(0, 80);
+          if (ok) pushLog("success", `\u5DF2\u5220\u9664 ${m.id}${text ? ` \xB7 ${text}` : "\uFF08\u65E0\u6587\u672C\uFF09"}`);
+          else pushLog("warn", `\u8DF3\u8FC7 ${m.id} \xB7 ${error ?? "\u672A\u77E5\u9519\u8BEF"}`);
+        });
         progress(
           ctrlRef.current.stopped ? "\u5DF2\u505C\u6B62" : "\u5B8C\u6210",
           `\u5DF2\u5220\u9664 ${result.deleted} \u6761${result.skipped ? `\uFF0C\u8DF3\u8FC7 ${result.skipped} \u6761` : ""}\u3002`
@@ -9055,7 +9184,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, ch.name)
       ))));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u5220\u9664\u4E0D\u53EF\u6062\u590D\uFF0C\u4E14\u53EA\u4F1A\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u8BF7\u52A1\u5FC5\u5148\u9884\u89C8\u786E\u8BA4\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running2 }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running2 }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u53EA\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u5EFA\u8BAE\u5148\u9884\u89C8\uFF0C\u786E\u8BA4\u8303\u56F4\u540E\u518D\u5220\u9664\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running2 }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running2 }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
       Select,
       {
         value: order,
@@ -9065,22 +9194,133 @@ ${loc.channel ?? ""}`.toLowerCase();
           { value: "asc", label: "\u4ECE\u8001\u5230\u65B0" }
         ]
       }
-    ))), /* @__PURE__ */ React.createElement(Section, { title: "\u786E\u8BA4", note: "\u5220\u9664\u662F\u4E0D\u53EF\u9006\u64CD\u4F5C\uFF0C\u8BF7\u5148\u9884\u89C8\u518D\u5220\u9664\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6211\u786E\u8BA4\u53EA\u5220\u9664\u81EA\u5DF1\u7684\u6D88\u606F\uFF0C\u4E14\u660E\u767D\u4E0D\u53EF\u6062\u590D")), /* @__PURE__ */ React.createElement(Toggle, { checked: disclaimer, onChange: setDisclaimer, "aria-label": "\u786E\u8BA4" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__actions" }, mode === "previewing" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u9884\u89C8") : /* @__PURE__ */ React.createElement(Button, { variant: "primary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onPreview }, "\u9884\u89C8"), mode === "deleting" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u5220\u9664") : /* @__PURE__ */ React.createElement(
+    ))), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__actions" }, mode === "previewing" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u9884\u89C8") : /* @__PURE__ */ React.createElement(Button, { variant: "primary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onPreview }, "\u9884\u89C8"), mode === "deleting" ? /* @__PURE__ */ React.createElement(Button, { variant: "destructive", onClick: onStop }, "\u505C\u6B62\u5220\u9664") : /* @__PURE__ */ React.createElement(
       Button,
       {
         variant: "destructive",
         icon: /* @__PURE__ */ React.createElement(TrashIcon, { size: 16 }),
-        disabled: running2 || !disclaimer || previewed.length === 0,
+        disabled: running2 || previewed.length === 0,
         onClick: onDelete
       },
       "\u5220\u9664\u9884\u89C8\uFF08",
       previewed.length,
       "\uFF09"
-    )), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-state" }, state), detail && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-detail" }, detail)), previewed.length > 0 && /* @__PURE__ */ React.createElement(Section, { title: `\u9884\u89C8\u7ED3\u679C\uFF08${previewed.length}\uFF09` }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__list" }, previewed.slice(0, 50).map((m) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__item", key: m.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-time" }, formatTs(m.timestamp)), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-text" }, m.content.trim() || "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09"))), previewed.length > 50 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u2026\u8FD8\u6709 ", previewed.length - 50, " \u6761\u672A\u5C55\u793A"))), /* @__PURE__ */ React.createElement(Section, { title: "\u7EDF\u8BA1", note: "\u7EDF\u8BA1\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u5386\u53F2\u53D1\u8A00\u603B\u6570\uFF08\u8C03\u7528\u641C\u7D22\u63A5\u53E3\uFF09\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onCount }, "\u7EDF\u8BA1\u6211\u7684\u53D1\u8A00\u6570")), statCount != null && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cleaner__stat" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-num" }, statCount), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-unit" }, "\u6761"))));
+    )), /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-state" }, state), detail && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__status-detail" }, detail)), /* @__PURE__ */ React.createElement(Section, { title: "\u8FD0\u884C\u65E5\u5FD7", note: "\u9884\u89C8\u4E0E\u5220\u9664\u7684\u6BCF\u4E00\u6B65\u90FD\u8BB0\u5728\u8FD9\u91CC\uFF0C\u53EF\u968F\u65F6\u6E05\u7A7A\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__logbar" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__logcount" }, logs.length, " \u6761"), /* @__PURE__ */ React.createElement(
+      Button,
+      {
+        size: "sm",
+        variant: "plain",
+        disabled: logs.length === 0,
+        onClick: () => {
+          setLogs([]);
+          setAutoScroll(true);
+        }
+      },
+      "\u6E05\u7A7A"
+    )), /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "hc-cleaner__log",
+        ref: logBoxRef,
+        onScroll: onLogScroll,
+        role: "log",
+        "aria-live": "polite"
+      },
+      logs.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__log-empty" }, "\u6682\u65E0\u65E5\u5FD7\u3002\u70B9\u300C\u9884\u89C8\u300D\u5F00\u59CB\u3002") : logs.map((entry) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__log-row", "data-level": entry.level, key: entry.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__log-time" }, entry.time), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__log-level" }, entry.level.toUpperCase()), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__log-text" }, entry.text)))
+    )), previewed.length > 0 && /* @__PURE__ */ React.createElement(Section, { title: `\u9884\u89C8\u7ED3\u679C\uFF08${previewed.length}\uFF09` }, /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__list" }, previewed.slice(0, 50).map((m) => /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__item", key: m.id }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-time" }, formatTs(m.timestamp)), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__item-text" }, m.content.trim() || "\uFF08\u65E0\u6587\u672C\u5185\u5BB9\uFF09"))), previewed.length > 50 && /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__more" }, "\u2026\u8FD8\u6709 ", previewed.length - 50, " \u6761\u672A\u5C55\u793A"))), /* @__PURE__ */ React.createElement(Section, { title: "\u7EDF\u8BA1", note: "\u7EDF\u8BA1\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u5386\u53F2\u53D1\u8A00\u603B\u6570\uFF08\u8C03\u7528\u641C\u7D22\u63A5\u53E3\uFF09\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(SearchIcon, { size: 16 }), disabled: running2, onClick: onCount }, "\u7EDF\u8BA1\u6211\u7684\u53D1\u8A00\u6570")), statCount != null && /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cleaner__stat" }, /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-num" }, statCount), /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__stat-unit" }, "\u6761"))));
+  }
+
+  // src/plugins/message-cleaner/toolbar-button.tsx
+  var log20 = logger("message-cleaner");
+  var TOOLBAR_ANCHORS2 = [
+    'section[class*="title_"] [class*="toolbar_"]',
+    'section[class*="title"] [class*="toolbar"]',
+    '[class*="upperContainer"] [class*="toolbar"]',
+    '[class*="chat_"] [class*="toolbar_"]',
+    '[class*="toolbar_"]'
+  ];
+  var ENSURE_MS2 = 1e3;
+  var host3 = null;
+  var unmount3 = null;
+  var timer3;
+  function CleanerButton() {
+    const onClick2 = () => {
+      setPendingTarget(currentTarget());
+      openSettings({ pluginId: "message-cleaner" });
+    };
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "hc-cleaner-toolbtn",
+        "aria-label": "\u6D88\u606F\u6E05\u7406",
+        title: "\u51B2\u6C34\uFF08\u5220\u9664\u81EA\u5DF1\u7684\u6D88\u606F\uFF09",
+        onClick: onClick2
+      },
+      /* @__PURE__ */ React.createElement(TrashIcon, { size: 24 })
+    );
+  }
+  function findToolbar2() {
+    for (const selector of TOOLBAR_ANCHORS2) {
+      try {
+        const el = document.querySelector(selector);
+        if (el) return el;
+      } catch {
+      }
+    }
+    return null;
+  }
+  function ensureMounted2() {
+    if (host3 && document.contains(host3)) return;
+    if (host3) teardown2();
+    const toolbar = findToolbar2();
+    if (!toolbar) return;
+    const el = document.createElement("div");
+    el.className = "hc-cleaner-toolbtn-host";
+    el.setAttribute("data-hc-plugin", "message-cleaner");
+    try {
+      toolbar.insertBefore(el, toolbar.firstChild);
+    } catch {
+      return;
+    }
+    try {
+      const off = mountDetached(React.createElement(CleanerButton), el);
+      host3 = el;
+      unmount3 = off;
+    } catch (err) {
+      el.remove();
+      log20.debug("toolbar button mount failed", err);
+    }
+  }
+  function teardown2() {
+    if (unmount3) {
+      try {
+        unmount3();
+      } catch {
+      }
+      unmount3 = null;
+    }
+    if (host3) {
+      host3.remove();
+      host3 = null;
+    }
+  }
+  function startCleanerToolbarButton() {
+    injectStyles();
+    stopCleanerToolbarButton();
+    ensureMounted2();
+    timer3 = setInterval(ensureMounted2, ENSURE_MS2);
+  }
+  function stopCleanerToolbarButton() {
+    if (timer3) {
+      clearInterval(timer3);
+      timer3 = void 0;
+    }
+    teardown2();
   }
 
   // src/plugins/message-cleaner/index.tsx
-  var log20 = logger("message-cleaner");
+  var log21 = logger("message-cleaner");
   var message_cleaner_default = definePlugin({
     id: "message-cleaner",
     name: "\u6D88\u606F\u6E05\u7406",
@@ -9094,14 +9334,16 @@ ${loc.channel ?? ""}`.toLowerCase();
       component: CleanerPage
     },
     start() {
-      log20.info("message-cleaner ready");
+      startCleanerToolbarButton();
+      log21.info("message-cleaner ready");
     },
     stop() {
+      stopCleanerToolbarButton();
     }
   });
 
   // src/plugins/fake-nitro/index.ts
-  var log21 = logger("fake-nitro");
+  var log22 = logger("fake-nitro");
   var settings5 = defineSettings({
     enableEmojiBypass: {
       group: "\u8868\u60C5",
@@ -9291,7 +9533,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const canUse = canUseStickersNatively() && hasPermission(channelId, PERM.USE_EXTERNAL_STICKERS);
     if (sticker.available !== false && (canUse || sticker.guild_id === guildId)) return false;
     if (sticker.format_type === STICKER_LOTTIE) {
-      log21.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
+      log22.warn("Lottie \u8D34\u7EB8\u65E0\u6CD5\u4F5C\u4E3A\u56FE\u7247\u5185\u8054\uFF0C\u5DF2\u8DF3\u8FC7\uFF1A", sticker.name);
       return false;
     }
     const url = renderLink(stickerUrl(sticker), String(sticker?.name ?? ""));
@@ -9355,7 +9597,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       if (options) rewriteStickers(channelId, message, options, guildId);
       rewriteEmojis(channelId, message, guildId);
     } catch (err) {
-      log21.error("send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+      log22.error("send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
     }
   }
   function onEditMessage(ctx) {
@@ -9376,13 +9618,13 @@ ${loc.channel ?? ""}`.toLowerCase();
         }
       );
     } catch (err) {
-      log21.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
+      log22.error("edit \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u4FDD\u5B58", err);
     }
   }
   function reportPatches2() {
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "fake-nitro");
     if (!mine.length) {
-      log21.warn(
+      log22.warn(
         "\u672C\u63D2\u4EF6\u6CA1\u6709\u6CE8\u518C\u4EFB\u4F55\u6E90\u7801 patch \u2014\u2014 \u542F\u52A8\u65F6\u5B83\u5904\u4E8E\u5173\u95ED\u72B6\u6001\u3002\u5728\u8BBE\u7F6E\u91CC\u6253\u5F00\u201C\u5047 Nitro\u201D\u540E\u5FC5\u987B\u5237\u65B0\u9875\u9762\uFF1A\u6E90\u7801 patch \u53EA\u5728\u6A21\u5757\u52A0\u8F7D\u90A3\u4E00\u523B\u751F\u6548\uFF0C\u4E2D\u9014\u5F00\u542F\u4E0D\u4F1A\u8865\u4E0A\u3002"
       );
       return;
@@ -9391,23 +9633,23 @@ ${loc.channel ?? ""}`.toLowerCase();
     const missed = mine.filter((p) => !p.applied && !p.optional);
     const degraded = mine.filter((p) => !p.applied && p.optional);
     if (missed.length === 0) {
-      log21.info(`\u8868\u60C5 / \u8D34\u7EB8\u89E3\u9501\u7684\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548\uFF08\u5171 ${mine.length} \u5904\u66FF\u6362\uFF09`);
+      log22.info(`\u8868\u60C5 / \u8D34\u7EB8\u89E3\u9501\u7684\u6E90\u7801 patch \u5747\u5DF2\u5728\u5F53\u524D Discord \u7248\u672C\u751F\u6548\uFF08\u5171 ${mine.length} \u5904\u66FF\u6362\uFF09`);
     } else {
       const stale = missed.filter((p) => p.seen > 0);
       const unseen = missed.filter((p) => p.seen === 0);
       if (stale.length > 0) {
-        log21.warn(
+        log22.warn(
           "\u4EE5\u4E0B patch \u627E\u5230\u4E86\u76EE\u6807\u6A21\u5757\uFF0C\u4F46\u66FF\u6362\u6B63\u5219\u5DF2\u5BF9\u4E0D\u4E0A\u5F53\u524D Discord \u7248\u672C\uFF08\u9700\u8981\u91CD\u951A\uFF09\uFF1A" + stale.map(name).join("\u3001")
         );
       }
       if (unseen.length > 0) {
-        log21.warn(
+        log22.warn(
           "\u4EE5\u4E0B patch \u4ECE\u672A\u62FF\u5230\u76EE\u6807\u6A21\u5757 \u2014\u2014 \u6A21\u5757\u8FD8\u6CA1\u52A0\u8F7D\uFF0C\u6216 find \u5DF2\u5931\u6548\uFF1A" + unseen.map(name).join("\u3001") + "\u3002\u82E5\u76F8\u5173\u754C\u9762\uFF08\u8868\u60C5\u9009\u62E9\u5668\u7B49\uFF09\u5DF2\u7ECF\u6253\u5F00\u8FC7\u4ECD\u662F\u8FD9\u6837\uFF0C\u5C31\u662F find \u9700\u8981\u66F4\u65B0\u3002"
         );
       }
     }
     if (degraded.length > 0) {
-      log21.info("\u4EE5\u4E0B\u53EF\u9009 patch \u672A\u5339\u914D\uFF08\u4EC5\u5F71\u54CD\u9644\u5E26\u529F\u80FD\uFF0C\u4E0D\u5F71\u54CD\u8868\u60C5 / \u8D34\u7EB8\uFF09\uFF1A" + degraded.map(name).join("\u3001"));
+      log22.info("\u4EE5\u4E0B\u53EF\u9009 patch \u672A\u5339\u914D\uFF08\u4EC5\u5F71\u54CD\u9644\u5E26\u529F\u80FD\uFF0C\u4E0D\u5F71\u54CD\u8868\u60C5 / \u8D34\u7EB8\uFF09\uFF1A" + degraded.map(name).join("\u3001"));
     }
   }
   var IS_BYPASSEABLE_INTENTION = `[${INTENT_CHAT},${INTENT_STICKER_EMOJI}].includes(typeof fakeNitroIntention==="undefined"?-1:fakeNitroIntention)`;
@@ -9698,19 +9940,19 @@ ${loc.channel ?? ""}`.toLowerCase();
           try {
             unpatchSend = patcher.before(messageActions, "sendMessage", onSendMessage);
           } catch (err) {
-            log21.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
+            log22.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
           }
         }
         if (typeof messageActions.editMessage === "function") {
           try {
             unpatchEdit = patcher.before(messageActions, "editMessage", onEditMessage);
           } catch (err) {
-            log21.error("\u6302\u63A5 editMessage \u5931\u8D25", err);
+            log22.error("\u6302\u63A5 editMessage \u5931\u8D25", err);
           }
         }
-        log21.info("MessageActions \u5DF2\u6302\u63A5\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF1B\u82E5 pre-send \u8865\u4E01\u5DF2\u751F\u6548\u5219\u6B64 hook \u4EC5\u4F5C fallback\uFF09");
+        log22.info("MessageActions \u5DF2\u6302\u63A5\uFF08\u53D1\u9001 / \u7F16\u8F91\u6539\u5199\u5C31\u7EEA\uFF1B\u82E5 pre-send \u8865\u4E01\u5DF2\u751F\u6548\u5219\u6B64 hook \u4EC5\u4F5C fallback\uFF09");
       } else {
-        log21.warn(
+        log22.warn(
           "\u672A\u627E\u5230 MessageActions \u2014\u2014 \u9009\u62E9\u5668\u89E3\u9501\u5DF2\u901A\u8FC7\u6E90\u7801 patch \u751F\u6548\uFF0C\u4F46\u53D1\u9001\u65F6\u7684 URL \u6539\u5199\u4E0D\u53EF\u7528\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\uFF1B\u82E5\u4ECD\u672A\u627E\u5230\uFF0C\u8BF4\u660E\u8BE5 Discord \u7248\u672C\u7684 MessageActions \u5F62\u72B6\u6709\u53D8\u3002"
         );
       }
@@ -9740,7 +9982,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         rewriteEmojis(channelId, messageObj, guildId);
         messageObj.__fakeNitroRewritten = true;
       } catch (err) {
-        log21.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+        log22.error("pre-send \u6539\u5199\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
       }
       return false;
     },
@@ -9763,7 +10005,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         rewriteEmojis(channelId, scratch, guildIdOfChannel(channelId));
         return scratch.content;
       } catch (err) {
-        log21.debug("previewOutgoing \u5931\u8D25\uFF0C\u6309\u539F\u6587\u8FD4\u56DE", err);
+        log22.debug("previewOutgoing \u5931\u8D25\uFF0C\u6309\u539F\u6587\u8FD4\u56DE", err);
         return content;
       }
     }
@@ -9804,7 +10046,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-preview/render.tsx
-  var log22 = logger("message-preview");
+  var log23 = logger("message-preview");
   var parserChecked = false;
   var parser;
   var parserRejected = false;
@@ -9836,8 +10078,8 @@ ${loc.channel ?? ""}`.toLowerCase();
   function announce(message, err) {
     if (announced) return;
     announced = true;
-    if (err) log22.debug(message, err);
-    else log22.debug(message);
+    if (err) log23.debug(message, err);
+    else log23.debug(message);
   }
   function renderMessageContent(content, channelId) {
     if (!parserRejected) {
@@ -9894,7 +10136,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-preview/classes.ts
-  var log23 = logger("message-preview");
+  var log24 = logger("message-preview");
   var checked = false;
   var cached3 = "";
   function looksLikeMarkupClasses(m) {
@@ -9926,7 +10168,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       cached3 = "";
     }
     if (!cached3) {
-      log23.debug("\u672A\u627E\u5230 Discord \u7684 markup \u5BB9\u5668\u7C7B\uFF0C\u9884\u89C8\u5C06\u663E\u793A\u4E3A\u65E0\u6837\u5F0F\u6587\u672C\uFF08\u7ED3\u6784\u6B63\u786E\u3001\u5B57\u53F7/\u659C\u4F53\u7B49\u4E0D\u751F\u6548\uFF09");
+      log24.debug("\u672A\u627E\u5230 Discord \u7684 markup \u5BB9\u5668\u7C7B\uFF0C\u9884\u89C8\u5C06\u663E\u793A\u4E3A\u65E0\u6837\u5F0F\u6587\u672C\uFF08\u7ED3\u6784\u6B63\u786E\u3001\u5B57\u53F7/\u659C\u4F53\u7B49\u4E0D\u751F\u6548\uFF09");
     }
     return cached3;
   }
@@ -10044,7 +10286,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const hadContent = useRef(readDraft(initialChannel).trim().length > 0);
     useEffect(() => {
       if (!settings6.store.liveUpdate) return;
-      let timer3;
+      let timer4;
       let poll;
       let disposed = false;
       const sample2 = () => {
@@ -10058,14 +10300,14 @@ ${loc.channel ?? ""}`.toLowerCase();
         hadContent.current = has;
       };
       const schedule3 = () => {
-        if (timer3) clearTimeout(timer3);
-        timer3 = setTimeout(sample2, DEBOUNCE_MS);
+        if (timer4) clearTimeout(timer4);
+        timer4 = setTimeout(sample2, DEBOUNCE_MS);
       };
       const { attached, off } = subscribeToDraft(schedule3);
       poll = setInterval(sample2, attached ? POLL_MS * 4 : POLL_MS);
       return () => {
         disposed = true;
-        if (timer3) clearTimeout(timer3);
+        if (timer4) clearTimeout(timer4);
         if (poll) clearInterval(poll);
         off();
       };
@@ -10074,7 +10316,7 @@ ${loc.channel ?? ""}`.toLowerCase();
   }
 
   // src/plugins/message-preview/button.tsx
-  var log24 = logger("message-preview");
+  var log25 = logger("message-preview");
   var REPOSITION_MS = 250;
   var GAP_PX = 8;
   var panelHost = null;
@@ -10128,7 +10370,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       panelHost = el;
     } catch (err) {
       el.remove();
-      log24.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
+      log25.error("\u9884\u89C8\u9762\u677F\u6302\u8F7D\u5931\u8D25", err);
       return;
     }
     reposition();
@@ -10342,7 +10584,7 @@ ${tail}`;
   }
 
   // src/plugins/message-tail/index.ts
-  var log25 = logger("message-tail");
+  var log26 = logger("message-tail");
   var settings7 = defineSettings({
     template: {
       group: "\u5C3E\u5DF4",
@@ -10445,7 +10687,7 @@ ${tail}`;
       message.content = content;
       message.__halcyonTailed = true;
     } catch (err) {
-      log25.error("\u52A0\u5C3E\u5DF4\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
+      log26.error("\u52A0\u5C3E\u5DF4\u5931\u8D25\uFF0C\u6D88\u606F\u6309\u539F\u6837\u53D1\u9001", err);
     }
   }
   var message_tail_default = definePlugin({
@@ -10461,14 +10703,14 @@ ${tail}`;
         (m) => typeof m?.sendMessage === "function" && typeof m?.editMessage === "function" && typeof m?.deleteMessage === "function" && typeof m?.__halcyon_probe__ === "undefined"
       );
       if (!messageActions) {
-        log25.warn("\u672A\u627E\u5230 MessageActions\uFF0C\u5C3E\u5DF4\u65E0\u6CD5\u8FFD\u52A0\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
+        log26.warn("\u672A\u627E\u5230 MessageActions\uFF0C\u5C3E\u5DF4\u65E0\u6CD5\u8FFD\u52A0\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
         return;
       }
       try {
         unpatchSend2 = patcher.before(messageActions, "sendMessage", onSendMessage2);
-        log25.info("\u5DF2\u6302\u63A5 sendMessage\uFF0C\u53D1\u6D88\u606F\u65F6\u4F1A\u8FFD\u52A0\u5C3E\u5DF4");
+        log26.info("\u5DF2\u6302\u63A5 sendMessage\uFF0C\u53D1\u6D88\u606F\u65F6\u4F1A\u8FFD\u52A0\u5C3E\u5DF4");
       } catch (err) {
-        log25.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
+        log26.error("\u6302\u63A5 sendMessage \u5931\u8D25", err);
       }
     },
     stop() {
@@ -10563,7 +10805,7 @@ ${tail}`;
   }
 
   // src/plugins/custom-rpc/assets.ts
-  var log26 = logger("custom-rpc");
+  var log27 = logger("custom-rpc");
   var cache2 = /* @__PURE__ */ new Map();
   function endpoint(appId) {
     try {
@@ -10592,7 +10834,7 @@ ${tail}`;
       });
     } catch (err) {
       for (const url of pending2) cache2.set(url, null);
-      log26.debug("\u56FE\u7247\u6362\u53D6\u8D44\u6E90 id \u5931\u8D25\uFF08\u5E94\u7528 ID \u662F\u5426\u6B63\u786E\uFF1F\u56FE\u7247\u80FD\u516C\u5F00\u8BBF\u95EE\u5417\uFF1F\uFF09", err);
+      log27.debug("\u56FE\u7247\u6362\u53D6\u8D44\u6E90 id \u5931\u8D25\uFF08\u5E94\u7528 ID \u662F\u5426\u6B63\u786E\uFF1F\u56FE\u7247\u80FD\u516C\u5F00\u8BBF\u95EE\u5417\uFF1F\uFF09", err);
     }
   }
   function clearAssetCache() {
@@ -10600,7 +10842,7 @@ ${tail}`;
   }
 
   // src/plugins/custom-rpc/index.ts
-  var log27 = logger("custom-rpc");
+  var log28 = logger("custom-rpc");
   var SOCKET_ID = "halcyon-custom-rpc";
   var settings8 = defineSettings({
     name: {
@@ -10742,7 +10984,7 @@ ${tail}`;
     try {
       getDispatcher()?.dispatch({ type: "LOCAL_ACTIVITY_UPDATE", socketId: SOCKET_ID, activity });
     } catch (err) {
-      log27.error("presence \u4E0B\u53D1\u5931\u8D25", err);
+      log28.error("presence \u4E0B\u53D1\u5931\u8D25", err);
     }
   }
   async function push() {
@@ -10762,7 +11004,7 @@ ${tail}`;
       const summary = built.problems.join(" / ");
       if (summary !== lastProblems) {
         lastProblems = summary;
-        if (summary) log27.warn(summary);
+        if (summary) log28.warn(summary);
       }
       const urls = [config.largeImage, config.smallImage].map((v) => v.trim()).filter(isExternalImage);
       const missing = urls.filter((u) => cachedAsset(u) === void 0);
@@ -10940,7 +11182,7 @@ ${tail}`;
   });
 
   // src/plugins/console-cleaner/index.ts
-  var log28 = logger("console-cleaner");
+  var log29 = logger("console-cleaner");
   var settings10 = defineSettings({
     hideSelfXss: {
       group: "\u5185\u7F6E\u89C4\u5219",
@@ -11052,7 +11294,7 @@ ${tail}`;
     start() {
       const con = globalThis.console;
       if (!con) {
-        log28.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
+        log29.warn("\u672A\u627E\u5230 console \u5BF9\u8C61\uFF0C\u63D2\u4EF6\u65E0\u4E8B\u53EF\u505A");
         return;
       }
       suppressedCount = 0;
@@ -11062,11 +11304,11 @@ ${tail}`;
           try {
             unpatchers.push(patcher.instead(con, method, hook));
           } catch (err) {
-            log28.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
+            log29.error(`\u6302\u63A5 console.${method} \u5931\u8D25`, err);
           }
         }
       }
-      log28.info(
+      log29.info(
         `\u5DF2\u51C0\u5316 console\uFF08\u62E6\u622A ${unpatchers.length} \u4E2A\u65B9\u6CD5\uFF09\u3002\u6CE8\u610F\uFF1A\u6D4F\u89C8\u5668\u81EA\u8EAB\u4EA7\u751F\u7684\u8B66\u544A\uFF08\u5982\u67D0\u4E9B preload \u63D0\u793A\uFF09\u65E0\u6CD5\u901A\u8FC7 JS \u62E6\u622A\u3002`
       );
     },
@@ -11078,12 +11320,12 @@ ${tail}`;
         }
       }
       unpatchers = [];
-      log28.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
+      log29.info(`\u5DF2\u6062\u590D\u539F\u59CB console\uFF08\u672C\u6B21\u5171\u5C4F\u853D ${suppressedCount} \u6761\u6D88\u606F\uFF09`);
     }
   });
 
   // src/plugins/emote-cloner/clone.ts
-  var log29 = logger("emote-cloner");
+  var log30 = logger("emote-cloner");
   var MAX_EMOJI_SIZE_BYTES = 256 * 1024;
   var MAX_STICKER_SIZE_BYTES = 512 * 1024;
   var uploadEmojiAction = null;
@@ -11177,14 +11419,14 @@ ${tail}`;
         await upload({ guildId, name, image });
         return;
       } catch (err) {
-        log29.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
+        log30.error("emoji \u4E0A\u4F20\uFF08action\uFF09\u5931\u8D25", err);
         throw new Error(restErrorMessage(err));
       }
     }
     try {
       await RestAPI.post({ url: `/guilds/${guildId}/emojis`, body: { image, name, roles: [] } });
     } catch (err) {
-      log29.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
+      log30.error("emoji \u4E0A\u4F20\uFF08REST\uFF09\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
   }
@@ -11205,7 +11447,7 @@ ${tail}`;
       }
       return body;
     } catch (err) {
-      log29.warn("could not fetch sticker info; using fallbacks", err);
+      log30.warn("could not fetch sticker info; using fallbacks", err);
       return null;
     }
   }
@@ -11234,10 +11476,10 @@ ${tail}`;
       created = resPayload(res);
       if (created && !created.id && created.sticker?.id) created = created.sticker;
     } catch (err) {
-      log29.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
+      log30.error("sticker \u4E0A\u4F20\u5931\u8D25", err);
       throw new Error(restErrorMessage(err));
     }
-    log29.info("sticker uploaded", { id: created?.id, name: created?.name });
+    log30.info("sticker uploaded", { id: created?.id, name: created?.name });
     try {
       getDispatcher()?.dispatch({
         type: "GUILD_STICKERS_CREATE_SUCCESS",
@@ -11249,7 +11491,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/resolve.ts
-  var log30 = logger("emote-cloner");
+  var log31 = logger("emote-cloner");
   var SNOWFLAKE = /^\d{5,25}$/;
   var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
   function emojiName(raw) {
@@ -11516,9 +11758,9 @@ ${tail}`;
     const record2 = recordFromFiber(target, found.id);
     const resolved = emojiName(record2?.name) ?? emojiNameFromMessages(target, found.id) ?? emojiNameFromStore(found.id) ?? emojiNameFromDom(elements) ?? emojiName(found.domName);
     if (!resolved) {
-      log30.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
+      log31.warn(`could not resolve this emoji's name; falling back to "emoji"`, { id: found.id });
     } else {
-      log30.debug("resolved emoji", { id: found.id, name: resolved });
+      log31.debug("resolved emoji", { id: found.id, name: resolved });
     }
     return {
       kind: "emoji",
@@ -11529,53 +11771,53 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/picker.tsx
-  var log31 = logger("emote-cloner");
+  var log32 = logger("emote-cloner");
   function iconUrl(g2) {
     const ext = g2.icon && g2.icon.startsWith("a_") ? "gif" : "png";
     return `https://cdn.discordapp.com/icons/${g2.id}/${g2.icon}.${ext}?size=64`;
   }
-  var host3 = null;
-  var unmount3 = null;
+  var host4 = null;
+  var unmount4 = null;
   var keyHandler2 = null;
   function closeGuildPicker() {
     if (keyHandler2) {
       document.removeEventListener("keydown", keyHandler2);
       keyHandler2 = null;
     }
-    if (unmount3) {
+    if (unmount4) {
       try {
-        unmount3();
+        unmount4();
       } catch {
       }
-      unmount3 = null;
+      unmount4 = null;
     }
-    if (host3) {
-      host3.remove();
-      host3 = null;
+    if (host4) {
+      host4.remove();
+      host4 = null;
     }
   }
   function openGuildPicker(opts) {
     injectStyles();
     closeGuildPicker();
-    host3 = document.createElement("div");
-    host3.className = "halcyon";
-    document.body.appendChild(host3);
+    host4 = document.createElement("div");
+    host4.className = "halcyon";
+    document.body.appendChild(host4);
     keyHandler2 = (event) => {
       if (event.key === "Escape") closeGuildPicker();
     };
     document.addEventListener("keydown", keyHandler2);
     try {
-      unmount3 = mountDetached(
+      unmount4 = mountDetached(
         React.createElement(PickerModal, {
           title: opts.title,
           guilds: opts.guilds,
           onPick: opts.onPick,
           onClose: closeGuildPicker
         }),
-        host3
+        host4
       );
     } catch (err) {
-      log31.error("could not open guild picker", err);
+      log32.error("could not open guild picker", err);
       closeGuildPicker();
     }
   }
@@ -11595,7 +11837,7 @@ ${tail}`;
         setStatus({ state: "done", guild: g2.name });
         setTimeout(onClose, 1e3);
       }).catch((err) => {
-        log31.error("clone failed", err);
+        log32.error("clone failed", err);
         setStatus({ state: "error", guild: g2.name, message: err?.message ?? String(err) });
       });
     };
@@ -11654,7 +11896,7 @@ ${tail}`;
   }
 
   // src/plugins/emote-cloner/index.tsx
-  var log32 = logger("emote-cloner");
+  var log33 = logger("emote-cloner");
   var PERM2 = {
     CREATE_GUILD_EXPRESSIONS: 1n << 43n,
     MANAGE_GUILD_EXPRESSIONS: 1n << 40n,
@@ -11694,7 +11936,7 @@ ${tail}`;
     if (!hit) return;
     const MenuItem = getMenuItemComponent();
     if (!MenuItem) {
-      log32.warn("MenuItem component not learned yet; skipping clone item this open");
+      log33.warn("MenuItem component not learned yet; skipping clone item this open");
       return;
     }
     const label = hit.kind === "emoji" ? `\u590D\u5236\u8868\u60C5 :${hit.name}: \u5230\u670D\u52A1\u5668` : hit.name ? `\u590D\u5236\u8D34\u7EB8 ${hit.name} \u5230\u670D\u52A1\u5668` : "\u590D\u5236\u8D34\u7EB8\u5230\u670D\u52A1\u5668";
@@ -11715,7 +11957,7 @@ ${tail}`;
     category: "utility",
     start() {
       unpatchers2.push(addContextMenuPatch(["message", "expression-picker"], cloneMenuPatch));
-      log32.info("emote-cloner ready \u2014 right-click an emoji or sticker");
+      log33.info("emote-cloner ready \u2014 right-click an emoji or sticker");
     },
     stop() {
       for (const un of unpatchers2) {
@@ -11801,7 +12043,7 @@ ${tail}`;
   }
 
   // src/plugins/quick-react/send.ts
-  var log33 = logger("quick-react");
+  var log34 = logger("quick-react");
   var cachedActions;
   function reactionActions() {
     if (cachedActions && typeof cachedActions.addReaction === "function") return cachedActions;
@@ -11887,7 +12129,7 @@ ${tail}`;
         else await removeOne(channelId, messageId, targets[i]);
       } catch (err) {
         failed++;
-        log33.warn(`${action === "add" ? "\u6DFB\u52A0" : "\u79FB\u9664"}\u53CD\u5E94 :${targets[i].name}: \u5931\u8D25`, err);
+        log34.warn(`${action === "add" ? "\u6DFB\u52A0" : "\u79FB\u9664"}\u53CD\u5E94 :${targets[i].name}: \u5931\u8D25`, err);
       }
       done++;
       if (delayMs > 0 && i < total - 1) await sleep2(delayMs);
@@ -12074,7 +12316,7 @@ ${tail}`;
   }
 
   // src/plugins/quick-react/toolbar.ts
-  var log34 = logger("quick-react");
+  var log35 = logger("quick-react");
   var BTN_CLASS = "hc-qr-msgbtn";
   var COALESCE_MS = 120;
   var SWEEP_MS = 1500;
@@ -12137,7 +12379,7 @@ ${tail}`;
         if (!msg) continue;
         bar.insertBefore(makeButton(msg.channelId, msg.messageId), bar.firstChild);
       } catch (err) {
-        log34.debug("\u6CE8\u5165 hover \u6309\u94AE\u5931\u8D25", err);
+        log35.debug("\u6CE8\u5165 hover \u6309\u94AE\u5931\u8D25", err);
       }
     }
   }
@@ -12157,7 +12399,7 @@ ${tail}`;
         observer = new MutationObserver(schedule2);
         observer.observe(document.body, { childList: true, subtree: true });
       } catch (err) {
-        log34.warn("MutationObserver \u6302\u63A5\u5931\u8D25\uFF0C\u6539\u7528\u8F6E\u8BE2\u515C\u5E95", err);
+        log35.warn("MutationObserver \u6302\u63A5\u5931\u8D25\uFF0C\u6539\u7528\u8F6E\u8BE2\u515C\u5E95", err);
       }
     }
     sweepTimer = setInterval(schedule2, SWEEP_MS);
@@ -12242,7 +12484,7 @@ ${tail}`;
   }
 
   // src/plugins/quick-react/index.tsx
-  var log35 = logger("quick-react");
+  var log36 = logger("quick-react");
   var settings11 = defineSettings({
     reactions: {
       group: "\u53CD\u5E94",
@@ -12295,7 +12537,7 @@ ${tail}`;
       }
       refreshToolbarButtons();
     } catch (err) {
-      log35.error("\u4E00\u952E\u53CD\u5E94\u5931\u8D25", err);
+      log36.error("\u4E00\u952E\u53CD\u5E94\u5931\u8D25", err);
       showToast("\u4E00\u952E\u53CD\u5E94\u5931\u8D25\uFF0C\u770B\u63A7\u5236\u53F0\u65E5\u5FD7", "failure");
     } finally {
       running = false;
@@ -12332,9 +12574,9 @@ ${tail}`;
       );
       unpatchers3.push(settings11.subscribe("reactions", () => refreshToolbarButtons()));
       if (!reactionBackendReady()) {
-        log35.warn("\u6CA1\u89E3\u6790\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF0C\u70B9\u51FB\u65F6\u4F1A\u8D70\u515C\u5E95\u6216\u62A5\u9519\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
+        log36.warn("\u6CA1\u89E3\u6790\u5230\u6DFB\u52A0\u53CD\u5E94\u7684\u63A5\u53E3\uFF0C\u70B9\u51FB\u65F6\u4F1A\u8D70\u515C\u5E95\u6216\u62A5\u9519\u3002\u91CD\u542F\u5BA2\u6237\u7AEF\u540E\u518D\u8BD5\u3002");
       }
-      log35.info("\u4E00\u952E\u53CD\u5E94\u5C31\u7EEA \u2014 \u53F3\u952E\u6D88\u606F\u6216\u70B9\u60AC\u505C\u5DE5\u5177\u680F\u7684\u5C0F\u7B11\u8138");
+      log36.info("\u4E00\u952E\u53CD\u5E94\u5C31\u7EEA \u2014 \u53F3\u952E\u6D88\u606F\u6216\u70B9\u60AC\u505C\u5DE5\u5177\u680F\u7684\u5C0F\u7B11\u8138");
     },
     stop() {
       stopToolbarButton2();
@@ -12357,12 +12599,12 @@ ${tail}`;
   });
 
   // src/core/flux/index.ts
-  var log36 = logger("flux");
+  var log37 = logger("flux");
   var listenersByType = /* @__PURE__ */ new Map();
   var dispatcherHandlers = /* @__PURE__ */ new Map();
   function dispatcher() {
     const d = getDispatcher();
-    if (!d) log36.error("dispatcher unavailable; flux subscriptions are inert");
+    if (!d) log37.error("dispatcher unavailable; flux subscriptions are inert");
     return d;
   }
   function ensureBridge(type) {
@@ -12374,7 +12616,7 @@ ${tail}`;
         try {
           listener(action);
         } catch (err) {
-          log36.error(`listener for ${type} threw`, err);
+          log37.error(`listener for ${type} threw`, err);
         }
       }
     };
@@ -12383,7 +12625,7 @@ ${tail}`;
       d?.subscribe(type, handler);
       dispatcherHandlers.set(type, handler);
     } catch (err) {
-      log36.error(`could not subscribe to ${type}`, err);
+      log37.error(`could not subscribe to ${type}`, err);
     }
   }
   function teardownBridge(type) {
@@ -12394,7 +12636,7 @@ ${tail}`;
     try {
       dispatcher()?.unsubscribe(type, handler);
     } catch (err) {
-      log36.error(`could not unsubscribe from ${type}`, err);
+      log37.error(`could not unsubscribe from ${type}`, err);
     }
     dispatcherHandlers.delete(type);
     listenersByType.delete(type);
@@ -12425,13 +12667,13 @@ ${tail}`;
       try {
         dispatcher()?.dispatch(action);
       } catch (err) {
-        log36.error("dispatch failed", action?.type, err);
+        log37.error("dispatch failed", action?.type, err);
       }
     }
   };
 
   // src/plugins/mark-all-read/mark.ts
-  var log37 = logger("mark-all-read");
+  var log38 = logger("mark-all-read");
   var shapeLogged = false;
   function channelIdOf(entry) {
     return entry?.channel?.id ?? entry?.id;
@@ -12445,7 +12687,7 @@ ${tail}`;
       try {
         grouped = GuildChannelStore.getChannels?.(guildId);
       } catch (err) {
-        log37.warn(`could not read channels for guild ${guildId}`, err);
+        log38.warn(`could not read channels for guild ${guildId}`, err);
         continue;
       }
       if (!grouped) continue;
@@ -12471,16 +12713,16 @@ ${tail}`;
             if (Array.isArray(v)) return `${k}:array(${v.length})`;
             return `${k}:${typeof v}`;
           }).join(", ");
-          log37.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
+          log38.info(`getChannels shape for guild ${guildId} \u2014 { ${desc} }`);
           for (const k of Object.keys(grouped)) {
             const v = grouped[k];
             if (Array.isArray(v) && v.length > 0) {
-              log37.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
+              log38.info(`  first "${k}" entry keys=[${Object.keys(v[0]).join(",")}]`);
               break;
             }
           }
         } catch (err) {
-          log37.warn("could not describe getChannels shape", err);
+          log38.warn("could not describe getChannels shape", err);
         }
       }
       const buckets = [grouped.SELECTABLE, grouped.VOCAL].filter(Array.isArray);
@@ -12500,14 +12742,14 @@ ${tail}`;
           }
         }
       } catch (err) {
-        log37.warn(`could not read joined threads for guild ${guildId}`, err);
+        log38.warn(`could not read joined threads for guild ${guildId}`, err);
       }
     }
     return { channels, guilds: guildsWithUnread.size };
   }
   function diagnoseStores() {
     const probe2 = (label, method) => `${label}=${typeof method === "function" ? "ok" : "MISSING"}`;
-    log37.info(
+    log38.info(
       "store check \u2014 " + [
         probe2("GuildStore.getGuilds", GuildStore.getGuilds),
         probe2("GuildChannelStore.getChannels", GuildChannelStore.getChannels),
@@ -12524,9 +12766,9 @@ ${tail}`;
     diagnoseStores();
     const guildCount = Object.keys(GuildStore.getGuilds?.() ?? {}).length;
     const { channels, guilds } = collectUnread();
-    log37.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
+    log38.info(`scanned ${guildCount} guild(s); found ${channels.length} unread channel(s)`);
     if (channels.length === 0) {
-      log37.info("nothing unread; skipping BULK_ACK");
+      log38.info("nothing unread; skipping BULK_ACK");
       return { channels: 0, guilds: 0 };
     }
     flux.dispatch({
@@ -12534,12 +12776,12 @@ ${tail}`;
       context: "APP",
       channels
     });
-    log37.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
+    log38.info(`BULK_ACK dispatched for ${channels.length} channel(s) across ${guilds} guild(s)`);
     return { channels: channels.length, guilds };
   }
 
   // src/plugins/mark-all-read/ui/MarkAllReadPage.tsx
-  var log38 = logger("mark-all-read");
+  var log39 = logger("mark-all-read");
   function MarkAllReadPage() {
     const [busy, setBusy] = useState(false);
     const [state, setState] = useState("\u5F85\u673A");
@@ -12564,7 +12806,7 @@ ${tail}`;
         setState("\u5931\u8D25");
         setDetail(err?.message ?? String(err));
         showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-        log38.error("mark all read failed", err);
+        log39.error("mark all read failed", err);
       } finally {
         setBusy(false);
       }
@@ -12573,7 +12815,7 @@ ${tail}`;
   }
 
   // src/plugins/mark-all-read/index.tsx
-  var log39 = logger("mark-all-read");
+  var log40 = logger("mark-all-read");
   function runMark() {
     try {
       const result = markAllRead();
@@ -12584,7 +12826,7 @@ ${tail}`;
       }
     } catch (err) {
       showToast("\u6807\u8BB0\u5931\u8D25", "failure");
-      log39.error("mark all read failed", err);
+      log40.error("mark all read failed", err);
     }
   }
   function RailButton() {
@@ -12634,7 +12876,7 @@ ${tail}`;
   }
   function openQuestHub() {
     if (navigate("/quest-home")) return;
-    log39.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
+    log40.warn("\u65E0\u6CD5\u6253\u5F00\u4EFB\u52A1\u4E2D\u5FC3\uFF1A\u672A\u89E3\u6790\u5230\u5BFC\u822A\u8DEF\u7531\uFF0C\u5DF2\u653E\u5F03\u8DF3\u8F6C\u4EE5\u907F\u514D\u6574\u9875\u5237\u65B0\u3002");
   }
   function QuestRailButton() {
     const count2 = useOpenQuestCount();
@@ -12705,7 +12947,7 @@ ${tail}`;
     start() {
       injectStyles();
       addContextMenuPatch(GUILD_MENUS, patchGuildMenu);
-      log39.info("mark-all-read ready");
+      log40.info("mark-all-read ready");
     },
     stop() {
       removeContextMenuPatch(GUILD_MENUS, patchGuildMenu);
@@ -12713,7 +12955,7 @@ ${tail}`;
   });
 
   // src/plugins/silent-typing/index.ts
-  var log40 = logger("silent-typing");
+  var log41 = logger("silent-typing");
   var settings12 = defineSettings({
     scope: {
       group: "\u8303\u56F4",
@@ -12775,7 +13017,7 @@ ${tail}`;
         return void 0;
       }
     } catch (err) {
-      log40.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
+      log41.error("\u5224\u65AD\u662F\u5426\u9759\u9ED8\u65F6\u51FA\u9519\uFF0C\u672C\u6B21\u6309 Discord \u9ED8\u8BA4\u884C\u4E3A\u5904\u7406", err);
     }
     return ctx.callOriginal();
   }
@@ -12799,9 +13041,9 @@ ${tail}`;
     const mine = getSourcePatchReport().filter((p) => p.pluginId === "silent-typing");
     if (mine.length === 0) return;
     if (mine.every((p) => p.applied)) {
-      log40.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
+      log41.info("\u6E90\u7801 patch \u5DF2\u751F\u6548\uFF08\u8F93\u5165\u72B6\u6001\u5728\u6E90\u5934\u5C31\u88AB\u62E6\u6389\uFF09");
     } else {
-      log40.warn(
+      log41.warn(
         "\u6E90\u7801 patch \u672A\u5339\u914D\u5F53\u524D Discord \u7248\u672C\uFF0C\u5DF2\u6539\u7528\u8FD0\u884C\u65F6 hook \u515C\u5E95\u3002\u82E5\u53D1\u73B0\u522B\u4EBA\u4ECD\u80FD\u770B\u5230\u4F60\u7684\u8F93\u5165\u72B6\u6001\uFF0C\u8BF7\u53CD\u9988\u8FD9\u6761\u65E5\u5FD7\u3002"
       );
     }
@@ -12834,7 +13076,7 @@ ${tail}`;
       active2 = true;
       typingModule = findByProps("startTyping", "stopTyping");
       if (!typingModule || typeof typingModule.startTyping !== "function") {
-        log40.warn(
+        log41.warn(
           "\u672A\u627E\u5230 Discord \u7684\u8F93\u5165\u72B6\u6001\u6A21\u5757\uFF08startTyping / stopTyping\uFF09\uFF0C\u8FD0\u884C\u65F6\u515C\u5E95\u4E0D\u53EF\u7528\uFF1B\u4ECD\u4F9D\u8D56\u6E90\u7801 patch\u3002\u6253\u5F00\u4EFB\u610F\u9891\u9053\u540E\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u53EF\u518D\u8BD5\u4E00\u6B21\u3002"
         );
       } else {
@@ -12844,17 +13086,17 @@ ${tail}`;
         try {
           unpatchStart = patcher.instead(typingModule, "startTyping", onStartTyping);
         } catch (err) {
-          log40.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
+          log41.warn("\u6302\u63A5 startTyping \u5931\u8D25\uFF0C\u4EC5\u4F9D\u8D56\u6E90\u7801 patch", err);
         }
         if (typeof typingModule.stopTyping === "function") {
           try {
             unpatchStop = patcher.instead(typingModule, "stopTyping", onStopTyping);
           } catch (err) {
-            log40.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
+            log41.warn("\u6302\u63A5 stopTyping \u5931\u8D25\uFF0C\u201C\u540C\u65F6\u62E6\u622A\u505C\u6B62\u8F93\u5165\u201D\u5F00\u5173\u5C06\u65E0\u6548", err);
           }
         }
       }
-      log40.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings12.store.scope}\uFF09`);
+      log41.info(`\u5DF2\u62E6\u622A\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u8303\u56F4\uFF1A${settings12.store.scope}\uFF09`);
       setTimeout(reportPatch, 4e3);
     },
     stop() {
@@ -12864,7 +13106,7 @@ ${tail}`;
       unpatchStart = void 0;
       unpatchStop = void 0;
       typingModule = void 0;
-      log40.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
+      log41.info(`\u5DF2\u6062\u590D\u8F93\u5165\u72B6\u6001\u4E0A\u62A5\uFF08\u672C\u6B21\u5171\u62E6\u622A ${suppressed} \u6B21\uFF09`);
     },
     /**
      * Called from the source patch at the top of `startTyping`. Returns true to
@@ -13004,7 +13246,7 @@ ${tail}`;
   });
 
   // src/plugins/member-count/counts.ts
-  var log41 = logger("member-count");
+  var log42 = logger("member-count");
   function memo(resolve) {
     let cached4;
     return () => cached4 ??= resolve();
@@ -13098,9 +13340,9 @@ ${tail}`;
       if (typeof api?.preload !== "function") return;
       const target = GuildChannelStore.getDefaultChannel?.(guildId)?.id ?? channelId;
       api.preload(guildId, target);
-      log41.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
+      log42.debug(`\u5DF2\u8BF7\u6C42\u52A0\u8F7D ${guildId} \u7684\u6210\u5458\u5217\u8868\u6570\u636E`);
     } catch (err) {
-      log41.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
+      log42.debug("preload \u8C03\u7528\u5931\u8D25\uFF0C\u5FFD\u7565", err);
     }
   }
   function readTotal(guildId) {
@@ -13219,10 +13461,10 @@ ${tail}`;
       };
       refresh();
       const unsubscribes4 = WATCHED_ACTIONS.map((type) => flux.subscribe(type, refresh));
-      const timer3 = setInterval(refresh, POLL_MS2);
+      const timer4 = setInterval(refresh, POLL_MS2);
       return () => {
         live = false;
-        clearInterval(timer3);
+        clearInterval(timer4);
         for (const off of unsubscribes4) off();
       };
     }, []);
@@ -13252,7 +13494,7 @@ ${tail}`;
   }
 
   // src/plugins/member-count/index.tsx
-  var log42 = logger("member-count");
+  var log43 = logger("member-count");
   var ANCHORS = {
     header: [
       'section[class*="title_"] [class*="toolbar_"]',
@@ -13277,7 +13519,7 @@ ${tail}`;
       'aside[class*="members"]'
     ]
   };
-  var ENSURE_MS2 = 1e3;
+  var ENSURE_MS3 = 1e3;
   var mounted2 = /* @__PURE__ */ new Map();
   var ensureTimer;
   var selfCheckTimer;
@@ -13301,7 +13543,7 @@ ${tail}`;
     if (placement === "member-list" || placement === "both") want.add("list");
     return want;
   }
-  function teardown2(variant) {
+  function teardown3(variant) {
     const entry = mounted2.get(variant);
     if (!entry) return;
     mounted2.delete(variant);
@@ -13312,31 +13554,31 @@ ${tail}`;
     entry.host.remove();
   }
   function attach2(variant, hit) {
-    const host5 = document.createElement("div");
-    host5.className = "hc-membercount-host";
-    host5.setAttribute("data-hc-plugin", "member-count");
+    const host6 = document.createElement("div");
+    host6.className = "hc-membercount-host";
+    host6.setAttribute("data-hc-plugin", "member-count");
     try {
-      hit.element.insertBefore(host5, hit.element.firstChild);
+      hit.element.insertBefore(host6, hit.element.firstChild);
     } catch (err) {
-      log42.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
+      log43.debug(`\u65E0\u6CD5\u5728 ${variant} \u4F4D\u7F6E\u63D2\u5165\u5BBF\u4E3B\u8282\u70B9`, err);
       return;
     }
     try {
-      const unmount5 = mountDetached(React.createElement(MemberCountChip, { variant }), host5);
-      mounted2.set(variant, { host: host5, unmount: unmount5, selector: hit.selector });
+      const unmount6 = mountDetached(React.createElement(MemberCountChip, { variant }), host6);
+      mounted2.set(variant, { host: host6, unmount: unmount6, selector: hit.selector });
       if (lastSelector.get(variant) !== hit.selector) {
         lastSelector.set(variant, hit.selector);
-        log42.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
+        log43.info(`\u5DF2\u6302\u8F7D\u5230 ${variant}\uFF1A${hit.selector}`);
       }
     } catch (err) {
-      host5.remove();
-      log42.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
+      host6.remove();
+      log43.error(`\u6302\u8F7D\u6210\u5458\u6570\u6807\u7B7E\u5931\u8D25\uFF08${variant}\uFF09`, err);
     }
   }
-  function ensureMounted2() {
+  function ensureMounted3() {
     const want = wantedVariants();
     for (const [variant, entry] of [...mounted2]) {
-      if (!want.has(variant) || !document.contains(entry.host)) teardown2(variant);
+      if (!want.has(variant) || !document.contains(entry.host)) teardown3(variant);
     }
     let anyAnchor = false;
     for (const variant of want) {
@@ -13351,7 +13593,7 @@ ${tail}`;
     }
     if (!anyAnchor && !warnedNoAnchor && mounted2.size === 0) {
       warnedNoAnchor = true;
-      log42.warn(
+      log43.warn(
         "\u627E\u4E0D\u5230\u53EF\u63D2\u5165\u7684\u4F4D\u7F6E\uFF08\u9891\u9053\u9876\u680F / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u670D\u52A1\u5668\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765 \u2014\u2014 \u8BF4\u660E\u8FD9\u4E2A Discord \u7248\u672C\u7684\u5BB9\u5668\u7C7B\u540D\u53D8\u4E86\u3002"
       );
     }
@@ -13368,7 +13610,7 @@ ${tail}`;
     if (!guildIdOfChannel2(channelId)) return;
     const { total, online } = readCounts(channelId);
     if (total != null || online != null) return;
-    log42.warn(
+    log43.warn(
       "\u5DF2\u6302\u8F7D\u4F46\u62FF\u4E0D\u5230\u6210\u5458\u6570\uFF08\u6240\u6709\u6570\u636E\u6E90\u90FD\u662F\u7A7A\uFF09\u3002\u4E0B\u9762\u662F\u6BCF\u4E2A\u6765\u6E90\u7684\u5B9E\u9645\u7ED3\u679C\uFF1B\u4E5F\u53EF\u4EE5\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u62FF\u5230\u5B8C\u6574\u62A5\u544A\u3002",
       countsDiagnostics(channelId)
     );
@@ -13385,14 +13627,14 @@ ${tail}`;
       warnedNoAnchor = false;
       lastSelector.clear();
       startCountTracking();
-      ensureMounted2();
-      ensureTimer = setInterval(ensureMounted2, ENSURE_MS2);
+      ensureMounted3();
+      ensureTimer = setInterval(ensureMounted3, ENSURE_MS3);
       unsubscribePlacement = settings13.subscribe("placement", () => {
         warnedNoAnchor = false;
-        ensureMounted2();
+        ensureMounted3();
       });
       selfCheckTimer = setTimeout(selfCheck, 8e3);
-      log42.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
+      log43.info(`\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u542F\u7528\uFF08\u4F4D\u7F6E\uFF1A${settings13.store.placement}\uFF09`);
     },
     stop() {
       if (ensureTimer) {
@@ -13406,9 +13648,9 @@ ${tail}`;
       unsubscribePlacement?.();
       unsubscribePlacement = void 0;
       stopCountTracking();
-      for (const variant of [...mounted2.keys()]) teardown2(variant);
+      for (const variant of [...mounted2.keys()]) teardown3(variant);
       lastSelector.clear();
-      log42.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
+      log43.info("\u6210\u5458\u6570\u6807\u7B7E\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -13509,7 +13751,7 @@ ${tail}`;
   });
 
   // src/plugins/who-reacted/reactors.ts
-  var log43 = logger("who-reacted");
+  var log44 = logger("who-reacted");
   var CACHE_TTL_MS = 3e4;
   function resolveReaction(node) {
     for (const props of getFiberPropsChain(node, 14)) {
@@ -13592,7 +13834,7 @@ ${tail}`;
       return reactors;
     })();
     const guarded = request.catch((err) => {
-      log43.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
+      log44.debug("\u62C9\u53D6 reaction \u540D\u5355\u5931\u8D25", err);
       throw err;
     });
     inFlight2.set(key, guarded);
@@ -13654,24 +13896,24 @@ ${tail}`;
   }
 
   // src/plugins/who-reacted/inline-avatars.ts
-  var log44 = logger("who-reacted");
+  var log45 = logger("who-reacted");
   var DECORATED = /* @__PURE__ */ new WeakSet();
   var HOST_ATTR = "data-hc-reactors";
   var scanTimer;
   var mutationObserver;
   var REACTION_SELECTOR = '[class*="reactionInner"], [class*="reaction_"]';
   function makeHost() {
-    const host5 = document.createElement("span");
-    host5.className = "hc-inline-reactors";
-    host5.setAttribute(HOST_ATTR, "1");
-    return host5;
+    const host6 = document.createElement("span");
+    host6.className = "hc-inline-reactors";
+    host6.setAttribute(HOST_ATTR, "1");
+    return host6;
   }
-  function fillHost(host5, reactors, totalHint) {
+  function fillHost(host6, reactors, totalHint) {
     const max = Math.max(1, Math.min(6, Math.trunc(settings14.store.inlineAvatarCount) || 3));
     const shown = reactors.slice(0, max);
     const total = totalHint ?? reactors.length;
     const overflow = Math.max(0, total - shown.length);
-    host5.textContent = "";
+    host6.textContent = "";
     for (const reactor of shown) {
       const img = document.createElement("img");
       img.className = "hc-inline-reactors__avatar";
@@ -13680,13 +13922,13 @@ ${tail}`;
       img.loading = "lazy";
       img.title = reactor.name;
       img.referrerPolicy = "no-referrer";
-      host5.appendChild(img);
+      host6.appendChild(img);
     }
     if (shown.length > 0 && overflow > 0) {
       const more = document.createElement("span");
       more.className = "hc-inline-reactors__more";
       more.textContent = `+${overflow}`;
-      host5.appendChild(more);
+      host6.appendChild(more);
     }
   }
   function pillHasNativePreview(pill) {
@@ -13702,29 +13944,29 @@ ${tail}`;
     const target = resolveReaction(pill);
     if (!target) return;
     if (target.count != null && target.count <= 0) return;
-    const host5 = makeHost();
+    const host6 = makeHost();
     try {
-      pill.appendChild(host5);
+      pill.appendChild(host6);
     } catch {
       return;
     }
     try {
       const wanted = Math.min(12, Math.max(6, (settings14.store.inlineAvatarCount || 3) + 3));
       const reactors = await fetchReactors(target, wanted);
-      if (!host5.isConnected) return;
+      if (!host6.isConnected) return;
       if (reactors.length === 0) {
-        host5.remove();
+        host6.remove();
         DECORATED.delete(pill);
         return;
       }
       if (pillHasNativePreview(pill)) {
-        host5.remove();
+        host6.remove();
         return;
       }
-      fillHost(host5, reactors, target.count);
+      fillHost(host6, reactors, target.count);
     } catch (err) {
-      log44.debug("inline avatars: fetch failed", err);
-      host5.remove();
+      log45.debug("inline avatars: fetch failed", err);
+      host6.remove();
       DECORATED.delete(pill);
     }
   }
@@ -13762,7 +14004,7 @@ ${tail}`;
       } catch {
       }
     }
-    log44.info("inline reactor avatars: enabled");
+    log45.info("inline reactor avatars: enabled");
   }
   function stopInlineAvatars() {
     if (scanTimer) {
@@ -13777,18 +14019,18 @@ ${tail}`;
       mutationObserver = void 0;
     }
     try {
-      document.querySelectorAll(`[${HOST_ATTR}]`).forEach((host5) => host5.remove());
+      document.querySelectorAll(`[${HOST_ATTR}]`).forEach((host6) => host6.remove());
     } catch {
     }
   }
 
   // src/plugins/who-reacted/index.tsx
-  var log45 = logger("who-reacted");
+  var log46 = logger("who-reacted");
   var REACTION_SELECTOR2 = '[class*="reactionInner"], [class*="reaction_"]';
   var HIDE_GRACE_MS = 140;
   var ANCHOR_CHECK_MS = 500;
-  var host4 = null;
-  var unmount4 = null;
+  var host5 = null;
+  var unmount5 = null;
   var anchor = null;
   var observer2 = null;
   var anchorTimer;
@@ -13801,18 +14043,18 @@ ${tail}`;
   var hoverToggleUnsub;
   var hoverListenersAttached = false;
   function reposition2() {
-    if (!host4 || !anchor) return;
+    if (!host5 || !anchor) return;
     const rect = anchor.getBoundingClientRect();
-    const width = host4.offsetWidth || 220;
-    const height = host4.offsetHeight || 110;
+    const width = host5.offsetWidth || 220;
+    const height = host5.offsetHeight || 110;
     const margin = 8;
     let left = rect.left + rect.width / 2 - width / 2;
     let top = rect.top - height - margin;
     if (top < margin) top = rect.bottom + margin;
     left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
     top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
-    host4.style.left = `${Math.round(left)}px`;
-    host4.style.top = `${Math.round(top)}px`;
+    host5.style.left = `${Math.round(left)}px`;
+    host5.style.top = `${Math.round(top)}px`;
   }
   function hide2() {
     if (hideTimer) {
@@ -13830,21 +14072,21 @@ ${tail}`;
       }
       observer2 = null;
     }
-    if (unmount4) {
+    if (unmount5) {
       try {
-        unmount4();
+        unmount5();
       } catch {
       }
-      unmount4 = null;
+      unmount5 = null;
     }
-    if (host4) {
-      host4.remove();
-      host4 = null;
+    if (host5) {
+      host5.remove();
+      host5 = null;
     }
     anchor = null;
   }
   function scheduleHide() {
-    if (!host4 || hideTimer) return;
+    if (!host5 || hideTimer) return;
     hideTimer = setTimeout(() => {
       hideTimer = void 0;
       hide2();
@@ -13858,22 +14100,22 @@ ${tail}`;
   }
   function show(element, target) {
     hide2();
-    host4 = document.createElement("div");
-    host4.className = "halcyon hc-whoreacted-host";
-    host4.setAttribute("data-hc-plugin", "who-reacted");
-    document.body.appendChild(host4);
+    host5 = document.createElement("div");
+    host5.className = "halcyon hc-whoreacted-host";
+    host5.setAttribute("data-hc-plugin", "who-reacted");
+    document.body.appendChild(host5);
     anchor = element;
     try {
-      unmount4 = mountDetached(React.createElement(ReactorCard, { target }), host4);
+      unmount5 = mountDetached(React.createElement(ReactorCard, { target }), host5);
     } catch (err) {
-      log45.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
+      log46.error("\u65E0\u6CD5\u663E\u793A reaction \u540D\u5355", err);
       hide2();
       return;
     }
     reposition2();
     if (typeof ResizeObserver === "function") {
       observer2 = new ResizeObserver(() => reposition2());
-      observer2.observe(host4);
+      observer2.observe(host5);
     } else {
       setTimeout(reposition2, 120);
       setTimeout(reposition2, 400);
@@ -13928,7 +14170,7 @@ ${tail}`;
   function onKeyDown3(event) {
     if (!event.altKey) return;
     altDown = true;
-    if (settings14.store.trigger === "alt-hover" && hovered && !host4) {
+    if (settings14.store.trigger === "alt-hover" && hovered && !host5) {
       if (document.contains(hovered)) tryShow(hovered);
     }
   }
@@ -13939,7 +14181,7 @@ ${tail}`;
     }
   }
   function onScrollOrResize() {
-    if (host4) hide2();
+    if (host5) hide2();
   }
   function onWindowBlur() {
     altDown = false;
@@ -13994,7 +14236,7 @@ ${tail}`;
         if (on) attachHoverListeners();
         else detachHoverListeners();
       });
-      log45.info(
+      log46.info(
         `\u5DF2\u542F\u7528\uFF08\u5185\u5D4C\u5934\u50CF\uFF1A${settings14.store.inlineAvatars ? "\u5F00" : "\u5173"}\uFF0C\u60AC\u505C\u6D6E\u5C42\uFF1A${settings14.store.hoverPopout ? "\u5F00" : "\u5173"}\uFF09`
       );
     },
@@ -14012,7 +14254,7 @@ ${tail}`;
       altDown = false;
       hide2();
       clearCache();
-      log45.info("\u5DF2\u505C\u7528");
+      log46.info("\u5DF2\u505C\u7528");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -14035,7 +14277,7 @@ ${tail}`;
       }
       return {
         trigger: settings14.store.trigger,
-        cardShown: host4 != null,
+        cardShown: host5 != null,
         reactionNodes: nodes?.length ?? -1,
         sample: sample2,
         anchors: probeSelectors([REACTION_SELECTOR2, '[class*="reactionInner"]', '[class*="reaction_"]']),
@@ -14303,7 +14545,7 @@ ${tail}`;
   }
 
   // src/plugins/platform-indicators/index.tsx
-  var log46 = logger("platform-indicators");
+  var log47 = logger("platform-indicators");
   var MARK = "data-hc-platform";
   var MESSAGE_SELECTORS = [
     '[id^="message-username-"]',
@@ -14354,24 +14596,24 @@ ${tail}`;
     return null;
   }
   function attach3(anchor2, kind, userId, selfId) {
-    const host5 = document.createElement("span");
-    host5.className = "hc-platform-host";
-    host5.setAttribute("data-hc-plugin", "platform-indicators");
+    const host6 = document.createElement("span");
+    host6.className = "hc-platform-host";
+    host6.setAttribute("data-hc-plugin", "platform-indicators");
     try {
-      anchor2.appendChild(host5);
+      anchor2.appendChild(host6);
     } catch {
       return false;
     }
     try {
-      const unmount5 = mountDetached(
+      const unmount6 = mountDetached(
         React.createElement(PlatformIndicator, { userId, isSelf: userId === selfId }),
-        host5
+        host6
       );
-      mounted3.set(host5, { kind, host: host5, anchor: anchor2, unmount: unmount5 });
+      mounted3.set(host6, { kind, host: host6, anchor: anchor2, unmount: unmount6 });
       return true;
     } catch (err) {
-      host5.remove();
-      log46.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
+      host6.remove();
+      log47.debug("\u6302\u8F7D\u5E73\u53F0\u56FE\u6807\u5931\u8D25", err);
       return false;
     }
   }
@@ -14427,7 +14669,7 @@ ${tail}`;
     if (!hit) return false;
     if (lastSelector2.get(kind) !== hit.selector) {
       lastSelector2.set(kind, hit.selector);
-      log46.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
+      log47.info(`${kind} \u951A\u70B9\uFF1A${hit.selector}\uFF08${hit.nodes.length} \u4E2A\uFF09`);
     }
     mountInto(hit.nodes, kind, selfId);
     return true;
@@ -14441,7 +14683,7 @@ ${tail}`;
     if (s.inMemberList && scanKind("member", MEMBER_SELECTORS, selfId)) anyAnchor = true;
     if (!anyAnchor && !warnedNoAnchor2 && (s.inMessages || s.inMemberList)) {
       warnedNoAnchor2 = true;
-      log46.warn(
+      log47.warn(
         "\u627E\u4E0D\u5230\u53EF\u6302\u8F7D\u7684\u4F4D\u7F6E\uFF08\u6D88\u606F\u4F5C\u8005 / \u6210\u5458\u5217\u8868\uFF09\u3002\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6709\u6D88\u606F\u7684\u9891\u9053\uFF1B\u82E5\u5DF2\u7ECF\u6253\u5F00\u8FD8\u662F\u6CA1\u6709\uFF0C\u5728\u63A7\u5236\u53F0\u8FD0\u884C HalcyonAPI.probe() \u5E76\u628A\u8F93\u51FA\u53D1\u56DE\u6765\u3002"
       );
     }
@@ -14482,7 +14724,7 @@ ${tail}`;
         settings15.subscribe("ignoreBots", () => bumpPresence()),
         settings15.subscribe("ignoreSelf", () => bumpPresence())
       );
-      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
+      log47.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u542F\u7528");
     },
     stop() {
       if (scanTimer2) {
@@ -14500,7 +14742,7 @@ ${tail}`;
       clearMarks();
       resetPresenceBus();
       lastSelector2.clear();
-      log46.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
+      log47.info("\u5E73\u53F0\u6807\u8BC6\u5DF2\u79FB\u9664");
     },
     /** Diagnostic snapshot. Surfaced through `HalcyonAPI.probe()`. */
     probe() {
@@ -14567,7 +14809,7 @@ ${tail}`;
   ];
 
   // src/core/probe.ts
-  var log47 = logger("probe");
+  var log48 = logger("probe");
   function probe() {
     const perPlugin = {};
     for (const view of runtime.list()) {
@@ -14590,8 +14832,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.26" : "dev",
-      build: true ? "2026-11-08 18:30:49" : "dev",
+      version: true ? "0.7.27" : "dev",
+      build: true ? "2026-11-19 07:44:03" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14604,14 +14846,14 @@ ${tail}`;
     };
     try {
       globalThis.__halcyonProbe = JSON.stringify(out, null, 2);
-      log47.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
+      log48.info("probe \u5DF2\u751F\u6210 \u2014\u2014 \u5728\u63A7\u5236\u53F0\u8FD0\u884C  copy(__halcyonProbe)  \u7136\u540E\u628A\u5185\u5BB9\u8D34\u56DE\u6765");
     } catch {
     }
     return out;
   }
 
   // src/userscript/main.ts
-  var log48 = logger("userscript");
+  var log49 = logger("userscript");
   runtime.registerAll(plugins);
   runtime.boot().then(() => {
     injectStyles();
@@ -14622,8 +14864,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.26" : "dev",
-        build: true ? "2026-11-08 18:30:49" : "dev",
+        version: true ? "0.7.27" : "dev",
+        build: true ? "2026-11-19 07:44:03" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,
@@ -14640,6 +14882,6 @@ ${tail}`;
       };
     } catch {
     }
-    log48.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
-  }).catch((err) => log48.error("userscript boot failed", err));
+    log49.info("Halcyon (userscript) ready \u2014 press Ctrl/Cmd+Shift+H to open settings");
+  }).catch((err) => log49.error("userscript boot failed", err));
 })();
