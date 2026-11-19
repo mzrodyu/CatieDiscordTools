@@ -1,8 +1,8 @@
 // The message-cleaner page.
 //
-// Full port of the 冲水 userscript UI into Halcyon's component system. Includes:
+// Message cleanup controls with an Undiscord-style search backend. Includes:
 // - Token input + auto-extract
-// - Guild/channel picker (from Discord stores)
+// - Guild/channel picker (REST)
 // - Time range filter (after/before)
 // - Order selector
 // - Preview → Delete flow
@@ -103,6 +103,7 @@ export function CleanerPage(): React.ReactElement {
   const [pickerGuilds, setPickerGuilds] = useState<GuildInfo[]>([]);
   const [pickerChannels, setPickerChannels] = useState<ChannelInfo[]>([]);
   const [pickerLevel, setPickerLevel] = useState<"guilds" | "channels">("guilds");
+  const [pickerGuildId, setPickerGuildId] = useState("");
   const [pickerGuildName, setPickerGuildName] = useState("");
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerError, setPickerError] = useState("");
@@ -272,6 +273,7 @@ export function CleanerPage(): React.ReactElement {
       progress("需要 Token", e.message);
       return;
     }
+    setPickerGuildId(g.id);
     setPickerGuildName(g.name);
     setPickerLevel("channels");
     setPickerError("");
@@ -289,6 +291,11 @@ export function CleanerPage(): React.ReactElement {
   };
 
   const pickChannel = (ch: ChannelInfo) => {
+    // Commit both ids together: retaining the previous guild id searches a
+    // different server and returns zero despite the selected channel's count.
+    setGuildId(pickerGuildId);
+    setPreviewed([]);
+    setStatCount(null);
     if (!ch.id) {
       // Server-wide
       setServerWide(true);
@@ -328,7 +335,7 @@ export function CleanerPage(): React.ReactElement {
     ctrlRef.current = { stopped: false };
     setMode("previewing");
     setPreviewed([]);
-    progress("预览中", "正在扫描你的消息…");
+    progress("预览中", "正在搜索你在所选范围内的消息…");
     try {
       const found = await collect(tok, opts, meId, progress, ctrlRef.current);
       setPreviewed(found);

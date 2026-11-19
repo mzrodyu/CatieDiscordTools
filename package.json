@@ -1,6 +1,6 @@
 {
   "name": "halcyon",
-  "version": "0.7.28",
+  "version": "0.7.29",
   "private": true,
   "description": "A plugin runtime for the Discord desktop client with a restrained iOS-style interface.",
   "author": "caitemm (mzrodyu)",
@@ -13,6 +13,7 @@
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs --watch",
     "typecheck": "tsc --noEmit",
+    "test:message-cleaner": "node --test scripts/test-message-cleaner.mjs",
     "inject": "node dist/injector.js inject",
     "uninject": "node dist/injector.js uninject",
     "deploy": "node scripts/build.mjs && node dist/injector.js inject",

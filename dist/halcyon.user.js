@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.28
+// @version      0.7.29
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-19 07:51:02" : "dev";
-      const version2 = true ? "0.7.28" : "dev";
+      const build = true ? "2026-11-19 09:04:31" : "dev";
+      const version2 = true ? "0.7.29" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -4619,7 +4619,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.28" : "dev";
+    return true ? "0.7.29" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4711,7 +4711,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.28" : "dev";
+    const version2 = true ? "0.7.29" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -8717,7 +8717,9 @@ ${loc.channel ?? ""}`.toLowerCase();
       const b = await res.text().catch(() => "");
       throw new Error(`API ${res.status}: ${b.slice(0, 120)}`);
     }
-    return res.status === 204 ? null : res.json();
+    if (res.status === 204) return null;
+    const body = await res.json();
+    return res.status === 202 ? { ...body, indexing: true } : body;
   }
   async function fetchUserId(token) {
     const me = await apiFetch(token, "/users/@me");
@@ -8781,80 +8783,119 @@ ${loc.channel ?? ""}`.toLowerCase();
     if (!Array.isArray(channels)) return [];
     return channels.filter((c) => c.type !== 4).map((c) => ({ id: String(c.id), name: c.name ?? "\u672A\u77E5", type: c.type ?? 0 }));
   }
+  var SEARCH_PAGE_SIZE = 25;
+  var SEARCH_DELAY_MS = 1200;
+  var MAX_INDEXING_ATTEMPTS = 10;
+  var MAX_EMPTY_PAGE_ATTEMPTS = 3;
+  async function resolveSearchScope(token, target) {
+    let guildId = target.guildId.trim();
+    const channelId = target.channelId.trim();
+    if (target.serverWide || !channelId) {
+      if (!SNOWFLAKE.test(guildId)) throw new Error("\u5168\u670D\u68C0\u7D22\u9700\u8981\u6709\u6548\u7684\u670D\u52A1\u5668 ID\u3002");
+      return { path: `/guilds/${guildId}/messages/search` };
+    }
+    if (!SNOWFLAKE.test(channelId)) throw new Error("\u8BF7\u586B\u5199\u6709\u6548\u7684\u9891\u9053 ID\u3002");
+    if (!guildId) {
+      const channel = await apiFetch(token, `/channels/${channelId}`);
+      if (!channel?.id) throw new Error("\u672A\u83B7\u53D6\u5230\u9891\u9053\u4FE1\u606F\uFF0C\u8BF7\u68C0\u67E5\u9891\u9053 ID\u3002");
+      guildId = channel.guild_id ? String(channel.guild_id) : "@me";
+    }
+    if (guildId === "@me") return { path: `/channels/${channelId}/messages/search` };
+    if (!SNOWFLAKE.test(guildId)) throw new Error("\u8BF7\u586B\u5199\u6709\u6548\u7684\u670D\u52A1\u5668 ID\u3002");
+    return { path: `/guilds/${guildId}/messages/search`, channelId };
+  }
+  function searchParams(scope, meId) {
+    const params = new URLSearchParams({ author_id: meId, include_nsfw: "true" });
+    if (scope.channelId) params.set("channel_id", scope.channelId);
+    return params;
+  }
+  function isIndexing(res) {
+    return res?.indexing === true || res?.code === 11e4 || res?.message === "Indexing";
+  }
+  function searchTotal(res) {
+    const total = res?.total_results;
+    return typeof total === "number" && Number.isFinite(total) && total >= 0 ? total : null;
+  }
+  async function waitForSearch(ms, ctrl) {
+    while (ms > 0 && !ctrl.stopped) {
+      const part = Math.min(ms, 250);
+      await sleep(part);
+      ms -= part;
+    }
+  }
   async function collect(token, opts, meId, onProgress, ctrl) {
     const out = [];
-    if (opts.serverWide && opts.guildId && opts.guildId !== "@me") {
-      let offset = 0;
-      while (out.length < opts.limit) {
-        if (ctrl.stopped) break;
-        onProgress("\u5168\u670D\u68C0\u7D22\u4E2D", `\u5DF2\u627E\u5230 ${out.length} \u6761\uFF08\u641C\u7D22\u63A5\u53E3\u8F83\u6162\uFF0C\u8BF7\u7A0D\u5019\uFF09`);
-        const params = new URLSearchParams({
-          author_id: meId,
-          offset: String(offset),
-          include_nsfw: "true",
-          sort_order: opts.order === "asc" ? "asc" : "desc"
-        });
-        if (opts.after) params.set("min_id", tsToSf(opts.after));
-        if (opts.before) params.set("max_id", tsToSf(opts.before));
-        let res;
-        try {
-          res = await apiFetch(token, `/guilds/${opts.guildId}/messages/search?${params}`);
-        } catch (e) {
-          throw new Error(`\u5168\u670D\u68C0\u7D22\u5931\u8D25\uFF1A${e.message}`);
+    if (ctrl.stopped) return out;
+    if (!opts.serverWide && !opts.channelId.trim()) throw new Error("\u8BF7\u586B\u5199\u9891\u9053 ID\uFF0C\u6216\u5F00\u542F\u5168\u670D\u68C0\u7D22\u3002");
+    for (const date of [opts.after, opts.before]) {
+      if (date && !Number.isFinite(date.getTime())) throw new Error("\u8BF7\u586B\u5199\u6709\u6548\u7684\u65F6\u95F4\u8303\u56F4\u3002");
+    }
+    if (opts.after && opts.before && opts.after >= opts.before) throw new Error("\u8D77\u59CB\u65F6\u95F4\u5FC5\u987B\u65E9\u4E8E\u7ED3\u675F\u65F6\u95F4\u3002");
+    const scope = await resolveSearchScope(token, opts);
+    const params = searchParams(scope, meId);
+    params.set("sort_by", "timestamp");
+    params.set("sort_order", opts.order);
+    if (opts.after) params.set("min_id", tsToSf(opts.after));
+    if (opts.before) params.set("max_id", tsToSf(opts.before));
+    const seen = /* @__PURE__ */ new Set();
+    const expectedChannel = opts.serverWide ? "" : opts.channelId.trim();
+    let offset = 0;
+    let page = 1;
+    let indexingAttempts = 0;
+    let emptyPageAttempts = 0;
+    while (out.length < opts.limit && !ctrl.stopped) {
+      params.set("offset", String(offset));
+      onProgress("\u68C0\u7D22\u4E2D", `\u6B63\u5728\u8BF7\u6C42\u7B2C ${page} \u9875\uFF08offset ${offset}\uFF09\uFF0C\u4EC5\u641C\u7D22\u4F60\u7684\u6D88\u606F\u2026`);
+      if (ctrl.stopped) break;
+      const res = await apiFetch(token, `${scope.path}?${params}`);
+      if (ctrl.stopped) break;
+      if (isIndexing(res)) {
+        if (++indexingAttempts >= MAX_INDEXING_ATTEMPTS) throw new Error("\u641C\u7D22\u7D22\u5F15\u4ECD\u672A\u5C31\u7EEA\uFF0C\u8BF7\u7A0D\u540E\u91CD\u65B0\u9884\u89C8\u3002");
+        const seconds = Number(res.retry_after);
+        const wait = Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds * 1e3) : 1e3;
+        onProgress("\u5EFA\u7ACB\u7D22\u5F15\u4E2D", `Discord \u6B63\u5728\u5EFA\u7ACB\u641C\u7D22\u7D22\u5F15\uFF0C${(wait / 1e3).toFixed(1)} \u79D2\u540E\u91CD\u8BD5\u2026`);
+        await waitForSearch(wait, ctrl);
+        continue;
+      }
+      indexingAttempts = 0;
+      if (!Array.isArray(res?.messages)) throw new Error("\u641C\u7D22\u54CD\u5E94\u7F3A\u5C11\u6D88\u606F\u5217\u8868\uFF0C\u8BF7\u7A0D\u540E\u91CD\u65B0\u9884\u89C8\u3002");
+      const total = searchTotal(res);
+      if (res.messages.length === 0 && total !== null && offset < total) {
+        if (++emptyPageAttempts >= MAX_EMPTY_PAGE_ATTEMPTS) {
+          throw new Error(`\u641C\u7D22\u547D\u4E2D ${total} \u6761\uFF0C\u4F46\u5206\u9875\u4ECD\u4E3A\u7A7A\uFF0C\u8BF7\u7A0D\u540E\u91CD\u65B0\u9884\u89C8\u3002`);
         }
-        if (res?.message === "Indexing") {
-          onProgress("\u5EFA\u7ACB\u7D22\u5F15\u4E2D", "Discord \u6B63\u5728\u5EFA\u7ACB\u5168\u670D\u7D22\u5F15\uFF0C10 \u79D2\u540E\u81EA\u52A8\u91CD\u8BD5\u2026");
-          await sleep(1e4);
-          continue;
-        }
-        if (!res?.messages || res.messages.length === 0) break;
-        for (const group of res.messages) {
-          const m = group.find((x) => x?.hit) ?? group.find((x) => x?.author?.id === meId) ?? group[0];
-          if (!m || m.author?.id !== meId || skipList.has(m.id)) continue;
+        onProgress("\u7D22\u5F15\u540C\u6B65\u4E2D", `\u641C\u7D22\u547D\u4E2D ${total} \u6761\uFF0C\u5F53\u524D\u5206\u9875\u6682\u672A\u8FD4\u56DE\uFF0C\u7A0D\u540E\u81EA\u52A8\u91CD\u8BD5\u2026`);
+        await waitForSearch(SEARCH_DELAY_MS, ctrl);
+        continue;
+      }
+      emptyPageAttempts = 0;
+      let hits = 0;
+      let newHits = 0;
+      let filtered = 0;
+      for (const group of res.messages) {
+        if (!Array.isArray(group)) throw new Error("\u641C\u7D22\u54CD\u5E94\u7684\u6D88\u606F\u5206\u7EC4\u683C\u5F0F\u5F02\u5E38\u3002");
+        for (const m of group) {
+          if (m?.hit !== true || !SNOWFLAKE.test(m.id)) continue;
+          hits++;
+          if (seen.has(m.id)) continue;
+          seen.add(m.id);
+          newHits++;
+          const time = new Date(m.timestamp).getTime();
+          if (m.author?.id !== meId || !SNOWFLAKE.test(m.channel_id) || expectedChannel && m.channel_id !== expectedChannel || skipList.has(m.id) || !Number.isFinite(time) || opts.after && time < opts.after.getTime() || opts.before && time > opts.before.getTime()) {
+            filtered++;
+            continue;
+          }
           out.push({ id: m.id, channelId: m.channel_id, content: m.content ?? "", timestamp: m.timestamp });
           if (out.length >= opts.limit) break;
         }
-        if (res.messages.length < 25) break;
-        offset += res.messages.length;
-        await sleep(1200);
+        if (out.length >= opts.limit) break;
       }
-      return out;
-    }
-    if (!opts.channelId) throw new Error("\u8BF7\u586B\u5199\u9891\u9053 ID\uFF0C\u6216\u5F00\u542F\u300C\u5168\u670D\u626B\u63CF\u300D\u5E76\u586B\u5199\u670D\u52A1\u5668 ID\u3002");
-    let boundary = null;
-    if (opts.order === "desc") {
-      boundary = opts.before ? tsToSf(opts.before) : null;
-    } else {
-      boundary = opts.after ? tsToSf(opts.after) : "0";
-    }
-    while (out.length < opts.limit) {
-      if (ctrl.stopped) break;
-      const params = new URLSearchParams({ limit: "100" });
-      if (boundary) params.set(opts.order === "desc" ? "before" : "after", boundary);
-      let batch;
-      try {
-        batch = await apiFetch(token, `/channels/${opts.channelId}/messages?${params}`);
-      } catch (e) {
-        throw new Error(`\u8BFB\u53D6\u9891\u9053\u6D88\u606F\u5931\u8D25\uFF1A${e.message}`);
-      }
-      if (!Array.isArray(batch) || batch.length === 0) break;
-      for (const m of batch) {
-        const t = new Date(m.timestamp);
-        if (opts.order === "desc" && opts.after && t < opts.after) {
-          return out;
-        }
-        if (opts.order === "asc" && opts.before && t > opts.before) {
-          return out;
-        }
-        const inRange = (!opts.after || t >= opts.after) && (!opts.before || t <= opts.before);
-        if (m.author?.id === meId && inRange && !skipList.has(m.id)) {
-          out.push({ id: m.id, channelId: m.channel_id ?? opts.channelId, content: m.content ?? "", timestamp: m.timestamp });
-          if (out.length >= opts.limit) break;
-        }
-      }
-      boundary = batch[batch.length - 1].id;
-      onProgress("\u626B\u63CF\u4E2D", `\u5DF2\u627E\u5230 ${out.length} \u6761`);
-      await sleep(150);
+      if (hits > 0 && newHits === 0) throw new Error("\u641C\u7D22\u63A5\u53E3\u8FD4\u56DE\u91CD\u590D\u5206\u9875\uFF0C\u8BF7\u7A0D\u540E\u91CD\u65B0\u9884\u89C8\u3002");
+      onProgress("\u68C0\u7D22\u4E2D", `\u7B2C ${page} \u9875 \xB7 \u641C\u7D22\u547D\u4E2D ${total ?? "\u672A\u77E5"} \u6761\uFF0C\u5DF2\u627E\u5230 ${out.length} \u6761${filtered ? `\uFF08\u672C\u9875\u8FC7\u6EE4 ${filtered} \u6761\u975E\u672C\u4EBA/\u975E\u672C\u9891\u9053\u7B49\u7ED3\u679C\uFF09` : ""}`);
+      offset += res.messages.length;
+      if (res.messages.length === 0 || out.length >= opts.limit || (total !== null ? offset >= total : res.messages.length < SEARCH_PAGE_SIZE)) break;
+      page++;
+      await waitForSearch(SEARCH_DELAY_MS, ctrl);
     }
     return out;
   }
@@ -8881,30 +8922,12 @@ ${loc.channel ?? ""}`.toLowerCase();
     return { deleted, skipped };
   }
   async function count(token, target, meId) {
-    const params = new URLSearchParams({ author_id: meId, include_nsfw: "true" });
-    let guildId = target.guildId && target.guildId !== "@me" ? target.guildId : "";
-    if (!guildId && !target.serverWide && target.channelId) {
-      const resolved = await fetchChannelName(token, target.channelId).catch(() => null);
-      if (resolved?.guildId) guildId = resolved.guildId;
-    }
-    let url;
-    if (target.serverWide && guildId) {
-      url = `/guilds/${guildId}/messages/search?${params}`;
-    } else if (target.channelId) {
-      if (guildId) {
-        params.set("channel_id", target.channelId);
-        url = `/guilds/${guildId}/messages/search?${params}`;
-      } else {
-        url = `/channels/${target.channelId}/messages/search?${params}`;
-      }
-    } else if (guildId) {
-      url = `/guilds/${guildId}/messages/search?${params}`;
-    } else {
-      throw new Error("\u8BF7\u586B\u5199\u670D\u52A1\u5668 ID \u6216\u9891\u9053 ID\u3002");
-    }
-    const res = await apiFetch(token, url);
-    if (res?.message === "Indexing") return { total: 0, indexing: true };
-    return { total: res?.total_results ?? 0, indexing: false };
+    const scope = await resolveSearchScope(token, target);
+    const res = await apiFetch(token, `${scope.path}?${searchParams(scope, meId)}`);
+    if (isIndexing(res)) return { total: 0, indexing: true };
+    const total = searchTotal(res);
+    if (total === null) throw new Error("\u641C\u7D22\u54CD\u5E94\u7F3A\u5C11\u53D1\u8A00\u603B\u6570\uFF0C\u8BF7\u7A0D\u540E\u91CD\u65B0\u7EDF\u8BA1\u3002");
+    return { total, indexing: false };
   }
 
   // src/plugins/message-cleaner/ui/CleanerPage.tsx
@@ -8946,6 +8969,7 @@ ${loc.channel ?? ""}`.toLowerCase();
     const [pickerGuilds, setPickerGuilds] = useState([]);
     const [pickerChannels, setPickerChannels] = useState([]);
     const [pickerLevel, setPickerLevel] = useState("guilds");
+    const [pickerGuildId, setPickerGuildId] = useState("");
     const [pickerGuildName, setPickerGuildName] = useState("");
     const [pickerLoading, setPickerLoading] = useState(false);
     const [pickerError, setPickerError] = useState("");
@@ -9093,6 +9117,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         progress("\u9700\u8981 Token", e.message);
         return;
       }
+      setPickerGuildId(g2.id);
       setPickerGuildName(g2.name);
       setPickerLevel("channels");
       setPickerError("");
@@ -9108,6 +9133,9 @@ ${loc.channel ?? ""}`.toLowerCase();
       }
     };
     const pickChannel = (ch) => {
+      setGuildId(pickerGuildId);
+      setPreviewed([]);
+      setStatCount(null);
       if (!ch.id) {
         setServerWide(true);
         setChannelId("");
@@ -9154,7 +9182,7 @@ ${loc.channel ?? ""}`.toLowerCase();
       ctrlRef.current = { stopped: false };
       setMode("previewing");
       setPreviewed([]);
-      progress("\u9884\u89C8\u4E2D", "\u6B63\u5728\u626B\u63CF\u4F60\u7684\u6D88\u606F\u2026");
+      progress("\u9884\u89C8\u4E2D", "\u6B63\u5728\u641C\u7D22\u4F60\u5728\u6240\u9009\u8303\u56F4\u5185\u7684\u6D88\u606F\u2026");
       try {
         const found = await collect(tok, opts, meId, progress, ctrlRef.current);
         setPreviewed(found);
@@ -14913,8 +14941,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.28" : "dev",
-      build: true ? "2026-11-19 07:51:02" : "dev",
+      version: true ? "0.7.29" : "dev",
+      build: true ? "2026-11-19 09:04:31" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14945,8 +14973,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.28" : "dev",
-        build: true ? "2026-11-19 07:51:02" : "dev",
+        version: true ? "0.7.29" : "dev",
+        build: true ? "2026-11-19 09:04:31" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

@@ -123,7 +123,11 @@ async function apiFetch(
     const b = await res.text().catch(() => "");
     throw new Error(`API ${res.status}: ${b.slice(0, 120)}`);
   }
-  return res.status === 204 ? null : res.json();
+  if (res.status === 204) return null;
+  const body = await res.json();
+  // Search indexing is identified by HTTP status, not an English message:
+  // Discord also returns localized bodies containing code 110000.
+  return res.status === 202 ? { ...body, indexing: true } : body;
 }
 
 // --- Current user / current channel ----------------------------------------
@@ -226,6 +230,83 @@ export async function fetchChannels(token: string, guildId: string): Promise<Cha
     .map((c: any) => ({ id: String(c.id), name: c.name ?? "未知", type: c.type ?? 0 }));
 }
 
+// --- Search (shared by preview and count) -----------------------------------
+
+const SEARCH_PAGE_SIZE = 25;
+const SEARCH_DELAY_MS = 1200;
+const MAX_INDEXING_ATTEMPTS = 10;
+const MAX_EMPTY_PAGE_ATTEMPTS = 3;
+
+interface SearchScope {
+  path: string;
+  /** Only guild search uses a channel_id query filter. */
+  channelId?: string;
+}
+
+interface SearchMessage {
+  id: string;
+  channel_id: string;
+  author?: { id: string };
+  hit?: boolean;
+  content?: string;
+  timestamp: string;
+}
+
+interface SearchResponse {
+  messages?: SearchMessage[][];
+  total_results?: number;
+  indexing?: boolean;
+  code?: number;
+  message?: string;
+  retry_after?: number;
+}
+
+async function resolveSearchScope(token: string, target: CleanTarget): Promise<SearchScope> {
+  let guildId = target.guildId.trim();
+  const channelId = target.channelId.trim();
+  if (target.serverWide || !channelId) {
+    if (!SNOWFLAKE.test(guildId)) throw new Error("全服检索需要有效的服务器 ID。");
+    return { path: `/guilds/${guildId}/messages/search` };
+  }
+  if (!SNOWFLAKE.test(channelId)) throw new Error("请填写有效的频道 ID。");
+  if (!guildId) {
+    // Resolve a pasted channel id before choosing the endpoint. A failed
+    // lookup must surface, not silently classify a guild channel as a DM.
+    const channel = await apiFetch(token, `/channels/${channelId}`);
+    if (!channel?.id) throw new Error("未获取到频道信息，请检查频道 ID。");
+    guildId = channel.guild_id ? String(channel.guild_id) : "@me";
+  }
+  if (guildId === "@me") return { path: `/channels/${channelId}/messages/search` };
+  if (!SNOWFLAKE.test(guildId)) throw new Error("请填写有效的服务器 ID。");
+  // Same split as Undiscord: channel search is DM-only. Guild channels use
+  // guild search plus channel_id, otherwise Discord returns 50024.
+  return { path: `/guilds/${guildId}/messages/search`, channelId };
+}
+
+function searchParams(scope: SearchScope, meId: string): URLSearchParams {
+  const params = new URLSearchParams({ author_id: meId, include_nsfw: "true" });
+  if (scope.channelId) params.set("channel_id", scope.channelId);
+  return params;
+}
+
+function isIndexing(res: SearchResponse): boolean {
+  return res?.indexing === true || res?.code === 110000 || res?.message === "Indexing";
+}
+
+function searchTotal(res: SearchResponse): number | null {
+  const total = res?.total_results;
+  return typeof total === "number" && Number.isFinite(total) && total >= 0 ? total : null;
+}
+
+/** Stop promptly between requests, including during an indexing wait. */
+async function waitForSearch(ms: number, ctrl: Controller): Promise<void> {
+  while (ms > 0 && !ctrl.stopped) {
+    const part = Math.min(ms, 250);
+    await sleep(part);
+    ms -= part;
+  }
+}
+
 // --- Collect ---------------------------------------------------------------
 
 export async function collect(
@@ -236,80 +317,98 @@ export async function collect(
   ctrl: Controller
 ): Promise<CollectedMessage[]> {
   const out: CollectedMessage[] = [];
+  if (ctrl.stopped) return out;
+  if (!opts.serverWide && !opts.channelId.trim()) throw new Error("请填写频道 ID，或开启全服检索。");
+  for (const date of [opts.after, opts.before]) {
+    if (date && !Number.isFinite(date.getTime())) throw new Error("请填写有效的时间范围。");
+  }
+  if (opts.after && opts.before && opts.after >= opts.before) throw new Error("起始时间必须早于结束时间。");
 
-  // Server-wide: search API
-  if (opts.serverWide && opts.guildId && opts.guildId !== "@me") {
-    let offset = 0;
-    while (out.length < opts.limit) {
-      if (ctrl.stopped) break;
-      onProgress("全服检索中", `已找到 ${out.length} 条（搜索接口较慢，请稍候）`);
-      const params = new URLSearchParams({
-        author_id: meId,
-        offset: String(offset),
-        include_nsfw: "true",
-        sort_order: opts.order === "asc" ? "asc" : "desc"
-      });
-      if (opts.after) params.set("min_id", tsToSf(opts.after));
-      if (opts.before) params.set("max_id", tsToSf(opts.before));
+  const scope = await resolveSearchScope(token, opts);
+  const params = searchParams(scope, meId);
+  params.set("sort_by", "timestamp");
+  params.set("sort_order", opts.order);
+  if (opts.after) params.set("min_id", tsToSf(opts.after));
+  if (opts.before) params.set("max_id", tsToSf(opts.before));
 
-      let res: any;
-      try {
-        res = await apiFetch(token, `/guilds/${opts.guildId}/messages/search?${params}`);
-      } catch (e: any) {
-        throw new Error(`全服检索失败：${e.message}`);
+  const seen = new Set<string>();
+  const expectedChannel = opts.serverWide ? "" : opts.channelId.trim();
+  let offset = 0;
+  let page = 1;
+  let indexingAttempts = 0;
+  let emptyPageAttempts = 0;
+  while (out.length < opts.limit && !ctrl.stopped) {
+    params.set("offset", String(offset));
+    onProgress("检索中", `正在请求第 ${page} 页（offset ${offset}），仅搜索你的消息…`);
+    if (ctrl.stopped) break;
+    const res: SearchResponse = await apiFetch(token, `${scope.path}?${params}`);
+    if (ctrl.stopped) break;
+    if (isIndexing(res)) {
+      if (++indexingAttempts >= MAX_INDEXING_ATTEMPTS) throw new Error("搜索索引仍未就绪，请稍后重新预览。");
+      const seconds = Number(res.retry_after);
+      const wait = Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds * 1000) : 1000;
+      onProgress("建立索引中", `Discord 正在建立搜索索引，${(wait / 1000).toFixed(1)} 秒后重试…`);
+      await waitForSearch(wait, ctrl);
+      continue;
+    }
+    indexingAttempts = 0;
+    if (!Array.isArray(res?.messages)) throw new Error("搜索响应缺少消息列表，请稍后重新预览。");
+    const total = searchTotal(res);
+    // The index can briefly expose a total before the page is available.
+    // Retry that page, never call a positive total + empty page a completed zero.
+    if (res.messages.length === 0 && total !== null && offset < total) {
+      if (++emptyPageAttempts >= MAX_EMPTY_PAGE_ATTEMPTS) {
+        throw new Error(`搜索命中 ${total} 条，但分页仍为空，请稍后重新预览。`);
       }
-      if (res?.message === "Indexing") {
-        onProgress("建立索引中", "Discord 正在建立全服索引，10 秒后自动重试…");
-        await sleep(10_000);
-        continue;
-      }
-      if (!res?.messages || res.messages.length === 0) break;
-      for (const group of res.messages) {
-        const m = group.find((x: any) => x?.hit) ?? group.find((x: any) => x?.author?.id === meId) ?? group[0];
-        if (!m || m.author?.id !== meId || skipList.has(m.id)) continue;
+      onProgress("索引同步中", `搜索命中 ${total} 条，当前分页暂未返回，稍后自动重试…`);
+      await waitForSearch(SEARCH_DELAY_MS, ctrl);
+      continue;
+    }
+    emptyPageAttempts = 0;
+
+    let hits = 0;
+    let newHits = 0;
+    let filtered = 0;
+    for (const group of res.messages) {
+      if (!Array.isArray(group)) throw new Error("搜索响应的消息分组格式异常。");
+      for (const m of group) {
+        // Search includes nearby context (sometimes our own messages). Only
+        // explicit hits are candidates; never fall back to group[0]/author.
+        if (m?.hit !== true || !SNOWFLAKE.test(m.id)) continue;
+        hits++;
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        newHits++;
+        const time = new Date(m.timestamp).getTime();
+        if (
+          m.author?.id !== meId ||
+          !SNOWFLAKE.test(m.channel_id) ||
+          (expectedChannel && m.channel_id !== expectedChannel) ||
+          skipList.has(m.id) || !Number.isFinite(time) ||
+          (opts.after && time < opts.after.getTime()) ||
+          (opts.before && time > opts.before.getTime())
+        ) {
+          filtered++;
+          continue;
+        }
         out.push({ id: m.id, channelId: m.channel_id, content: m.content ?? "", timestamp: m.timestamp });
         if (out.length >= opts.limit) break;
       }
-      if (res.messages.length < 25) break;
-      offset += res.messages.length;
-      await sleep(1200);
+      if (out.length >= opts.limit) break;
     }
-    return out;
-  }
+    if (hits > 0 && newHits === 0) throw new Error("搜索接口返回重复分页，请稍后重新预览。");
 
-  // Single channel
-  if (!opts.channelId) throw new Error("请填写频道 ID，或开启「全服扫描」并填写服务器 ID。");
-  let boundary: string | null = null;
-  if (opts.order === "desc") {
-    boundary = opts.before ? tsToSf(opts.before) : null;
-  } else {
-    boundary = opts.after ? tsToSf(opts.after) : "0";
-  }
-
-  while (out.length < opts.limit) {
-    if (ctrl.stopped) break;
-    const params = new URLSearchParams({ limit: "100" });
-    if (boundary) params.set(opts.order === "desc" ? "before" : "after", boundary);
-    let batch: any[];
-    try {
-      batch = await apiFetch(token, `/channels/${opts.channelId}/messages?${params}`);
-    } catch (e: any) {
-      throw new Error(`读取频道消息失败：${e.message}`);
-    }
-    if (!Array.isArray(batch) || batch.length === 0) break;
-    for (const m of batch) {
-      const t = new Date(m.timestamp);
-      if (opts.order === "desc" && opts.after && t < opts.after) { return out; }
-      if (opts.order === "asc" && opts.before && t > opts.before) { return out; }
-      const inRange = (!opts.after || t >= opts.after) && (!opts.before || t <= opts.before);
-      if (m.author?.id === meId && inRange && !skipList.has(m.id)) {
-        out.push({ id: m.id, channelId: m.channel_id ?? opts.channelId, content: m.content ?? "", timestamp: m.timestamp });
-        if (out.length >= opts.limit) break;
-      }
-    }
-    boundary = batch[batch.length - 1].id;
-    onProgress("扫描中", `已找到 ${out.length} 条`);
-    await sleep(150);
+    onProgress("检索中", `第 ${page} 页 · 搜索命中 ${total ?? "未知"} 条，已找到 ${out.length} 条${filtered ? `（本页过滤 ${filtered} 条非本人/非本频道等结果）` : ""}`);
+    // Offset advances by raw search groups, not accepted/filtered messages.
+    // If Discord returns a short intermediate page, trust total_results and
+    // continue rather than prematurely reporting a partial preview as done.
+    offset += res.messages.length;
+    if (
+      res.messages.length === 0 || out.length >= opts.limit ||
+      (total !== null ? offset >= total : res.messages.length < SEARCH_PAGE_SIZE)
+    ) break;
+    page++;
+    await waitForSearch(SEARCH_DELAY_MS, ctrl);
   }
   return out;
 }
@@ -353,38 +452,10 @@ export async function count(
   target: CleanTarget,
   meId: string
 ): Promise<{ total: number; indexing: boolean }> {
-  const params = new URLSearchParams({ author_id: meId, include_nsfw: "true" });
-  let guildId = target.guildId && target.guildId !== "@me" ? target.guildId : "";
-
-  // A channel id alone is enough to find its guild — needed because the
-  // channel-scoped search endpoint rejects guild channels (50024).
-  if (!guildId && !target.serverWide && target.channelId) {
-    const resolved = await fetchChannelName(token, target.channelId).catch(() => null);
-    if (resolved?.guildId) guildId = resolved.guildId;
-  }
-
-  let url: string;
-  if (target.serverWide && guildId) {
-    // Whole server.
-    url = `/guilds/${guildId}/messages/search?${params}`;
-  } else if (target.channelId) {
-    // Guild channels must be searched through the guild endpoint with a
-    // channel_id filter — `/channels/:id/messages/search` answers 50024
-    // ("cannot execute action on this channel type") for them. Only DMs use
-    // the channel-scoped endpoint (same split as the reference 冲水 script).
-    if (guildId) {
-      params.set("channel_id", target.channelId);
-      url = `/guilds/${guildId}/messages/search?${params}`;
-    } else {
-      url = `/channels/${target.channelId}/messages/search?${params}`;
-    }
-  } else if (guildId) {
-    url = `/guilds/${guildId}/messages/search?${params}`;
-  } else {
-    throw new Error("请填写服务器 ID 或频道 ID。");
-  }
-
-  const res = await apiFetch(token, url);
-  if (res?.message === "Indexing") return { total: 0, indexing: true };
-  return { total: res?.total_results ?? 0, indexing: false };
+  const scope = await resolveSearchScope(token, target);
+  const res: SearchResponse = await apiFetch(token, `${scope.path}?${searchParams(scope, meId)}`);
+  if (isIndexing(res)) return { total: 0, indexing: true };
+  const total = searchTotal(res);
+  if (total === null) throw new Error("搜索响应缺少发言总数，请稍后重新统计。");
+  return { total, indexing: false };
 }
