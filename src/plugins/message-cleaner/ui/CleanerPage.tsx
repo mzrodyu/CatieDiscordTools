@@ -28,6 +28,8 @@ import {
   takePendingTarget,
   fetchGuilds,
   fetchChannels,
+  fetchGuildName,
+  fetchChannelName,
   type CollectedMessage,
   type CleanOptions,
   type CleanTarget,
@@ -80,6 +82,9 @@ export function CleanerPage(): React.ReactElement {
   const [guildId, setGuildId] = useState("");
   const [channelId, setChannelId] = useState("");
   const [serverWide, setServerWide] = useState(false);
+  // Resolved names for the ids above (best-effort; empty when unknown).
+  const [guildName, setGuildName] = useState("");
+  const [channelName, setChannelName] = useState("");
   // Time range
   const [afterStr, setAfterStr] = useState("");
   const [beforeStr, setBeforeStr] = useState("");
@@ -163,6 +168,43 @@ export function CleanerPage(): React.ReactElement {
       pushLog("warn", "未自动获取到 Token，请手动粘贴。");
     }
   }, []);
+
+  // Resolve ids → names so the page shows what is about to be wiped, not just
+  // a snowflake. Debounced while typing; failures stay silent because the raw
+  // id is still perfectly usable.
+  useEffect(() => {
+    const tok = token.trim();
+    const id = guildId.trim();
+    setGuildName("");
+    if (!tok || !/^\d{15,25}$/.test(id)) return;
+    let alive = true;
+    const timer = setTimeout(() => {
+      fetchGuildName(tok, id)
+        .then((name) => { if (alive && name) setGuildName(name); })
+        .catch(() => {});
+    }, 400);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [token, guildId]);
+
+  useEffect(() => {
+    const tok = token.trim();
+    const id = channelId.trim();
+    setChannelName("");
+    if (!tok || !/^\d{15,25}$/.test(id)) return;
+    let alive = true;
+    const timer = setTimeout(() => {
+      fetchChannelName(tok, id)
+        .then((res) => {
+          if (!alive || !res) return;
+          setChannelName(res.name);
+          // A pasted channel id implies its guild; fill it so server-wide
+          // count/search and the guild name display both work.
+          if (res.guildId) setGuildId((prev) => (prev.trim() ? prev : res.guildId!));
+        })
+        .catch(() => {});
+    }, 400);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [token, channelId]);
 
   const requireToken = (): string => {
     const t = token.trim();
@@ -443,7 +485,12 @@ export function CleanerPage(): React.ReactElement {
         </div>
         <div className="hc-cell">
           <div className="hc-cell--row">
-            <div className="hc-cell__main"><div className="hc-cell__label">服务器 ID</div></div>
+            <div className="hc-cell__main">
+              <div className="hc-cell__label">
+                服务器 ID
+                {guildName && <span className="hc-cleaner__resolved">{guildName}</span>}
+              </div>
+            </div>
           </div>
           <div className="hc-cell__control">
             <TextInput value={guildId} onChange={setGuildId} placeholder="服务器 ID" />
@@ -452,7 +499,12 @@ export function CleanerPage(): React.ReactElement {
         {!serverWide && (
           <div className="hc-cell">
             <div className="hc-cell--row">
-              <div className="hc-cell__main"><div className="hc-cell__label">频道 ID</div></div>
+              <div className="hc-cell__main">
+                <div className="hc-cell__label">
+                  频道 ID
+                  {channelName && <span className="hc-cleaner__resolved">{channelName}</span>}
+                </div>
+              </div>
             </div>
             <div className="hc-cell__control">
               <TextInput value={channelId} onChange={setChannelId} placeholder="频道 ID" />

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halcyon for Discord
 // @namespace    halcyon
-// @version      0.7.27
+// @version      0.7.28
 // @description  A restrained, iOS-styled plugin layer for the Discord web client.
 // @author       caitemm (mzrodyu)
 // @match        *://*.discord.com/*
@@ -842,8 +842,8 @@ ${slices.join("\n  ...  \n")}`
         if (this.shouldRun(id)) this.startPlugin(id);
       }
       this.emit();
-      const build = true ? "2026-11-19 07:44:03" : "dev";
-      const version2 = true ? "0.7.27" : "dev";
+      const build = true ? "2026-11-19 07:51:02" : "dev";
+      const version2 = true ? "0.7.28" : "dev";
       log3.info(`runtime up \u2014 v${version2} (build ${build}), ${this.runningCount()} plugin(s) active`);
     }
     isEnabled(id) {
@@ -1640,8 +1640,8 @@ ${slices.join("\n  ...  \n")}`
 }
 
 .hc-panel {
-  width: min(900px, 92vw);
-  height: min(720px, 88vh);
+  width: min(1180px, 94vw);
+  height: min(840px, 92vh);
   background: var(--hc-bg-primary);
   border-radius: var(--hc-radius-xl);
   box-shadow: var(--hc-elev-3);
@@ -2567,9 +2567,21 @@ ${slices.join("\n  ...  \n")}`
   display: flex;
   gap: var(--hc-space-3);
   margin: var(--hc-space-4) 0;
-}
-.hc-cleaner__actions .hc-btn {
+}.hc-cleaner__actions .hc-btn {
   flex: 1;
+}
+/* Resolved guild/channel name next to the id label \u2014 muted, one line. */
+.hc-cleaner__resolved {
+  margin-left: var(--hc-space-2);
+  font-size: var(--hc-text-caption1);
+  font-weight: 400;
+  color: var(--hc-accent);
+  vertical-align: middle;
+  display: inline-block;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .hc-cleaner__status {
   margin: var(--hc-space-3) 0;
@@ -2649,12 +2661,12 @@ ${slices.join("\n  ...  \n")}`
   font-variant-numeric: tabular-nums;
 }
 .hc-cleaner__log {
-  max-height: 220px;
+  max-height: min(340px, 45vh);
   overflow: auto;
   padding: var(--hc-space-2) 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 11.5px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.6;
   user-select: text;
 }
 .hc-cleaner__log-empty {
@@ -4607,7 +4619,7 @@ ${components_default}`;
   var cached = null;
   var inflight = null;
   function currentVersion() {
-    return true ? "0.7.27" : "dev";
+    return true ? "0.7.28" : "dev";
   }
   function getCachedUpdate() {
     return cached;
@@ -4699,7 +4711,7 @@ ${components_default}`;
   function AboutView() {
     const plugins2 = useRuntimeList().filter((p) => !p.hidden);
     const enabled2 = plugins2.filter((p) => p.enabled).length;
-    const version2 = true ? "0.7.27" : "dev";
+    const version2 = true ? "0.7.28" : "dev";
     const [update, setUpdate] = React.useState(getCachedUpdate);
     const [checking, setChecking] = React.useState(false);
     const alive = React.useRef(true);
@@ -8730,6 +8742,27 @@ ${loc.channel ?? ""}`.toLowerCase();
     pendingTarget = null;
     return target;
   }
+  var SNOWFLAKE = /^\d{15,25}$/;
+  async function fetchGuildName(token, guildId) {
+    if (!SNOWFLAKE.test(guildId)) return null;
+    try {
+      const guild = await apiFetch(token, `/guilds/${guildId}`);
+      return guild?.name ?? null;
+    } catch {
+      return null;
+    }
+  }
+  async function fetchChannelName(token, channelId) {
+    if (!SNOWFLAKE.test(channelId)) return null;
+    try {
+      const channel = await apiFetch(token, `/channels/${channelId}`);
+      if (!channel) return null;
+      const name = channel.name || (Array.isArray(channel.recipients) ? channel.recipients.map((r) => r.global_name || r.username).join("\u3001") : "") || "\u672A\u77E5\u9891\u9053";
+      return { name, guildId: channel.guild_id ? String(channel.guild_id) : null };
+    } catch {
+      return null;
+    }
+  }
   async function fetchGuilds(token) {
     const guilds = await apiFetch(token, "/users/@me/guilds");
     if (!Array.isArray(guilds)) return [];
@@ -8848,14 +8881,24 @@ ${loc.channel ?? ""}`.toLowerCase();
     return { deleted, skipped };
   }
   async function count(token, target, meId) {
-    let url;
     const params = new URLSearchParams({ author_id: meId, include_nsfw: "true" });
-    if (target.serverWide && target.guildId && target.guildId !== "@me") {
-      url = `/guilds/${target.guildId}/messages/search?${params}`;
+    let guildId = target.guildId && target.guildId !== "@me" ? target.guildId : "";
+    if (!guildId && !target.serverWide && target.channelId) {
+      const resolved = await fetchChannelName(token, target.channelId).catch(() => null);
+      if (resolved?.guildId) guildId = resolved.guildId;
+    }
+    let url;
+    if (target.serverWide && guildId) {
+      url = `/guilds/${guildId}/messages/search?${params}`;
     } else if (target.channelId) {
-      url = `/channels/${target.channelId}/messages/search?${params}`;
-    } else if (target.guildId && target.guildId !== "@me") {
-      url = `/guilds/${target.guildId}/messages/search?${params}`;
+      if (guildId) {
+        params.set("channel_id", target.channelId);
+        url = `/guilds/${guildId}/messages/search?${params}`;
+      } else {
+        url = `/channels/${target.channelId}/messages/search?${params}`;
+      }
+    } else if (guildId) {
+      url = `/guilds/${guildId}/messages/search?${params}`;
     } else {
       throw new Error("\u8BF7\u586B\u5199\u670D\u52A1\u5668 ID \u6216\u9891\u9053 ID\u3002");
     }
@@ -8889,6 +8932,8 @@ ${loc.channel ?? ""}`.toLowerCase();
     const [guildId, setGuildId] = useState("");
     const [channelId, setChannelId] = useState("");
     const [serverWide, setServerWide] = useState(false);
+    const [guildName, setGuildName] = useState("");
+    const [channelName, setChannelName] = useState("");
     const [afterStr, setAfterStr] = useState("");
     const [beforeStr, setBeforeStr] = useState("");
     const [order, setOrder] = useState(settings4.store.order);
@@ -8949,6 +8994,42 @@ ${loc.channel ?? ""}`.toLowerCase();
         pushLog("warn", "\u672A\u81EA\u52A8\u83B7\u53D6\u5230 Token\uFF0C\u8BF7\u624B\u52A8\u7C98\u8D34\u3002");
       }
     }, []);
+    useEffect(() => {
+      const tok = token.trim();
+      const id = guildId.trim();
+      setGuildName("");
+      if (!tok || !/^\d{15,25}$/.test(id)) return;
+      let alive = true;
+      const timer4 = setTimeout(() => {
+        fetchGuildName(tok, id).then((name) => {
+          if (alive && name) setGuildName(name);
+        }).catch(() => {
+        });
+      }, 400);
+      return () => {
+        alive = false;
+        clearTimeout(timer4);
+      };
+    }, [token, guildId]);
+    useEffect(() => {
+      const tok = token.trim();
+      const id = channelId.trim();
+      setChannelName("");
+      if (!tok || !/^\d{15,25}$/.test(id)) return;
+      let alive = true;
+      const timer4 = setTimeout(() => {
+        fetchChannelName(tok, id).then((res) => {
+          if (!alive || !res) return;
+          setChannelName(res.name);
+          if (res.guildId) setGuildId((prev) => prev.trim() ? prev : res.guildId);
+        }).catch(() => {
+        });
+      }, 400);
+      return () => {
+        alive = false;
+        clearTimeout(timer4);
+      };
+    }, [token, channelId]);
     const requireToken = () => {
       const t = token.trim();
       if (!t) throw new Error("\u8BF7\u5148\u83B7\u53D6\u6216\u586B\u5165 Token\u3002");
@@ -9184,7 +9265,7 @@ ${loc.channel ?? ""}`.toLowerCase();
         /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner__picker-name" }, ch.name)
       ))));
     }
-    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u53EA\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u5EFA\u8BAE\u5148\u9884\u89C8\uFF0C\u786E\u8BA4\u8303\u56F4\u540E\u518D\u5220\u9664\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running2 }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running2 }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", { className: "hc-cleaner" }, /* @__PURE__ */ React.createElement("div", { className: "hc-inline-note hc-inline-note--danger" }, /* @__PURE__ */ React.createElement(WarningIcon, { size: 18 }), /* @__PURE__ */ React.createElement("span", null, "\u53EA\u5220\u9664", /* @__PURE__ */ React.createElement("strong", null, "\u4F60\u81EA\u5DF1"), "\u53D1\u9001\u7684\u6D88\u606F\u3002\u5EFA\u8BAE\u5148\u9884\u89C8\uFF0C\u786E\u8BA4\u8303\u56F4\u540E\u518D\u5220\u9664\u3002")), /* @__PURE__ */ React.createElement(Section, { title: "Token" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "Discord Token"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u4EE3\u8868\u4F60\u7684\u8D26\u53F7\u6743\u9650\uFF0C\u4E0D\u8981\u6CC4\u9732\u7ED9\u4EFB\u4F55\u4EBA\u3002")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(RefreshIcon, { size: 16 }), onClick: onAutoToken }, "\u81EA\u52A8")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: token, onChange: setToken, placeholder: "\u81EA\u52A8\u586B\u5165\u6216\u624B\u52A8\u7C98\u8D34", type: "password" })))), /* @__PURE__ */ React.createElement(Section, { title: "\u8303\u56F4" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u5168\u670D\u626B\u63CF"), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__desc" }, "\u5FFD\u7565\u9891\u9053\uFF0C\u626B\u63CF\u6574\u4E2A\u670D\u52A1\u5668\uFF08\u8D70\u641C\u7D22\u63A5\u53E3\uFF0C\u8F83\u6162\uFF09\u3002")), /* @__PURE__ */ React.createElement(Toggle, { checked: serverWide, onChange: setServerWide, "aria-label": "\u5168\u670D\u626B\u63CF" })), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u670D\u52A1\u5668 ID", guildName && /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__resolved" }, guildName)))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: guildId, onChange: setGuildId, placeholder: "\u670D\u52A1\u5668 ID" }))), !serverWide && /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u9891\u9053 ID", channelName && /* @__PURE__ */ React.createElement("span", { className: "hc-cleaner__resolved" }, channelName)))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement(TextInput, { value: channelId, onChange: setChannelId, placeholder: "\u9891\u9053 ID" }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row", style: { gap: "var(--hc-space-2)" } }, /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ServerIcon, { size: 16 }), onClick: openPicker, disabled: running2 }, "\u5217\u8868"), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "secondary", icon: /* @__PURE__ */ React.createElement(ListIcon, { size: 16 }), onClick: useCurrent, disabled: running2 }, "\u5F53\u524D"))), /* @__PURE__ */ React.createElement(Section, { title: "\u65F6\u95F4\u8303\u56F4", note: "\u53EF\u9009\u3002\u7559\u7A7A\u8868\u793A\u4E0D\u9650\u5236\u8BE5\u65B9\u5411\u3002" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u8D77\u59CB\u65F6\u95F4"))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: afterStr, onChange: (e) => setAfterStr(e.currentTarget.value) }))), /* @__PURE__ */ React.createElement("div", { className: "hc-cell" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u7ED3\u675F\u65F6\u95F4")), /* @__PURE__ */ React.createElement(Button, { size: "sm", variant: "plain", onClick: syncNow }, "\u540C\u6B65\u6700\u65B0")), /* @__PURE__ */ React.createElement("div", { className: "hc-cell__control" }, /* @__PURE__ */ React.createElement("input", { className: "hc-input", type: "datetime-local", value: beforeStr, onChange: (e) => setBeforeStr(e.currentTarget.value) })))), /* @__PURE__ */ React.createElement(Section, { title: "\u65B9\u5411" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell hc-cell--row" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__main" }, /* @__PURE__ */ React.createElement("div", { className: "hc-cell__label" }, "\u6E05\u7406\u65B9\u5411")), /* @__PURE__ */ React.createElement(
       Select,
       {
         value: order,
@@ -11492,7 +11573,7 @@ ${tail}`;
 
   // src/plugins/emote-cloner/resolve.ts
   var log31 = logger("emote-cloner");
-  var SNOWFLAKE = /^\d{5,25}$/;
+  var SNOWFLAKE2 = /^\d{5,25}$/;
   var EMOJI_NAME = /^\w{1,32}(?:~\d+)?$/;
   function emojiName(raw) {
     if (typeof raw !== "string") return void 0;
@@ -11646,7 +11727,7 @@ ${tail}`;
     return out;
   }
   function emojiNameFromMessages(target, id) {
-    if (!SNOWFLAKE.test(id)) return void 0;
+    if (!SNOWFLAKE2.test(id)) return void 0;
     const inContent = new RegExp(`<a?:(\\w+)(?:~\\d+)?:${id}>`);
     for (const msg of messagesNear(target)) {
       try {
@@ -11711,7 +11792,7 @@ ${tail}`;
     if (dataEl) {
       const { id, name, type } = dataEl.dataset;
       const img = dataEl.tagName === "IMG" ? dataEl : dataEl.querySelector("img");
-      if (id && SNOWFLAKE.test(id) && type === "emoji") {
+      if (id && SNOWFLAKE2.test(id) && type === "emoji") {
         return {
           kind: "emoji",
           id,
@@ -11720,7 +11801,7 @@ ${tail}`;
           isAnimated: isGifUrl(img?.currentSrc || img?.src)
         };
       }
-      if (id && SNOWFLAKE.test(id) && type === "sticker" && !isLottie(dataEl)) {
+      if (id && SNOWFLAKE2.test(id) && type === "sticker" && !isLottie(dataEl)) {
         return { kind: "sticker", id, domName: name, img, isAnimated: false };
       }
     }
@@ -14832,8 +14913,8 @@ ${tail}`;
       }
     }
     const out = {
-      version: true ? "0.7.27" : "dev",
-      build: true ? "2026-11-19 07:44:03" : "dev",
+      version: true ? "0.7.28" : "dev",
+      build: true ? "2026-11-19 07:51:02" : "dev",
       href: (() => {
         try {
           return location.pathname;
@@ -14864,8 +14945,8 @@ ${tail}`;
         // schedule (plus an already-open tab keeping the old code) makes it
         // genuinely unknowable otherwise — two rounds of "还是不行" were really
         // an old build still running.
-        version: true ? "0.7.27" : "dev",
-        build: true ? "2026-11-19 07:44:03" : "dev",
+        version: true ? "0.7.28" : "dev",
+        build: true ? "2026-11-19 07:51:02" : "dev",
         open: openSettings,
         close: closeSettings,
         runtime,

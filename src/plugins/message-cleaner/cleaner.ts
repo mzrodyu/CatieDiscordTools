@@ -168,6 +168,40 @@ export function takePendingTarget(): CleanTarget | null {
 
 // --- Picker (REST, same endpoints as the original 冲水 script) -------------
 
+const SNOWFLAKE = /^\d{15,25}$/;
+
+/** Human-readable guild name for an id, or null when it can't be resolved. */
+export async function fetchGuildName(token: string, guildId: string): Promise<string | null> {
+  if (!SNOWFLAKE.test(guildId)) return null;
+  try {
+    const guild = await apiFetch(token, `/guilds/${guildId}`);
+    return guild?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Channel name (or DM participant list) for an id, plus its guild when known. */
+export async function fetchChannelName(
+  token: string,
+  channelId: string
+): Promise<{ name: string; guildId: string | null } | null> {
+  if (!SNOWFLAKE.test(channelId)) return null;
+  try {
+    const channel = await apiFetch(token, `/channels/${channelId}`);
+    if (!channel) return null;
+    const name =
+      channel.name ||
+      (Array.isArray(channel.recipients)
+        ? channel.recipients.map((r: any) => r.global_name || r.username).join("、")
+        : "") ||
+      "未知频道";
+    return { name, guildId: channel.guild_id ? String(channel.guild_id) : null };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchGuilds(token: string): Promise<GuildInfo[]> {
   const guilds = await apiFetch(token, "/users/@me/guilds");
   if (!Array.isArray(guilds)) return [];
@@ -319,17 +353,37 @@ export async function count(
   target: CleanTarget,
   meId: string
 ): Promise<{ total: number; indexing: boolean }> {
-  let url: string;
   const params = new URLSearchParams({ author_id: meId, include_nsfw: "true" });
-  if (target.serverWide && target.guildId && target.guildId !== "@me") {
-    url = `/guilds/${target.guildId}/messages/search?${params}`;
+  let guildId = target.guildId && target.guildId !== "@me" ? target.guildId : "";
+
+  // A channel id alone is enough to find its guild — needed because the
+  // channel-scoped search endpoint rejects guild channels (50024).
+  if (!guildId && !target.serverWide && target.channelId) {
+    const resolved = await fetchChannelName(token, target.channelId).catch(() => null);
+    if (resolved?.guildId) guildId = resolved.guildId;
+  }
+
+  let url: string;
+  if (target.serverWide && guildId) {
+    // Whole server.
+    url = `/guilds/${guildId}/messages/search?${params}`;
   } else if (target.channelId) {
-    url = `/channels/${target.channelId}/messages/search?${params}`;
-  } else if (target.guildId && target.guildId !== "@me") {
-    url = `/guilds/${target.guildId}/messages/search?${params}`;
+    // Guild channels must be searched through the guild endpoint with a
+    // channel_id filter — `/channels/:id/messages/search` answers 50024
+    // ("cannot execute action on this channel type") for them. Only DMs use
+    // the channel-scoped endpoint (same split as the reference 冲水 script).
+    if (guildId) {
+      params.set("channel_id", target.channelId);
+      url = `/guilds/${guildId}/messages/search?${params}`;
+    } else {
+      url = `/channels/${target.channelId}/messages/search?${params}`;
+    }
+  } else if (guildId) {
+    url = `/guilds/${guildId}/messages/search?${params}`;
   } else {
     throw new Error("请填写服务器 ID 或频道 ID。");
   }
+
   const res = await apiFetch(token, url);
   if (res?.message === "Indexing") return { total: 0, indexing: true };
   return { total: res?.total_results ?? 0, indexing: false };

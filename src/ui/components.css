@@ -581,8 +581,8 @@
 }
 
 .hc-panel {
-  width: min(900px, 92vw);
-  height: min(720px, 88vh);
+  width: min(1180px, 94vw);
+  height: min(840px, 92vh);
   background: var(--hc-bg-primary);
   border-radius: var(--hc-radius-xl);
   box-shadow: var(--hc-elev-3);
@@ -1508,9 +1508,21 @@
   display: flex;
   gap: var(--hc-space-3);
   margin: var(--hc-space-4) 0;
-}
-.hc-cleaner__actions .hc-btn {
+}.hc-cleaner__actions .hc-btn {
   flex: 1;
+}
+/* Resolved guild/channel name next to the id label — muted, one line. */
+.hc-cleaner__resolved {
+  margin-left: var(--hc-space-2);
+  font-size: var(--hc-text-caption1);
+  font-weight: 400;
+  color: var(--hc-accent);
+  vertical-align: middle;
+  display: inline-block;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .hc-cleaner__status {
   margin: var(--hc-space-3) 0;
@@ -1590,12 +1602,12 @@
   font-variant-numeric: tabular-nums;
 }
 .hc-cleaner__log {
-  max-height: 220px;
+  max-height: min(340px, 45vh);
   overflow: auto;
   padding: var(--hc-space-2) 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 11.5px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.6;
   user-select: text;
 }
 .hc-cleaner__log-empty {
